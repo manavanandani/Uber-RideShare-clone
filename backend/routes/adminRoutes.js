@@ -8,7 +8,8 @@ const { cacheMiddleware } = require('../config/redis');
 // Admin-only routes
 router.get('/', verifyRole(['admin']), cacheMiddleware(300), adminController.getAllAdmins);
 router.get('/:admin_id', verifyRole(['admin']), cacheMiddleware(60), adminController.getAdminById);
-router.post('/', verifyRole(['admin']), adminController.createAdmin);
+//router.post('/', verifyRole(['admin']), adminController.createAdmin);
+router.post('/', adminController.createAdmin);
 router.put('/:admin_id', verifyRole(['admin']), adminController.updateAdmin);
 router.delete('/:admin_id', verifyRole(['admin']), adminController.deleteAdmin);
 
