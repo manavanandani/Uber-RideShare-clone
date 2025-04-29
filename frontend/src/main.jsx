@@ -1,17 +1,18 @@
 // src/main.jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { Provider } from 'react-redux';
-import { StrictMode } from 'react';
-import store from './store';
-import App from './App.jsx';
-import './index.css';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { Provider } from 'react-redux'
+import { StrictMode } from 'react'
+import store from './store'
+import App from './App.jsx'
+import './index.css'
+import 'leaflet/dist/leaflet.css';
 
 // Add axios interceptor for the token
 import axios from 'axios';
 
 // Set up axios defaults
-axios.defaults.baseURL = 'http://localhost:5000/api';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Add request interceptor
 axios.interceptors.request.use(
@@ -44,4 +45,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <App />
     </Provider>
   </StrictMode>,
-);
+)

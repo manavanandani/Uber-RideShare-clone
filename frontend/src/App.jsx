@@ -1,8 +1,10 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { getCurrentUser } from './store/slices/authSlice';
 
 // Import theme
 import theme from './theme';
@@ -14,44 +16,44 @@ import Register from './pages/auth/Register';
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import BookRide from './pages/customer/BookRide';
+import RideTracking from './pages/customer/RideTracking';
+import CustomerProfile from './pages/customer/CustomerProfile';
+import RideHistory from './pages/customer/RideHistory';
 
 // Driver Pages
 import DriverDashboard from './pages/driver/Dashboard';
 import AvailableRides from './pages/driver/AvailableRides';
+import DriverProfile from './pages/driver/DriverProfile';
+import DriverRideHistory from './pages/driver/RideHistory';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
+import UserManagement from './pages/admin/UserManagement';
+import SystemAnalytics from './pages/admin/SystemAnalytics';
+import BillingManagement from './pages/admin/BillingManagement';
 
 // Layouts
 import CustomerLayout from './layouts/CustomerLayout';
-
-// Create placeholder components for missing pages
-const RideTracking = () => <div>Ride Tracking Page (Placeholder)</div>;
-const CustomerProfile = () => <div>Customer Profile Page (Placeholder)</div>;
-const DriverProfile = () => <div>Driver Profile Page (Placeholder)</div>;
-const UserManagement = () => <div>User Management Page (Placeholder)</div>;
-const Analytics = () => <div>Analytics Page (Placeholder)</div>;
-
-// Create placeholder layouts
-const DriverLayout = ({ children }) => (
-  <div>
-    <h1>Driver Layout</h1>
-    <div>{children}</div>
-  </div>
-);
-
-const AdminLayout = ({ children }) => (
-  <div>
-    <h1>Admin Layout</h1>
-    <div>{children}</div>
-  </div>
-);
+import DriverLayout from './layouts/DriverLayout';
+import AdminLayout from './layouts/AdminLayout';
 
 function App() {
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  
+  // Check if user is authenticated on app load
+  useEffect(() => {
+    if (localStorage.getItem('token') && !isAuthenticated && !loading) {
+      dispatch(getCurrentUser());
+    }
+  }, [dispatch, isAuthenticated, loading]);
   
   // Protected route component
   const ProtectedRoute = ({ children, roles }) => {
+    if (loading) {
+      return <div>Loading...</div>;
+    }
+    
     if (!isAuthenticated) {
       return <Navigate to="/login" />;
     }
@@ -73,42 +75,50 @@ function App() {
           <Route path="/register" element={<Register />} />
           
           {/* Customer routes */}
-          <Route path="/customer" element={
-            <ProtectedRoute roles={['customer']}>
-              <CustomerLayout />
-            </ProtectedRoute>
-          }>
+          <Route 
+            path="/customer" 
+            element={
+              <ProtectedRoute roles={['customer']}>
+                <CustomerLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<CustomerDashboard />} />
             <Route path="book" element={<BookRide />} />
             <Route path="ride/:rideId" element={<RideTracking />} />
             <Route path="profile" element={<CustomerProfile />} />
+            <Route path="history" element={<RideHistory />} />
           </Route>
           
           {/* Driver routes */}
-          <Route path="/driver" element={
-            <ProtectedRoute roles={['driver']}>
-              <DriverLayout>
-                <Routes>
-                  <Route index element={<DriverDashboard />} />
-                  <Route path="rides" element={<AvailableRides />} />
-                  <Route path="profile" element={<DriverProfile />} />
-                </Routes>
-              </DriverLayout>
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute roles={['driver']}>
+                <DriverLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DriverDashboard />} />
+            <Route path="rides" element={<AvailableRides />} />
+            <Route path="profile" element={<DriverProfile />} />
+            <Route path="history" element={<DriverRideHistory />} />
+          </Route>
           
           {/* Admin routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute roles={['admin']}>
-              <AdminLayout>
-                <Routes>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="users" element={<UserManagement />} />
-                  <Route path="analytics" element={<Analytics />} />
-                </Routes>
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="analytics" element={<SystemAnalytics />} />
+            <Route path="billing" element={<BillingManagement />} />
+          </Route>
           
           {/* Default redirect based on role */}
           <Route path="/" element={
