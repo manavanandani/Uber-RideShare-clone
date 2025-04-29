@@ -19,6 +19,9 @@ async function createKafkaTopics() {
     await admin.connect();
     console.log('Kafka admin connected');
     
+    // Get existing topics first
+    const existingTopics = await admin.listTopics();
+    
     // Define topics to create
     const topics = [
       { topic: 'ride_requests', numPartitions: 3, replicationFactor: 1 },
@@ -28,19 +31,27 @@ async function createKafkaTopics() {
       { topic: 'customer_events', numPartitions: 3, replicationFactor: 1 }
     ];
     
-    // Create topics
-    await admin.createTopics({
-      topics,
-      waitForLeaders: true
-    });
+    // Filter out existing topics
+    const topicsToCreate = topics.filter(t => !existingTopics.includes(t.topic));
     
-    console.log('Kafka topics created successfully');
+    if (topicsToCreate.length > 0) {
+      // Create only new topics
+      await admin.createTopics({
+        topics: topicsToCreate,
+        waitForLeaders: true
+      });
+      console.log('New Kafka topics created successfully:', topicsToCreate.map(t => t.topic));
+    } else {
+      console.log('All Kafka topics already exist');
+    }
+    
   } catch (error) {
-    console.error('Error creating Kafka topics:', error);
+    console.error('Error managing Kafka topics:', error);
   } finally {
     await admin.disconnect();
   }
 }
+
 
 // Call this function when your app starts
 createKafkaTopics().catch(console.error);

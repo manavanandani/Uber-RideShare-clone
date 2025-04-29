@@ -19,6 +19,24 @@ exports.getAllDrivers = async (req, res) => {
   }
 };
 
+// Get available drivers
+exports.getAvailableDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.find({ status: 'available' })
+      .select('driver_id first_name last_name car_details intro_media.location rating');
+    
+    res.status(200).json({
+      message: 'Available drivers retrieved successfully',
+      count: drivers.length,
+      data: drivers
+    });
+  } catch (error) {
+    console.error('Error getting available drivers:', error);
+    res.status(500).json({ message: 'Failed to get available drivers' });
+  }
+};
+
+
 // Get single driver by ID
 exports.getDriverById = async (req, res) => {
   const { driver_id } = req.params;

@@ -25,7 +25,7 @@ initKafka().catch(err => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes); // Add this
+app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/billing', billingRoutes);
@@ -37,6 +37,10 @@ app.use('/api/stats', statsRoutes);
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date() });
+});
+
+app.get('/', (req, res) => {
+  res.send('Welcome to the Ride Sharing App!');
 });
 
 // 404 handler

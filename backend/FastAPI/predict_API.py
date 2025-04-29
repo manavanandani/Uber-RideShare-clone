@@ -135,3 +135,7 @@ async def predict_fare(ride: RideRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "model_loaded": model is not None}
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Taxi Fare Prediction API!"}
