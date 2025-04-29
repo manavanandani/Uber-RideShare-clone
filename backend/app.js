@@ -1,3 +1,4 @@
+// app.js
 const express = require('express');
 const cors = require('cors');
 
@@ -8,6 +9,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const rideRoutes = require('./routes/rideRoutes');
 const pricingRoutes = require('./routes/pricingRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const authRoutes = require('./routes/authRoutes'); // Add this
 
 const { initKafka } = require('./config/kafka');
 
@@ -23,6 +25,7 @@ initKafka().catch(err => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes); // Add this
 app.use('/api/admin', adminRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/billing', billingRoutes);

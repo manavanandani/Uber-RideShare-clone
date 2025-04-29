@@ -1,3 +1,4 @@
+// services/pricingService.js already exists but let's ensure it's fully implemented
 const axios = require('axios');
 const haversine = require('haversine');
 const { redisClient } = require('../config/redis');
@@ -136,7 +137,7 @@ const getPredictedFare = async (pickup, dropoff, dateTime, passengerCount) => {
   try {
     const timestamp = new Date(dateTime).toISOString();
     
-    const response = await axios.post('http://localhost:8000/predict', {
+    const response = await axios.post(process.env.ML_API_URL || 'http://localhost:8000/predict', {
       pickup_datetime: timestamp,
       passenger_count: passengerCount,
       pickup_longitude: pickup.longitude,
@@ -164,6 +165,14 @@ const getPredictedFare = async (pickup, dropoff, dateTime, passengerCount) => {
  */
 const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passengerCount = 1) => {
   try {
+    // Try to get from cache first
+    const cacheKey = `price:${pickup.latitude.toFixed(4)}:${pickup.longitude.toFixed(4)}:${dropoff.latitude.toFixed(4)}:${dropoff.longitude.toFixed(4)}:${passengerCount}:${dateTime.getHours()}`;
+    const cachedPrice = await redisClient.get(cacheKey);
+    
+    if (cachedPrice) {
+      return JSON.parse(cachedPrice);
+    }
+    
     // Try to get ML prediction first
     const prediction = await getPredictedFare(pickup, dropoff, dateTime, passengerCount);
     
@@ -174,7 +183,7 @@ const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passenger
     const finalFare = prediction.status === 'success' ? prediction.predicted_fare : estimate.fareEstimate;
     
     // Bundle all the information together
-    return {
+    const result = {
       fare: finalFare,
       distance: prediction.distance_km || estimate.distance,
       duration: estimate.duration,
@@ -189,6 +198,11 @@ const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passenger
         surge_multiplier: estimate.demandFactor * (isPeakHour(dateTime) ? 1.25 : 1.0)
       }
     };
+    
+    // Cache for 3 minutes
+    await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 180);
+    
+    return result;
   } catch (error) {
     console.error('Error in dynamic pricing:', error);
     throw error;
