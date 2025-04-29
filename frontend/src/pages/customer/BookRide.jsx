@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import MapWithMarkers from '../../components/common/MapWithMarkers';
 import {
   Box,
   Grid,
@@ -25,27 +25,11 @@ import {
   Alert
 } from '@mui/material';
 
-const libraries = ['places'];
-const mapContainerStyle = {
-  width: '100%',
-  height: '400px'
-};
-const center = {
-  lat: 37.7749, // San Francisco default
-  lng: -122.4194
-};
-
 function BookRide() {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: 'YOUR_GOOGLE_MAPS_API_KEY', // Replace with your API key
-    libraries
-  });
-  
   const { user } = useSelector(state => state.auth);
   const navigate = useNavigate();
   
   const [activeStep, setActiveStep] = useState(0);
-  const [directions, setDirections] = useState(null);
   const [markers, setMarkers] = useState({
     pickup: null,
     dropoff: null
@@ -59,7 +43,7 @@ function BookRide() {
       latitude: null,
       longitude: null
     },
-    date_time: new Date().toISOString(),
+    date_time: new Date().toISOString().slice(0, 16), // Format for datetime-local input
     passenger_count: 1
   });
   const [nearbyDrivers, setNearbyDrivers] = useState([]);
@@ -120,51 +104,33 @@ function BookRide() {
     }
   }, [activeStep, rideData.pickup_location]);
   
-  // Calculate directions when both pickup and dropoff are set
+  // Calculate fare when both pickup and dropoff are set
   useEffect(() => {
-    if (isLoaded && markers.pickup && markers.dropoff) {
-      const directionsService = new window.google.maps.DirectionsService();
-      
-      directionsService.route(
-        {
-          origin: markers.pickup,
-          destination: markers.dropoff,
-          travelMode: window.google.maps.TravelMode.DRIVING
-        },
-        (result, status) => {
-          if (status === window.google.maps.DirectionsStatus.OK) {
-            setDirections(result);
-            
-            // Get fare estimate
-            if (rideData.pickup_location.latitude && rideData.dropoff_location.latitude) {
-              calculateFare();
-            }
-          } else {
-            setError(`Error calculating directions: ${status}`);
-          }
+    const calculateFare = async () => {
+      if (rideData.pickup_location.latitude && rideData.dropoff_location.latitude) {
+        try {
+          setLoading(true);
+          const response = await customerService.getFareEstimate({
+            pickup_latitude: rideData.pickup_location.latitude,
+            pickup_longitude: rideData.pickup_location.longitude,
+            dropoff_latitude: rideData.dropoff_location.latitude,
+            dropoff_longitude: rideData.dropoff_location.longitude,
+            datetime: rideData.date_time,
+            passenger_count: rideData.passenger_count
+          });
+          setFareEstimate(response.data);
+          setLoading(false);
+        } catch (err) {
+          setError(err.response?.data?.message || 'Failed to calculate fare');
+          setLoading(false);
         }
-      );
+      }
+    };
+
+    if (markers.pickup && markers.dropoff) {
+      calculateFare();
     }
-  }, [isLoaded, markers]);
-  
-  const calculateFare = async () => {
-    try {
-      setLoading(true);
-      const response = await customerService.getFareEstimate({
-        pickup_latitude: rideData.pickup_location.latitude,
-        pickup_longitude: rideData.pickup_location.longitude,
-        dropoff_latitude: rideData.dropoff_location.latitude,
-        dropoff_longitude: rideData.dropoff_location.longitude,
-        datetime: rideData.date_time,
-        passenger_count: rideData.passenger_count
-      });
-      setFareEstimate(response.data);
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to calculate fare');
-      setLoading(false);
-    }
-  };
+  }, [markers]);
   
   const handleMapClick = useCallback((event) => {
     const lat = event.latLng.lat();
@@ -250,7 +216,6 @@ function BookRide() {
         ...prev,
         dropoff_location: { latitude: null, longitude: null }
       }));
-      setDirections(null);
     }
   };
   
@@ -302,7 +267,7 @@ function BookRide() {
                 label="Date & Time"
                 type="datetime-local"
                 name="date_time"
-                value={rideData.date_time.slice(0, 16)} // Format for datetime-local input
+                value={rideData.date_time}
                 onChange={handleRideDataChange}
                 InputLabelProps={{
                   shrink: true,
@@ -356,7 +321,7 @@ function BookRide() {
                           <Typography variant="body2" color="textSecondary">{driver.car_details}</Typography>
                           <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                             <Typography variant="body2" sx={{ mr: 1 }}>Rating:</Typography>
-                            <Typography variant="body1">{driver.rating.toFixed(1)}</Typography>
+                            <Typography variant="body1">{driver.rating?.toFixed(1) || "N/A"}</Typography>
                           </Box>
                         </CardContent>
                       </Card>
@@ -435,14 +400,6 @@ function BookRide() {
         return null;
     }
   };
-  
-  if (loadError) {
-    return <div>Error loading maps</div>;
-  }
-  
-  if (!isLoaded) {
-    return <div>Loading maps</div>;
-  }
 
   return (
     <Box>
@@ -457,37 +414,14 @@ function BookRide() {
       )}
       
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ height: mapContainerStyle.height, mb: 2 }}>
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={markers.pickup || center}
-            zoom={12}
-            onClick={activeStep === 0 ? handleMapClick : undefined}
-          >
-            {markers.pickup && (
-              <Marker
-                position={markers.pickup}
-                label="P"
-              />
-            )}
-            {markers.dropoff && (
-              <Marker
-                position={markers.dropoff}
-                label="D"
-              />
-            )}
-            {directions && (
-              <DirectionsRenderer
-                directions={directions}
-                options={{
-                  polylineOptions: {
-                    strokeColor: '#1976d2',
-                    strokeWeight: 5
-                  }
-                }}
-              />
-            )}
-          </GoogleMap>
+        <Box sx={{ mb: 2 }}>
+          <MapWithMarkers
+            pickup={markers.pickup}
+            dropoff={markers.dropoff}
+            showDirections={markers.pickup && markers.dropoff}
+            onMapClick={activeStep === 0 ? handleMapClick : undefined}
+            height={400}
+          />
         </Box>
         
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 3 }}>
@@ -542,4 +476,3 @@ function BookRide() {
 }
 
 export default BookRide;
-                  

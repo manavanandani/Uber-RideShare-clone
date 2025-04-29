@@ -28,9 +28,9 @@ import DriverRideHistory from './pages/driver/RideHistory';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
-import UserManagement from './pages/admin/UserManagement';
+import UserManagement from './pages/admin/UserManagment';
 import SystemAnalytics from './pages/admin/SystemAnalytics';
-import BillingManagement from './pages/admin/BillingManagement';
+import BillingManagement from './pages/admin/BillingManagment';
 
 // Layouts
 import CustomerLayout from './layouts/CustomerLayout';
@@ -101,6 +101,7 @@ function App() {
           >
             <Route index element={<DriverDashboard />} />
             <Route path="rides" element={<AvailableRides />} />
+            <Route path="ride/:rideId" element={<RideTracking />} />
             <Route path="profile" element={<DriverProfile />} />
             <Route path="history" element={<DriverRideHistory />} />
           </Route>

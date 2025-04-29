@@ -1,4 +1,4 @@
-// src/services/driverService.js
+// src/services/driverService.js (update with any missing methods)
 import api from './api';
 
 export const driverService = {
@@ -27,6 +27,11 @@ export const driverService = {
   // Ride management
   getRideHistory: async (driverId) => {
     const response = await api.get(`/rides/driver/${driverId}`);
+    return response.data;
+  },
+  
+  getAvailableRides: async () => {
+    const response = await api.get('/rides?status=requested');
     return response.data;
   },
   
@@ -67,6 +72,12 @@ export const driverService = {
   // Reviews
   getReviews: async (driverId) => {
     const response = await api.get(`/drivers/${driverId}/reviews`);
+    return response.data;
+  },
+  
+  // Create billing for a completed ride
+  createBill: async (rideId) => {
+    const response = await api.post('/billing', { ride_id: rideId });
     return response.data;
   }
 };

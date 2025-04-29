@@ -23,7 +23,7 @@ import {
   Timer as TimerIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
-import api from '../../services/api';
+import { driverService } from '../../services/driverService';
 
 function AvailableRides() {
   const { user } = useSelector(state => state.auth);
@@ -41,29 +41,33 @@ function AvailableRides() {
         setLoading(true);
         
         // Get driver status first
-        const profileResponse = await api.get(`/drivers/${user.driver_id}`);
+        const profileResponse = await driverService.getProfile(user.driver_id);
         
         // If driver is not available, update status
-        if (profileResponse.data.data.status !== 'available') {
+        if (profileResponse.data.status !== 'available') {
           // Update to available and get current location
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(async (position) => {
-              await api.patch(`/drivers/${user.driver_id}/status`, {
-                status: 'available',
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-              });
+              await driverService.updateStatus(
+                user.driver_id,
+                'available',
+                {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude
+                }
+              );
             }, (_err) => {
               setError('Location access is required to see available rides. Please enable location access.');
               setLoading(false);
-            });          }
+            });
+          }
         }
         
         // Get all rides for the driver
-        const ridesResponse = await api.get(`/rides/driver/${user.driver_id}`);
+        const ridesResponse = await driverService.getRideHistory(user.driver_id);
         
         // Categorize rides by status
-        const allRides = ridesResponse.data.data;
+        const allRides = ridesResponse.data;
         const available = allRides.filter(ride => ride.status === 'requested');
         const accepted = allRides.filter(ride => ride.status === 'accepted');
         const inProgress = allRides.filter(ride => ride.status === 'in_progress');
@@ -93,7 +97,7 @@ function AvailableRides() {
 
   const handleAcceptRide = async (rideId) => {
     try {
-      await api.patch(`/rides/${rideId}/accept`);
+      await driverService.acceptRide(rideId);
       
       // Update local state
       const updatedRide = rides.available.find(ride => ride.ride_id === rideId);
@@ -112,7 +116,7 @@ function AvailableRides() {
 
   const handleStartRide = async (rideId) => {
     try {
-      await api.patch(`/rides/${rideId}/start`);
+      await driverService.startRide(rideId);
       
       // Update local state
       const updatedRide = rides.accepted.find(ride => ride.ride_id === rideId);
@@ -131,7 +135,10 @@ function AvailableRides() {
 
   const handleCompleteRide = async (rideId) => {
     try {
-      await api.patch(`/rides/${rideId}/complete`);
+      await driverService.completeRide(rideId);
+      
+      // Also create a bill for the completed ride
+      await driverService.createBill(rideId);
       
       // Update local state
       setRides({
@@ -375,4 +382,3 @@ function AvailableRides() {
 }
 
 export default AvailableRides;
-

@@ -20,6 +20,7 @@ import {
   MenuItem
 } from '@mui/material';
 import api from '../../services/api';
+import MediaUploader from './MediaUploader';
 
 function DriverProfile() {
   const { user } = useSelector(state => state.auth);
@@ -361,10 +362,80 @@ function DriverProfile() {
               )}
             </CardContent>
           </Card>
+
+          <Card sx={{ my: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Profile Media
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+              {profile?.intro_media && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Current Media
+                  </Typography>
+                  
+                  {profile.intro_media.image_urls?.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Images
+                      </Typography>
+                      <Grid container spacing={1}>
+                        {profile.intro_media.image_urls.map((url, index) => (
+                          <Grid item xs={6} sm={4} key={index}>
+                            <img 
+                              src={url} 
+                              alt={`Driver ${index + 1}`} 
+                              style={{ 
+                                width: '100%', 
+                                height: 100, 
+                                objectFit: 'cover',
+                                borderRadius: '4px'
+                              }} 
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  )}
+                  
+                  {profile.intro_media.video_url && (
+                    <Box>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Video
+                      </Typography>
+                      <video 
+                        src={profile.intro_media.video_url} 
+                        controls
+                        style={{ 
+                          width: '100%', 
+                          maxHeight: 200,
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </Box>
+                  )}
+                </Box>
+              )}
+              
+              <MediaUploader 
+                onUploadComplete={() => {
+                  // Refresh profile after upload
+                  driverService.getProfile(user.driver_id)
+                    .then(response => {
+                      setProfile(response.data.data);
+                    })
+                    .catch(err => {
+                      setError('Failed to refresh profile after upload');
+                    });
+                }} 
+              />
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </Box>
   );
 }
-
 export default DriverProfile;

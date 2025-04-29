@@ -1,6 +1,6 @@
-// src/pages/customer/RideTracking.jsx
+// src/pages/driver/RideDetails.jsx
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   Box,
@@ -26,17 +26,15 @@ import {
 import {
   LocationOn as LocationIcon,
   AccessTime as TimeIcon,
-  Person as PersonIcon,
-  DirectionsCar as CarIcon,
-  Check as CheckIcon
+  Person as PersonIcon
 } from '@mui/icons-material';
-import api from '../../services/api';
+import { driverService } from '../../services/driverService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
-import { customerService } from '../../services/customerService';
 
-function RideTracking() {
+function RideDetails() {
   const { rideId } = useParams();
   const { user } = useSelector(state => state.auth);
+  const navigate = useNavigate();
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,8 +46,8 @@ function RideTracking() {
     const fetchRideDetails = async () => {
       try {
         setLoading(true);
-        // If you're a customer fetching your own ride
-        const response = await api.get(`/rides/customer/${user.customer_id}`);
+        // Get all rides for this driver
+        const response = await driverService.getRideHistory(user.driver_id);
         
         // Find the specific ride
         const rideData = response.data.data.find(r => r.ride_id === rideId);
@@ -68,18 +66,18 @@ function RideTracking() {
       }
     };
     
-    if (rideId && user?.customer_id) {
+    if (rideId && user?.driver_id) {
       fetchRideDetails();
     }
   }, [rideId, user]);
 
-  const handleRateDriver = async () => {
+  const handleRateCustomer = async () => {
     try {
-      await customerService.rateRide(rideId, rating, comment);
+      await driverService.rateCustomer(rideId, rating, comment);
       setShowRatingDialog(false);
       
       // Refresh ride data to update rating
-      const response = await api.get(`/rides/customer/${user.customer_id}`);
+      const response = await driverService.getRideHistory(user.driver_id);
       const updatedRide = response.data.data.find(r => r.ride_id === rideId);
       if (updatedRide) {
         setRide(updatedRide);
@@ -89,23 +87,33 @@ function RideTracking() {
     }
   };
 
-  // Function to get step status
-  const getStepStatus = (rideStatus, step) => {
-    const statusOrder = {
-      'requested': 0,
-      'accepted': 1,
-      'in_progress': 2,
-      'completed': 3,
-      'cancelled': -1
-    };
-    
-    const currentStatusIndex = statusOrder[rideStatus];
-    const stepIndex = step;
-    
-    if (currentStatusIndex === -1) return 'error'; // Cancelled ride
-    if (stepIndex < currentStatusIndex) return 'completed';
-    if (stepIndex === currentStatusIndex) return 'active';
-    return 'pending';
+  const handleAction = async (action) => {
+    try {
+      switch (action) {
+        case 'accept':
+          await driverService.acceptRide(rideId);
+          break;
+        case 'start':
+          await driverService.startRide(rideId);
+          break;
+        case 'complete':
+          await driverService.completeRide(rideId);
+          // Also create a bill
+          await driverService.createBill(rideId);
+          break;
+        default:
+          return;
+      }
+      
+      // Refresh ride data
+      const response = await driverService.getRideHistory(user.driver_id);
+      const updatedRide = response.data.data.find(r => r.ride_id === rideId);
+      if (updatedRide) {
+        setRide(updatedRide);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to ${action} ride`);
+    }
   };
 
   if (loading) {
@@ -132,13 +140,10 @@ function RideTracking() {
     );
   }
 
-  // Use real ride data
-  const currentRide = ride;
-
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Ride #{currentRide.ride_id}
+        Ride #{ride.ride_id}
       </Typography>
 
       <Grid container spacing={3}>
@@ -150,16 +155,16 @@ function RideTracking() {
             <Divider sx={{ mb: 2 }} />
             
             <Stepper activeStep={
-              currentRide.status === 'requested' ? 0 :
-              currentRide.status === 'accepted' ? 1 :
-              currentRide.status === 'in_progress' ? 2 :
-              currentRide.status === 'completed' ? 3 : 0
+              ride.status === 'requested' ? 0 :
+              ride.status === 'accepted' ? 1 :
+              ride.status === 'in_progress' ? 2 :
+              ride.status === 'completed' ? 3 : 0
             }>
               <Step key="requested">
                 <StepLabel>Requested</StepLabel>
               </Step>
               <Step key="accepted">
-                <StepLabel>Driver Accepted</StepLabel>
+                <StepLabel>Accepted</StepLabel>
               </Step>
               <Step key="in_progress">
                 <StepLabel>In Progress</StepLabel>
@@ -181,39 +186,39 @@ function RideTracking() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup:</strong> {`${currentRide.pickup_location.latitude.toFixed(4)}, ${currentRide.pickup_location.longitude.toFixed(4)}`}
+                    <strong>Pickup:</strong> {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Dropoff:</strong> {`${currentRide.dropoff_location.latitude.toFixed(4)}, ${currentRide.dropoff_location.longitude.toFixed(4)}`}
+                    <strong>Dropoff:</strong> {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <TimeIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup Time:</strong> {new Date(currentRide.date_time).toLocaleString()}
+                    <strong>Pickup Time:</strong> {new Date(ride.date_time).toLocaleString()}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <PersonIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Passengers:</strong> {currentRide.passenger_count || 1}
+                    <strong>Passengers:</strong> {ride.passenger_count || 1}
                   </Typography>
                 </Box>
               </Grid>
             </Grid>
             
             <Box sx={{ mt: 2, height: 300 }}>
-            <MapWithMarkers 
+              <MapWithMarkers 
                 pickup={{
-                  lat: currentRide.pickup_location.latitude,
-                  lng: currentRide.pickup_location.longitude
+                  lat: ride.pickup_location.latitude,
+                  lng: ride.pickup_location.longitude
                 }}
                 dropoff={{
-                  lat: currentRide.dropoff_location.latitude,
-                  lng: currentRide.dropoff_location.longitude
+                  lat: ride.dropoff_location.latitude,
+                  lng: ride.dropoff_location.longitude
                 }}
                 showDirections={true}
                 height={300}
@@ -232,108 +237,128 @@ function RideTracking() {
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body1">Base Fare:</Typography>
-                <Typography variant="body1">${(currentRide.fare_amount * 0.4).toFixed(2)}</Typography>
+                <Typography variant="body1">${(ride.fare_amount * 0.4).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Distance ({currentRide.distance?.toFixed(1) || '0.0'} km):</Typography>
-                <Typography variant="body1">${(currentRide.distance * 1.5 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">Distance ({ride.distance?.toFixed(1) || '0.0'} km):</Typography>
+                <Typography variant="body1">${(ride.distance * 1.5 || 0).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Time ({currentRide.duration?.toFixed(0) || '0'} min):</Typography>
-                <Typography variant="body1">${(currentRide.duration * 0.2 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">Time ({ride.duration?.toFixed(0) || '0'} min):</Typography>
+                <Typography variant="body1">${(ride.duration * 0.2 || 0).toFixed(2)}</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6">Total Fare:</Typography>
-                <Typography variant="h6">${currentRide.fare_amount.toFixed(2)}</Typography>
+                <Typography variant="h6">${ride.fare_amount.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" color="textSecondary">Payment Status:</Typography>
+                <Typography variant="body2" color="textSecondary">You Earn:</Typography>
                 <Typography variant="body2" color="success.main">
-                  {currentRide.payment_status || 'Paid'}
+                  ${(ride.fare_amount * 0.8).toFixed(2)} (80%)
                 </Typography>
               </Box>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Driver Information
+                Customer Information
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ 
-                  width: 40, 
-                  height: 40, 
-                  borderRadius: '50%', 
-                  bgcolor: 'primary.main', 
-                  color: 'white', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  mr: 2
-                }}>
-                  {currentRide.driver_info?.first_name?.[0] || 'D'}
-                </Box>
-                <Box>
-                  <Typography variant="body1">
-                    {currentRide.driver_info?.first_name || 'Driver'} {currentRide.driver_info?.last_name || ''}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Rating 
-                      value={currentRide.driver_info?.rating || 4.5} 
-                      precision={0.5} 
-                      readOnly 
-                      size="small"
-                    />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      {currentRide.driver_info?.rating?.toFixed(1) || '4.5'}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CarIcon sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  {currentRide.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary">
+                  Customer ID
+                </Typography>
+                <Typography variant="body1">
+                  {ride.customer_id}
                 </Typography>
               </Box>
               
-              <Box sx={{ mt: 2 }}>
-                {currentRide.status === 'completed' && !currentRide.rating?.customer_to_driver && (
+              {ride.status === 'completed' && (
+                <Box>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Your Rating
+                  </Typography>
+                  {ride.rating?.driver_to_customer ? (
+                    <Rating 
+                      value={ride.rating.driver_to_customer} 
+                      readOnly 
+                      precision={0.5}
+                    />
+                  ) : (
+                    <Button 
+                      variant="contained" 
+                      fullWidth
+                      onClick={() => setShowRatingDialog(true)}
+                    >
+                      Rate Customer
+                    </Button>
+                  )}
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Action Card based on ride status */}
+          {ride.status !== 'completed' && ride.status !== 'cancelled' && (
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Ride Actions
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                
+                {ride.status === 'requested' && (
                   <Button 
                     variant="contained" 
+                    color="primary" 
                     fullWidth
-                    onClick={() => setShowRatingDialog(true)}
+                    onClick={() => handleAction('accept')}
                   >
-                    Rate Your Driver
+                    Accept Ride
                   </Button>
                 )}
                 
-                {currentRide.status === 'requested' && (
-                  <Typography color="warning.main">
-                    Waiting for a driver to accept your ride...
-                  </Typography>
+                {ride.status === 'accepted' && (
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    fullWidth
+                    onClick={() => handleAction('start')}
+                  >
+                    Start Ride
+                  </Button>
                 )}
-              </Box>
-            </CardContent>
-          </Card>
+                
+                {ride.status === 'in_progress' && (
+                  <Button 
+                    variant="contained" 
+                    color="success" 
+                    fullWidth
+                    onClick={() => handleAction('complete')}
+                  >
+                    Complete Ride
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </Grid>
       </Grid>
       
       {/* Rating Dialog */}
       <Dialog open={showRatingDialog} onClose={() => setShowRatingDialog(false)}>
-        <DialogTitle>Rate Your Driver</DialogTitle>
+        <DialogTitle>Rate Customer</DialogTitle>
         <DialogContent>
           <Box sx={{ my: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography variant="body1" gutterBottom>
-              How was your ride with {currentRide.driver_info?.first_name || 'your driver'}?
+              How was your experience with this customer?
             </Typography>
             <Rating
-              name="driver-rating"
+              name="customer-rating"
               value={rating}
               onChange={(event, newValue) => {
                 setRating(newValue);
@@ -357,7 +382,7 @@ function RideTracking() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowRatingDialog(false)}>Cancel</Button>
-          <Button onClick={handleRateDriver} disabled={!rating}>
+          <Button onClick={handleRateCustomer} disabled={!rating}>
             Submit Rating
           </Button>
         </DialogActions>
@@ -366,4 +391,4 @@ function RideTracking() {
   );
 }
 
-export default RideTracking;
+export default RideDetails;
