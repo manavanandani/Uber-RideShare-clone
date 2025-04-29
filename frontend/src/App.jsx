@@ -1,7 +1,11 @@
+// src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+
+// Import theme
+import theme from './theme';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -10,34 +14,38 @@ import Register from './pages/auth/Register';
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import BookRide from './pages/customer/BookRide';
-//import RideTracking from './pages/customer/RideTracking';
-//import CustomerProfile from './pages/customer/Profile';
 
 // Driver Pages
 import DriverDashboard from './pages/driver/Dashboard';
 import AvailableRides from './pages/driver/AvailableRides';
-//import DriverProfile from './pages/driver/Profile';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
-//import UserManagement from './pages/admin/UserManagement';
-//import Analytics from './pages/admin/Analytics';
 
 // Layouts
 import CustomerLayout from './layouts/CustomerLayout';
-//import DriverLayout from './layouts/DriverLayout';
-//import AdminLayout from './layouts/AdminLayout';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+// Create placeholder components for missing pages
+const RideTracking = () => <div>Ride Tracking Page (Placeholder)</div>;
+const CustomerProfile = () => <div>Customer Profile Page (Placeholder)</div>;
+const DriverProfile = () => <div>Driver Profile Page (Placeholder)</div>;
+const UserManagement = () => <div>User Management Page (Placeholder)</div>;
+const Analytics = () => <div>Analytics Page (Placeholder)</div>;
+
+// Create placeholder layouts
+const DriverLayout = ({ children }) => (
+  <div>
+    <h1>Driver Layout</h1>
+    <div>{children}</div>
+  </div>
+);
+
+const AdminLayout = ({ children }) => (
+  <div>
+    <h1>Admin Layout</h1>
+    <div>{children}</div>
+  </div>
+);
 
 function App() {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -79,24 +87,28 @@ function App() {
           {/* Driver routes */}
           <Route path="/driver" element={
             <ProtectedRoute roles={['driver']}>
-              <DriverLayout />
+              <DriverLayout>
+                <Routes>
+                  <Route index element={<DriverDashboard />} />
+                  <Route path="rides" element={<AvailableRides />} />
+                  <Route path="profile" element={<DriverProfile />} />
+                </Routes>
+              </DriverLayout>
             </ProtectedRoute>
-          }>
-            <Route index element={<DriverDashboard />} />
-            <Route path="rides" element={<AvailableRides />} />
-            <Route path="profile" element={<DriverProfile />} />
-          </Route>
+          } />
           
           {/* Admin routes */}
           <Route path="/admin" element={
             <ProtectedRoute roles={['admin']}>
-              <AdminLayout />
+              <AdminLayout>
+                <Routes>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="analytics" element={<Analytics />} />
+                </Routes>
+              </AdminLayout>
             </ProtectedRoute>
-          }>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="analytics" element={<Analytics />} />
-          </Route>
+          } />
           
           {/* Default redirect based on role */}
           <Route path="/" element={
