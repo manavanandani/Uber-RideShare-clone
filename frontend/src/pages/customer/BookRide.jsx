@@ -132,30 +132,33 @@ function BookRide() {
     }
   }, [markers]);
   
-  const handleMapClick = useCallback((event) => {
+  const handleMapClick = (event) => {
+    // Extract lat and lng from the event
     const lat = event.latLng.lat();
     const lng = event.latLng.lng();
     
     if (!markers.pickup) {
-      setMarkers(prev => ({
-        ...prev,
-        pickup: { lat, lng }
+      // Set pickup if not already set
+      setMarkers(prev => ({ 
+        ...prev, 
+        pickup: { lat, lng } 
       }));
       setRideData(prev => ({
         ...prev,
         pickup_location: { latitude: lat, longitude: lng }
       }));
-    } else if (!markers.dropoff) {
-      setMarkers(prev => ({
-        ...prev,
-        dropoff: { lat, lng }
+    } else {
+      // If pickup is set, set or update dropoff
+      setMarkers(prev => ({ 
+        ...prev, 
+        dropoff: { lat, lng } 
       }));
       setRideData(prev => ({
         ...prev,
         dropoff_location: { latitude: lat, longitude: lng }
       }));
     }
-  }, [markers]);
+  };
   
   const handleDriverSelect = (driver) => {
     setSelectedDriver(driver);
