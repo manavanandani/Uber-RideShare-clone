@@ -2,29 +2,31 @@
 import api from './api';
 
 export const adminService = {
-  // Driver management
+  // Get all drivers
   getAllDrivers: async () => {
     const response = await api.get('/drivers');
     return response.data;
   },
   
+  // Review driver account
   reviewDriverAccount: async (driverId, status, notes) => {
     const response = await api.post(`/admin/drivers/${driverId}/review`, { status, notes });
     return response.data;
   },
   
-  // Customer management
+  // Get all customers
   getAllCustomers: async () => {
     const response = await api.get('/customers');
     return response.data;
   },
   
+  // Review customer account
   reviewCustomerAccount: async (customerId, status, notes) => {
     const response = await api.post(`/admin/customers/${customerId}/review`, { status, notes });
     return response.data;
   },
   
-  // Billing management
+  // Search bills
   searchBills: async (filters) => {
     // Construct query params
     const queryParams = new URLSearchParams();
@@ -44,9 +46,21 @@ export const adminService = {
     return response.data;
   },
   
-  // System stats
-  getSystemSummary: async () => {
+  // Get system stats
+  getSystemStats: async () => {
     const response = await api.get('/admin/stats/summary');
+    return response.data;
+  },
+  
+  // Create driver
+  createDriver: async (driverData) => {
+    const response = await api.post('/drivers', driverData);
+    return response.data;
+  },
+  
+  // Create customer
+  createCustomer: async (customerData) => {
+    const response = await api.post('/customers', customerData);
     return response.data;
   }
 };

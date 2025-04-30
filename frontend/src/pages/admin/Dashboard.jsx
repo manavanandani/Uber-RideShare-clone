@@ -1,6 +1,5 @@
 // src/pages/admin/Dashboard.jsx
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import {
   Box,
   Grid,
@@ -37,7 +36,6 @@ import api from '../../services/api';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 function AdminDashboard() {
-  const { user } = useSelector(state => state.auth);
   const [period, setPeriod] = useState('week');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,9 +62,6 @@ function AdminDashboard() {
         
         // Get performance comparison data
         const performanceResponse = await api.get('/stats/performance-comparison');
-
-        console.log('Stats data:', statsResponse.data);
-        console.log('Revenue data:', revenueResponse.dat);
         
         setData({
           stats: statsResponse.data.data,

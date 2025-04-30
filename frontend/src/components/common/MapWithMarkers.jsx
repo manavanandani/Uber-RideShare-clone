@@ -10,9 +10,7 @@ function MapWithMarkers({
   showDirections = true,
   height = 400,
   onMapClick = null,
-  markers = [],
-  center = { lat: 37.7749, lng: -122.4194 },
-  zoom = 12
+  markers = []
 }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -24,7 +22,7 @@ function MapWithMarkers({
   useEffect(() => {
     // Initialize map if it doesn't exist
     if (!mapInstanceRef.current) {
-      mapInstanceRef.current = L.map(mapRef.current).setView([center.lat, center.lng], zoom);
+      mapInstanceRef.current = L.map(mapRef.current).setView([37.7749, -122.4194], 13);
       
       // Add OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

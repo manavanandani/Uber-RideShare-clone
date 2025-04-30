@@ -1,19 +1,20 @@
-// src/services/driverService.js (update with any missing methods)
+// src/services/driverService.js
 import api from './api';
 
 export const driverService = {
-  // Profile management
+  // Get driver profile
   getProfile: async (driverId) => {
     const response = await api.get(`/drivers/${driverId}`);
     return response.data;
   },
   
+  // Update driver profile
   updateProfile: async (driverId, data) => {
     const response = await api.put(`/drivers/${driverId}`, data);
     return response.data;
   },
   
-  // Status management
+  // Update driver status
   updateStatus: async (driverId, status, location = null) => {
     const data = { status };
     if (location) {
@@ -24,38 +25,37 @@ export const driverService = {
     return response.data;
   },
   
-  // Ride management
+  // Get ride history
   getRideHistory: async (driverId) => {
     const response = await api.get(`/rides/driver/${driverId}`);
     return response.data;
   },
   
-  getAvailableRides: async () => {
-    const response = await api.get('/rides?status=requested');
-    return response.data;
-  },
-  
+  // Accept a ride
   acceptRide: async (rideId) => {
     const response = await api.patch(`/rides/${rideId}/accept`);
     return response.data;
   },
   
+  // Start a ride
   startRide: async (rideId) => {
     const response = await api.patch(`/rides/${rideId}/start`);
     return response.data;
   },
   
+  // Complete a ride
   completeRide: async (rideId) => {
     const response = await api.patch(`/rides/${rideId}/complete`);
     return response.data;
   },
   
-  rateCustomer: async (rideId, rating, comment = '') => {
+  // Rate a customer
+  rateCustomer: async (rideId, rating, comment) => {
     const response = await api.post(`/rides/${rideId}/rate-customer`, { rating, comment });
     return response.data;
   },
   
-  // Media upload
+  // Upload media
   uploadMedia: async (driverId, file) => {
     const formData = new FormData();
     formData.append('media', file);
@@ -69,13 +69,7 @@ export const driverService = {
     return response.data;
   },
   
-  // Reviews
-  getReviews: async (driverId) => {
-    const response = await api.get(`/drivers/${driverId}/reviews`);
-    return response.data;
-  },
-  
-  // Create billing for a completed ride
+  // Create bill
   createBill: async (rideId) => {
     const response = await api.post('/billing', { ride_id: rideId });
     return response.data;
