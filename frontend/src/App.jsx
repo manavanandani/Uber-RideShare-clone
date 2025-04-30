@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { getCurrentUser } from './store/slices/authSlice';
+import RegisterAdmin from './pages/auth/RegisterAdmin';
+
 
 // Import theme
 import theme from './theme';
@@ -43,10 +45,12 @@ function App() {
   
   // Check if user is authenticated on app load
   useEffect(() => {
-    if (localStorage.getItem('token') && !isAuthenticated && !loading) {
+    const token = localStorage.getItem('token');
+    if (token && !user && !loading) {
+      console.log('Token found, fetching user data...');
       dispatch(getCurrentUser());
     }
-  }, [dispatch, isAuthenticated, loading]);
+  }, [dispatch, user, loading]);
   
   // Protected route component
   const ProtectedRoute = ({ children, roles }) => {
@@ -73,6 +77,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/register-admin" element={<RegisterAdmin />} />
           
           {/* Customer routes */}
           <Route 

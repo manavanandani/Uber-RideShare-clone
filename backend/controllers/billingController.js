@@ -2,6 +2,8 @@ const Billing = require('../models/Billing');
 const Ride = require('../models/Ride');
 const { publishBillingCreated, publishPaymentProcessed } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
+const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+
 
 // Create a new bill
 exports.createBill = async (req, res) => {

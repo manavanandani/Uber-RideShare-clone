@@ -64,6 +64,9 @@ function AdminDashboard() {
         
         // Get performance comparison data
         const performanceResponse = await api.get('/stats/performance-comparison');
+
+        console.log('Stats data:', statsResponse.data);
+        console.log('Revenue data:', revenueResponse.dat);
         
         setData({
           stats: statsResponse.data.data,
@@ -76,6 +79,7 @@ function AdminDashboard() {
         
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching dashboard data:', err);
         setError(err.response?.data?.message || 'Failed to load dashboard data');
         setLoading(false);
       }

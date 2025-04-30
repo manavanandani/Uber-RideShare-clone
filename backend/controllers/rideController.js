@@ -10,6 +10,8 @@ const {
 } = require('../services/messageService');
 const { v4: uuidv4 } = require('uuid');
 const { invalidateCache } = require('../config/redis');
+const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+
 
 exports.createRide = async (req, res) => {
   try {
@@ -309,9 +311,24 @@ exports.getNearbyDrivers = async (req, res) => {
       status: 'available'
     }).select('driver_id first_name last_name car_details intro_media.location rating');
 
+    // Convert location data format for frontend consumption
+    const formattedDrivers = drivers.map(driver => {
+      const driverObj = driver.toObject();
+      
+      // If location exists, convert from MongoDB format to simple lat/lng
+      if (driver.intro_media && driver.intro_media.location && driver.intro_media.location.coordinates) {
+        driverObj.intro_media.location = {
+          latitude: driver.intro_media.location.coordinates[1],
+          longitude: driver.intro_media.location.coordinates[0]
+        };
+      }
+      
+      return driverObj;
+    });
+
     res.status(200).json({
       message: 'Drivers within 10 miles',
-      data: drivers
+      data: formattedDrivers
     });
 
   } catch (err) {

@@ -46,19 +46,27 @@ export const getCurrentUser = createAsyncThunk(
         }
       };
       
+      console.log('Fetching user data...');
       const response = await axios.get(`${API_URL}/auth/me`, config);
+      console.log('User data:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Error fetching user data:', error);
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem('token');
+      }
       return rejectWithValue(error.response.data.message || 'Failed to get user');
     }
   }
 );
 
+
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    isAuthenticated: false,
+    isAuthenticated: localStorage.getItem('token') ? true : false,
     loading: false,
     error: null
   },

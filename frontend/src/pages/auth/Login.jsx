@@ -152,6 +152,11 @@ function Login() {
                   {"Don't have an account? Sign Up"}
                 </Link>
               </Grid>
+              <Grid item>
+                <Link to="/register-admin" variant="body2">
+                {"Create Admin Account"}
+                </Link>
+                </Grid>
             </Grid>
           </Box>
         </Box>

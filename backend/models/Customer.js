@@ -50,8 +50,15 @@ const CustomerSchema = new mongoose.Schema({
   }],
   ride_history: { type: [String], default: [] },
   last_location: {
-    latitude: { type: Number },
-    longitude: { type: Number }
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
+    }
   },
   created_at: { type: Date, default: Date.now }
 });

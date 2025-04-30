@@ -2,6 +2,8 @@
 const Customer = require('../models/Customer');
 const { publishCustomerEvent } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
+const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+
 
 // Get all customers
 exports.getAllCustomers = async (req, res) => {
@@ -335,8 +337,8 @@ exports.updateCustomerLocation = async (req, res) => {
       { 
         $set: { 
           last_location: {
-            latitude: parseFloat(latitude),
-            longitude: parseFloat(longitude)
+            type: 'Point',
+            coordinates: [parseFloat(longitude), parseFloat(latitude)]
           }
         }
       },
@@ -354,14 +356,17 @@ exports.updateCustomerLocation = async (req, res) => {
     await publishCustomerEvent(
       customer_id,
       'CUSTOMER_LOCATION_UPDATED',
-      { location: customer.last_location }
+      { location: { latitude: parseFloat(latitude), longitude: parseFloat(longitude) } }
     );
     
     res.status(200).json({
       message: 'Customer location updated successfully',
       data: {
         customer_id,
-        location: customer.last_location
+        location: {
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude)
+        }
       }
     });
   } catch (error) {

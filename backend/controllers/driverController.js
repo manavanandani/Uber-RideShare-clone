@@ -2,6 +2,8 @@
 const Driver = require('../models/Driver');
 const { publishDriverStatusChange } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
+const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+
 
 // Get all drivers
 exports.getAllDrivers = async (req, res) => {
@@ -278,17 +280,12 @@ exports.updateDriverStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status value' });
     }
     
-    if (status === 'available' && (!latitude || !longitude)) {
-      return res.status(400).json({ message: 'Location required when status is available' });
-    }
-    
-    // Prepare update object
     const updateObj = { status };
-    
+
     if (latitude && longitude) {
       updateObj['intro_media.location'] = {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude)
+        type: 'Point',
+        coordinates: [parseFloat(longitude), parseFloat(latitude)]
       };
     }
     
@@ -310,7 +307,7 @@ exports.updateDriverStatus = async (req, res) => {
     await publishDriverStatusChange(
       driver_id,
       status,
-      driver.intro_media?.location || null
+      latitude && longitude ? { latitude, longitude } : null
     );
     
     res.status(200).json({
@@ -318,7 +315,7 @@ exports.updateDriverStatus = async (req, res) => {
       data: {
         driver_id,
         status: driver.status,
-        location: driver.intro_media?.location
+        location: latitude && longitude ? { latitude, longitude } : null
       }
     });
   } catch (error) {

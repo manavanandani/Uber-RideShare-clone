@@ -6,6 +6,8 @@ const Ride = require('../models/Ride');
 const Billing = require('../models/Billing');
 const { invalidateCache } = require('../config/redis');
 const { publishDriverStatusChange, publishCustomerEvent } = require('../services/messageService');
+const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+
 
 // Get all admins
 exports.getAllAdmins = async (req, res) => {
@@ -44,7 +46,7 @@ exports.getAdminById = async (req, res) => {
   }
 };
 
-// Create a new admin
+// In backend/controllers/adminController.js - modify the createAdmin function
 exports.createAdmin = async (req, res) => {
   try {
     // Check if admin with the same ID, email, or phone exists

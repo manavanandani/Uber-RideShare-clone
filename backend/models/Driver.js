@@ -29,14 +29,21 @@ const DriverSchema = new mongoose.Schema({
     rating: {type: Number, min:1, max:5},
     comment: {type: String},
     date: {type: Date, required: true, default: Date.now}}],
-  intro_media: {
-    image_urls: {type: [String], default: []},
-    video_url: {type: String, default: ''},
+    intro_media: {
+      image_urls: {type: [String], default: []},
+      video_url: {type: String, default: ''},
     location: {
-      latitude: {type: Number},
-      longitude: {type: Number}
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
     }
-  },
+  }
+},
   ride_history: {type: [String], default: []},
   status: {type: String, enum: ['available', 'busy', 'offline'], default: 'offline'},
   created_at: {type: Date, default: Date.now},

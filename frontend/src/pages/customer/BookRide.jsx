@@ -131,34 +131,59 @@ function BookRide() {
       calculateFare();
     }
   }, [markers]);
+
+  // In frontend/src/pages/customer/BookRide.jsx - update handleMapClick
+
+const handleMapClick = (event) => {
+  console.log("Map clicked:", event);
+  // Extract lat and lng from the event
+  let lat, lng;
   
-  const handleMapClick = (event) => {
-    // Extract lat and lng from the event
-    const lat = event.latLng.lat();
-    const lng = event.latLng.lng();
-    
-    if (!markers.pickup) {
-      // Set pickup if not already set
-      setMarkers(prev => ({ 
-        ...prev, 
-        pickup: { lat, lng } 
-      }));
-      setRideData(prev => ({
-        ...prev,
-        pickup_location: { latitude: lat, longitude: lng }
-      }));
-    } else {
-      // If pickup is set, set or update dropoff
-      setMarkers(prev => ({ 
-        ...prev, 
-        dropoff: { lat, lng } 
-      }));
-      setRideData(prev => ({
-        ...prev,
-        dropoff_location: { latitude: lat, longitude: lng }
-      }));
-    }
-  };
+  // Handle different map click event structures
+  if (event.latLng && typeof event.latLng.lat === 'function') {
+    // Google Maps style event
+    lat = event.latLng.lat();
+    lng = event.latLng.lng();
+  } else if (event.latLng) {
+    // Our custom leaflet wrapper
+    lat = event.latLng.lat;
+    lng = event.latLng.lng;
+  } else if (event.latlng) {
+    // Direct Leaflet event
+    lat = event.latlng.lat;
+    lng = event.latlng.lng;
+  } else {
+    console.error("Unrecognized map click event format:", event);
+    return;
+  }
+  
+  console.log(`Extracted coordinates: ${lat}, ${lng}`);
+  
+  if (!markers.pickup) {
+    // Set pickup if not already set
+    setMarkers(prev => ({ 
+      ...prev, 
+      pickup: { lat, lng } 
+    }));
+    setRideData(prev => ({
+      ...prev,
+      pickup_location: { latitude: lat, longitude: lng }
+    }));
+  } else {
+    // If pickup is set, set or update dropoff
+    setMarkers(prev => ({ 
+      ...prev, 
+      dropoff: { lat, lng } 
+    }));
+    setRideData(prev => ({
+      ...prev,
+      dropoff_location: { latitude: lat, longitude: lng }
+    }));
+  }
+};
+
+  
+
   
   const handleDriverSelect = (driver) => {
     setSelectedDriver(driver);
