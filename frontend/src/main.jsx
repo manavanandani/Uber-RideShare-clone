@@ -46,3 +46,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </Provider>
   </StrictMode>,
 )
+
+if (import.meta.env.DEV) {
+  // Clear stored route in development
+  localStorage.removeItem('lastRoute');
+}

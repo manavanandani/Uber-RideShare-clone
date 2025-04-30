@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
+import axios from 'axios';
 import {
   Box,
   Grid,
@@ -52,6 +53,11 @@ function BookRide() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
+  // New state for address inputs
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [dropoffAddress, setDropoffAddress] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
+  
   // Get user's current location
   useEffect(() => {
     if (navigator.geolocation) {
@@ -72,6 +78,15 @@ function BookRide() {
               longitude: currentLocation.lng
             }
           }));
+          
+          // Reverse geocode the current location for better UX
+          reverseGeocode(currentLocation.lat, currentLocation.lng)
+            .then(address => {
+              if (address) {
+                setPickupAddress(address);
+              }
+            })
+            .catch(err => console.error('Error reverse geocoding:', err));
         },
         () => {
           setError('Error: Unable to get your current location');
@@ -132,58 +147,195 @@ function BookRide() {
     }
   }, [markers]);
 
-  // In frontend/src/pages/customer/BookRide.jsx - update handleMapClick
+  // Function to geocode an address using Nominatim
+  const geocodeAddress = async (address) => {
+    try {
+      const encodedAddress = encodeURIComponent(address);
+      // Add a delay to respect Nominatim's usage policy (no more than 1 request per second)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'UberSimulationApp/1.0' // Required by Nominatim's terms of use
+          }
+        }
+      );
+      
+      if (response.data && response.data.length > 0) {
+        const result = response.data[0];
+        return {
+          latitude: parseFloat(result.lat),
+          longitude: parseFloat(result.lon),
+          displayName: result.display_name
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      throw new Error('Failed to geocode address');
+    }
+  };
+  
+  // Function for reverse geocoding (coordinates to address)
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      // Add a delay to respect Nominatim's usage policy
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        {
+          headers: {
+            'User-Agent': 'UberSimulationApp/1.0'
+          }
+        }
+      );
+      
+      if (response.data && response.data.display_name) {
+        return response.data.display_name;
+      }
+      return null;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return null;
+    }
+  };
 
-const handleMapClick = (event) => {
-  console.log("Map clicked:", event);
-  // Extract lat and lng from the event
-  let lat, lng;
+  const handleMapClick = (event) => {
+    console.log("Map clicked:", event);
+    // Extract lat and lng from the event
+    let lat, lng;
+    
+    // Handle different map click event structures
+    if (event.latLng && typeof event.latLng.lat === 'function') {
+      // Google Maps style event
+      lat = event.latLng.lat();
+      lng = event.latLng.lng();
+    } else if (event.latLng) {
+      // Our custom leaflet wrapper
+      lat = event.latLng.lat;
+      lng = event.latLng.lng;
+    } else if (event.latlng) {
+      // Direct Leaflet event
+      lat = event.latlng.lat;
+      lng = event.latlng.lng;
+    } else {
+      console.error("Unrecognized map click event format:", event);
+      return;
+    }
+    
+    console.log(`Extracted coordinates: ${lat}, ${lng}`);
+    
+    // Determine whether to set pickup or dropoff
+    if (!markers.pickup) {
+      // Set pickup if not already set
+      setMarkers(prev => ({ 
+        ...prev, 
+        pickup: { lat, lng } 
+      }));
+      setRideData(prev => ({
+        ...prev,
+        pickup_location: { latitude: lat, longitude: lng }
+      }));
+      
+      // Also update the address field with reverse geocoding
+      reverseGeocode(lat, lng)
+        .then(address => {
+          if (address) {
+            setPickupAddress(address);
+          }
+        })
+        .catch(err => console.error('Error reverse geocoding pickup:', err));
+    } else {
+      // If pickup is set, set or update dropoff
+      setMarkers(prev => ({ 
+        ...prev, 
+        dropoff: { lat, lng } 
+      }));
+      setRideData(prev => ({
+        ...prev,
+        dropoff_location: { latitude: lat, longitude: lng }
+      }));
+      
+      // Also update the address field with reverse geocoding
+      reverseGeocode(lat, lng)
+        .then(address => {
+          if (address) {
+            setDropoffAddress(address);
+          }
+        })
+        .catch(err => console.error('Error reverse geocoding dropoff:', err));
+    }
+  };
   
-  // Handle different map click event structures
-  if (event.latLng && typeof event.latLng.lat === 'function') {
-    // Google Maps style event
-    lat = event.latLng.lat();
-    lng = event.latLng.lng();
-  } else if (event.latLng) {
-    // Our custom leaflet wrapper
-    lat = event.latLng.lat;
-    lng = event.latLng.lng;
-  } else if (event.latlng) {
-    // Direct Leaflet event
-    lat = event.latlng.lat;
-    lng = event.latlng.lng;
-  } else {
-    console.error("Unrecognized map click event format:", event);
-    return;
-  }
+  // New functions for handling address input
+  const handlePickupAddressChange = (e) => {
+    setPickupAddress(e.target.value);
+  };
   
-  console.log(`Extracted coordinates: ${lat}, ${lng}`);
+  const handleDropoffAddressChange = (e) => {
+    setDropoffAddress(e.target.value);
+  };
   
-  if (!markers.pickup) {
-    // Set pickup if not already set
-    setMarkers(prev => ({ 
-      ...prev, 
-      pickup: { lat, lng } 
-    }));
-    setRideData(prev => ({
-      ...prev,
-      pickup_location: { latitude: lat, longitude: lng }
-    }));
-  } else {
-    // If pickup is set, set or update dropoff
-    setMarkers(prev => ({ 
-      ...prev, 
-      dropoff: { lat, lng } 
-    }));
-    setRideData(prev => ({
-      ...prev,
-      dropoff_location: { latitude: lat, longitude: lng }
-    }));
-  }
-};
-
-  
-
+  const handleGeocode = async (type) => {
+    try {
+      setGeocoding(true);
+      setError(null);
+      
+      const address = type === 'pickup' ? pickupAddress : dropoffAddress;
+      if (!address.trim()) {
+        setError(`Please enter a ${type} address`);
+        setGeocoding(false);
+        return;
+      }
+      
+      const result = await geocodeAddress(address);
+      
+      if (!result) {
+        setError(`Could not find coordinates for the ${type} address`);
+        setGeocoding(false);
+        return;
+      }
+      
+      // Update state based on whether it's pickup or dropoff
+      if (type === 'pickup') {
+        setMarkers(prev => ({
+          ...prev,
+          pickup: { lat: result.latitude, lng: result.longitude }
+        }));
+        setRideData(prev => ({
+          ...prev,
+          pickup_location: { latitude: result.latitude, longitude: result.longitude }
+        }));
+        
+        // Update the display address if it's more detailed
+        if (result.displayName && result.displayName.length > pickupAddress.length) {
+          setPickupAddress(result.displayName);
+        }
+      } else {
+        setMarkers(prev => ({
+          ...prev,
+          dropoff: { lat: result.latitude, lng: result.longitude }
+        }));
+        setRideData(prev => ({
+          ...prev,
+          dropoff_location: { latitude: result.latitude, longitude: result.longitude }
+        }));
+        
+        // Update the display address if it's more detailed
+        if (result.displayName && result.displayName.length > dropoffAddress.length) {
+          setDropoffAddress(result.displayName);
+        }
+      }
+      
+      setGeocoding(false);
+    } catch (err) {
+      setError(`Failed to geocode address: ${err.message}`);
+      setGeocoding(false);
+    }
+  };
   
   const handleDriverSelect = (driver) => {
     setSelectedDriver(driver);
@@ -235,6 +387,7 @@ const handleMapClick = (event) => {
         ...prev,
         pickup_location: { latitude: null, longitude: null }
       }));
+      setPickupAddress('');
     } else {
       setMarkers(prev => ({
         ...prev,
@@ -244,6 +397,7 @@ const handleMapClick = (event) => {
         ...prev,
         dropoff_location: { latitude: null, longitude: null }
       }));
+      setDropoffAddress('');
     }
   };
   
@@ -259,10 +413,56 @@ const handleMapClick = (event) => {
                 Click on the map to set pickup and drop-off locations, or enter addresses below.
               </Typography>
             </Grid>
+            
+            {/* Pickup Address Input */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Pickup Location"
+                label="Pickup Address"
+                value={pickupAddress}
+                onChange={handlePickupAddressChange}
+                placeholder="Enter a pickup address"
+                InputProps={{
+                  endAdornment: (
+                    <Button 
+                      size="small" 
+                      onClick={() => handleGeocode('pickup')}
+                      disabled={geocoding || !pickupAddress}
+                    >
+                      {geocoding ? <CircularProgress size={20} /> : 'Search'}
+                    </Button>
+                  )
+                }}
+              />
+            </Grid>
+            
+            {/* Dropoff Address Input */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Dropoff Address"
+                value={dropoffAddress}
+                onChange={handleDropoffAddressChange}
+                placeholder="Enter a dropoff address"
+                InputProps={{
+                  endAdornment: (
+                    <Button 
+                      size="small" 
+                      onClick={() => handleGeocode('dropoff')}
+                      disabled={geocoding || !dropoffAddress}
+                    >
+                      {geocoding ? <CircularProgress size={20} /> : 'Search'}
+                    </Button>
+                  )
+                }}
+              />
+            </Grid>
+            
+            {/* Coordinates Display */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Pickup Coordinates"
                 value={markers.pickup ? `${markers.pickup.lat.toFixed(6)}, ${markers.pickup.lng.toFixed(6)}` : ''}
                 InputProps={{
                   readOnly: true,
@@ -277,7 +477,7 @@ const handleMapClick = (event) => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Drop-off Location"
+                label="Drop-off Coordinates"
                 value={markers.dropoff ? `${markers.dropoff.lat.toFixed(6)}, ${markers.dropoff.lng.toFixed(6)}` : ''}
                 InputProps={{
                   readOnly: true,
@@ -289,6 +489,7 @@ const handleMapClick = (event) => {
                 }}
               />
             </Grid>
+            
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -371,12 +572,12 @@ const handleMapClick = (event) => {
                 <CardContent>
                   <Typography variant="subtitle1">Pickup Location</Typography>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {`${rideData.pickup_location.latitude.toFixed(6)}, ${rideData.pickup_location.longitude.toFixed(6)}`}
+                    {pickupAddress || `${rideData.pickup_location.latitude.toFixed(6)}, ${rideData.pickup_location.longitude.toFixed(6)}`}
                   </Typography>
                   
                   <Typography variant="subtitle1" sx={{ mt: 2 }}>Drop-off Location</Typography>
                   <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {`${rideData.dropoff_location.latitude.toFixed(6)}, ${rideData.dropoff_location.longitude.toFixed(6)}`}
+                    {dropoffAddress || `${rideData.dropoff_location.latitude.toFixed(6)}, ${rideData.dropoff_location.longitude.toFixed(6)}`}
                   </Typography>
                   
                   <Typography variant="subtitle1" sx={{ mt: 2 }}>Date & Time</Typography>
