@@ -19,7 +19,8 @@ exports.createRide = async (req, res) => {
       pickup_location,
       dropoff_location,
       date_time,
-      passenger_count
+      passenger_count,
+      driver_id: requestedDriverId
     } = req.body;
 
     // Generate a ride_id in SSN format
@@ -27,19 +28,21 @@ exports.createRide = async (req, res) => {
     
     const customer_id = req.user.customer_id; // Extracted from JWT
 
-    // Find nearby drivers
-    const nearbyDrivers = await Driver.find({
-      'intro_media.location': {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [pickup_location.longitude, pickup_location.latitude]
-          },
-          $maxDistance: 10000 // 10km in meters
-        }
-      },
-      status: 'available'
-    }).limit(5);
+    let driver_id = requestedDriverId;
+    if (!driver_id) {
+      // Find nearby drivers
+      const nearbyDrivers = await Driver.find({
+        'intro_media.location': {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [pickup_location.longitude, pickup_location.latitude]
+            },
+            $maxDistance: 10000 // 10km in meters
+          }
+        },
+        status: 'available'
+      }).limit(5);
 
     if (nearbyDrivers.length === 0) {
       return res.status(404).json({ message: 'No drivers available nearby' });
@@ -47,7 +50,13 @@ exports.createRide = async (req, res) => {
 
     // For now, just pick the first driver
     const driver = nearbyDrivers[0];
-    const driver_id = driver.driver_id;
+    driver_id = driver.driver_id;
+  } else {
+    const driver = await Driver.findOne({ driver_id: requestedDriverId });
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+  }
 
     // Calculate fare using the dynamic pricing algorithm
     const priceData = await getDynamicPrice(
