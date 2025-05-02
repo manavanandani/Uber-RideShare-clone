@@ -89,25 +89,6 @@ function RideTracking() {
     }
   };
 
-  // Function to get step status
-  const getStepStatus = (rideStatus, step) => {
-    const statusOrder = {
-      'requested': 0,
-      'accepted': 1,
-      'in_progress': 2,
-      'completed': 3,
-      'cancelled': -1
-    };
-    
-    const currentStatusIndex = statusOrder[rideStatus];
-    const stepIndex = step;
-    
-    if (currentStatusIndex === -1) return 'error'; // Cancelled ride
-    if (stepIndex < currentStatusIndex) return 'completed';
-    if (stepIndex === currentStatusIndex) return 'active';
-    return 'pending';
-  };
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -132,13 +113,10 @@ function RideTracking() {
     );
   }
 
-  // Use real ride data
-  const currentRide = ride;
-
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Ride #{currentRide.ride_id}
+        Ride #{ride.ride_id}
       </Typography>
 
       <Grid container spacing={3}>
@@ -150,10 +128,10 @@ function RideTracking() {
             <Divider sx={{ mb: 2 }} />
             
             <Stepper activeStep={
-              currentRide.status === 'requested' ? 0 :
-              currentRide.status === 'accepted' ? 1 :
-              currentRide.status === 'in_progress' ? 2 :
-              currentRide.status === 'completed' ? 3 : 0
+              ride.status === 'requested' ? 0 :
+              ride.status === 'accepted' ? 1 :
+              ride.status === 'in_progress' ? 2 :
+              ride.status === 'completed' ? 3 : 0
             }>
               <Step key="requested">
                 <StepLabel>Requested</StepLabel>
@@ -181,25 +159,25 @@ function RideTracking() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup:</strong> {`${currentRide.pickup_location.latitude.toFixed(4)}, ${currentRide.pickup_location.longitude.toFixed(4)}`}
+                    <strong>Pickup:</strong> {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Dropoff:</strong> {`${currentRide.dropoff_location.latitude.toFixed(4)}, ${currentRide.dropoff_location.longitude.toFixed(4)}`}
+                    <strong>Dropoff:</strong> {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <TimeIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup Time:</strong> {new Date(currentRide.date_time).toLocaleString()}
+                    <strong>Pickup Time:</strong> {new Date(ride.date_time).toLocaleString()}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <PersonIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Passengers:</strong> {currentRide.passenger_count || 1}
+                    <strong>Passengers:</strong> {ride.passenger_count || 1}
                   </Typography>
                 </Box>
               </Grid>
@@ -208,12 +186,12 @@ function RideTracking() {
             <Box sx={{ mt: 2, height: 300 }}>
             <MapWithMarkers 
                 pickup={{
-                  lat: currentRide.pickup_location.latitude,
-                  lng: currentRide.pickup_location.longitude
+                  lat: ride.pickup_location.latitude,
+                  lng: ride.pickup_location.longitude
                 }}
                 dropoff={{
-                  lat: currentRide.dropoff_location.latitude,
-                  lng: currentRide.dropoff_location.longitude
+                  lat: ride.dropoff_location.latitude,
+                  lng: ride.dropoff_location.longitude
                 }}
                 showDirections={true}
                 height={300}
@@ -232,25 +210,25 @@ function RideTracking() {
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body1">Base Fare:</Typography>
-                <Typography variant="body1">${(currentRide.fare_amount * 0.4).toFixed(2)}</Typography>
+                <Typography variant="body1">${(ride.fare_amount * 0.4).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Distance ({currentRide.distance?.toFixed(1) || '0.0'} km):</Typography>
-                <Typography variant="body1">${(currentRide.distance * 1.5 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">Distance ({ride.distance?.toFixed(1) || '0.0'} km):</Typography>
+                <Typography variant="body1">${(ride.distance * 1.5 || 0).toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Time ({currentRide.duration?.toFixed(0) || '0'} min):</Typography>
-                <Typography variant="body1">${(currentRide.duration * 0.2 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">Time ({ride.duration?.toFixed(0) || '0'} min):</Typography>
+                <Typography variant="body1">${(ride.duration * 0.2 || 0).toFixed(2)}</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6">Total Fare:</Typography>
-                <Typography variant="h6">${currentRide.fare_amount.toFixed(2)}</Typography>
+                <Typography variant="h6">${ride.fare_amount.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" color="textSecondary">Payment Status:</Typography>
                 <Typography variant="body2" color="success.main">
-                  {currentRide.payment_status || 'Paid'}
+                  {ride.payment_status || 'Paid'}
                 </Typography>
               </Box>
             </CardContent>
@@ -275,21 +253,21 @@ function RideTracking() {
                   justifyContent: 'center',
                   mr: 2
                 }}>
-                  {currentRide.driver_info?.first_name?.[0] || 'D'}
+                  {ride.driver_info?.first_name?.[0] || 'D'}
                 </Box>
                 <Box>
                   <Typography variant="body1">
-                    {currentRide.driver_info?.first_name || 'Driver'} {currentRide.driver_info?.last_name || ''}
+                    {ride.driver_info?.first_name || 'Driver'} {ride.driver_info?.last_name || ''}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Rating 
-                      value={currentRide.driver_info?.rating || 4.5} 
+                      value={ride.driver_info?.rating || 4.5} 
                       precision={0.5} 
                       readOnly 
                       size="small"
                     />
                     <Typography variant="body2" sx={{ ml: 1 }}>
-                      {currentRide.driver_info?.rating?.toFixed(1) || '4.5'}
+                      {ride.driver_info?.rating?.toFixed(1) || '4.5'}
                     </Typography>
                   </Box>
                 </Box>
@@ -298,12 +276,12 @@ function RideTracking() {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <CarIcon sx={{ mr: 1 }} />
                 <Typography variant="body2">
-                  {currentRide.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
+                  {ride.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
                 </Typography>
               </Box>
               
               <Box sx={{ mt: 2 }}>
-                {currentRide.status === 'completed' && !currentRide.rating?.customer_to_driver && (
+                {ride.status === 'completed' && !ride.rating?.customer_to_driver && (
                   <Button 
                     variant="contained" 
                     fullWidth
@@ -313,7 +291,7 @@ function RideTracking() {
                   </Button>
                 )}
                 
-                {currentRide.status === 'requested' && (
+                {ride.status === 'requested' && (
                   <Typography color="warning.main">
                     Waiting for a driver to accept your ride...
                   </Typography>
@@ -330,7 +308,7 @@ function RideTracking() {
         <DialogContent>
           <Box sx={{ my: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography variant="body1" gutterBottom>
-              How was your ride with {currentRide.driver_info?.first_name || 'your driver'}?
+              How was your ride with {ride.driver_info?.first_name || 'your driver'}?
             </Typography>
             <Rating
               name="driver-rating"

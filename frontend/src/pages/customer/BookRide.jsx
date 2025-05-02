@@ -1,5 +1,5 @@
 // src/pages/customer/BookRide.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
@@ -44,7 +44,7 @@ function BookRide() {
       latitude: null,
       longitude: null
     },
-    date_time: new Date().toISOString().slice(0, 16), // Format for datetime-local input
+    date_time: new Date().toISOString().slice(0, 16),
     passenger_count: 1
   });
   const [nearbyDrivers, setNearbyDrivers] = useState([]);
@@ -204,7 +204,6 @@ function BookRide() {
   };
 
   const handleMapClick = (event) => {
-    console.log("Map clicked:", event);
     // Extract lat and lng from the event
     let lat, lng;
     
@@ -225,8 +224,6 @@ function BookRide() {
       console.error("Unrecognized map click event format:", event);
       return;
     }
-    
-    console.log(`Extracted coordinates: ${lat}, ${lng}`);
     
     // Determine whether to set pickup or dropoff
     if (!markers.pickup) {
@@ -505,8 +502,9 @@ function BookRide() {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>Passengers</InputLabel>
+                <InputLabel id="passengers-label">Passengers</InputLabel>
                 <Select
+                  labelId="passengers-label"
                   name="passenger_count"
                   value={rideData.passenger_count}
                   onChange={handleRideDataChange}

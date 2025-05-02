@@ -4,21 +4,21 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#276EF1', // Uber blue
+      light: '#5B91F5',
+      dark: '#1A4DB1',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#dc004e',
-      light: '#ff4081',
-      dark: '#9a0036',
+      main: '#111111', // Uber black
+      light: '#333333',
+      dark: '#000000',
       contrastText: '#ffffff',
     },
     success: {
-      main: '#4caf50',
-      light: '#81c784',
-      dark: '#388e3c',
+      main: '#05944F', // Uber green
+      light: '#3BAB6F',
+      dark: '#03703B',
       contrastText: '#ffffff',
     },
     background: {
@@ -39,10 +39,26 @@ const theme = createTheme({
       '"Segoe UI Emoji"',
       '"Segoe UI Symbol"',
     ].join(','),
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 700,
+    },
+    h3: {
+      fontWeight: 600,
+    },
     h4: {
       fontWeight: 600,
     },
+    h5: {
+      fontWeight: 600,
+    },
     h6: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
       fontWeight: 600,
     },
   },
@@ -50,8 +66,8 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none',
           borderRadius: 8,
+          padding: '8px 16px',
         },
       },
     },
@@ -59,7 +75,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
         },
       },
     },

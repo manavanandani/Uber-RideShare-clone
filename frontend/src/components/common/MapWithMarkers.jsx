@@ -34,8 +34,8 @@ function MapWithMarkers({
         mapInstanceRef.current.on('click', (e) => {
           onMapClick({
             latLng: {
-              lat: () => e.latlng.lat,
-              lng: () => e.latlng.lng
+              lat: e.latlng.lat,
+              lng: e.latlng.lng
             }
           });
         });

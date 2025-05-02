@@ -15,7 +15,7 @@ import {
   CardContent,
   Rating
 } from '@mui/material';
-import api from '../../services/api';
+import { customerService } from '../../services/customerService';
 
 function CustomerProfile() {
   const { user } = useSelector(state => state.auth);
@@ -48,25 +48,25 @@ function CustomerProfile() {
         setLoading(true);
         
         // Fetch customer profile
-        const response = await api.get(`/customers/${user.customer_id}`);
+        const response = await customerService.getProfile(user.customer_id);
         
-        setProfile(response.data.data);
+        setProfile(response.data);
         
         // Set form data from profile
         setFormData({
-          first_name: response.data.data.first_name || '',
-          last_name: response.data.data.last_name || '',
-          email: response.data.data.email || '',
-          phone: response.data.data.phone || '',
-          address: response.data.data.address || '',
-          city: response.data.data.city || '',
-          state: response.data.data.state || '',
-          zip_code: response.data.data.zip_code || '',
+          first_name: response.data.first_name || '',
+          last_name: response.data.last_name || '',
+          email: response.data.email || '',
+          phone: response.data.phone || '',
+          address: response.data.address || '',
+          city: response.data.city || '',
+          state: response.data.state || '',
+          zip_code: response.data.zip_code || '',
           credit_card: {
-            number: '************' + (response.data.data.credit_card?.number?.slice(-4) || ''),
-            expiry: response.data.data.credit_card?.expiry || '',
+            number: '************' + (response.data.credit_card?.number?.slice(-4) || ''),
+            expiry: response.data.credit_card?.expiry || '',
             cvv: '***',
-            name_on_card: response.data.data.credit_card?.name_on_card || ''
+            name_on_card: response.data.credit_card?.name_on_card || ''
           }
         });
         
@@ -79,55 +79,6 @@ function CustomerProfile() {
     
     if (user?.customer_id) {
       fetchProfile();
-    } else {
-      // For development/demonstration purposes
-      setProfile({
-        customer_id: '123-45-6789',
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john.doe@example.com',
-        phone: '555-123-4567',
-        address: '123 Main St',
-        city: 'San Francisco',
-        state: 'CA',
-        zip_code: '94105',
-        rating: 4.8,
-        reviews: [
-          {
-            driver_id: '987-65-4321',
-            rating: 5,
-            comment: 'Great passenger, very polite!',
-            date: new Date('2025-01-15')
-          },
-          {
-            driver_id: '456-78-9012',
-            rating: 4,
-            comment: 'Good passenger, was ready on time.',
-            date: new Date('2025-02-20')
-          }
-        ],
-        ride_history: ['111-22-3333', '444-55-6666'],
-        created_at: new Date('2024-01-01')
-      });
-      
-      setFormData({
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john.doe@example.com',
-        phone: '555-123-4567',
-        address: '123 Main St',
-        city: 'San Francisco',
-        state: 'CA',
-        zip_code: '94105',
-        credit_card: {
-          number: '************1234',
-          expiry: '12/26',
-          cvv: '***',
-          name_on_card: 'John Doe'
-        }
-      });
-      
-      setLoading(false);
     }
   }, [user]);
 
@@ -172,12 +123,8 @@ function CustomerProfile() {
         delete submitData.credit_card.cvv;
       }
       
-      // For demonstration purpose only
-      // In a real app, you'd submit to the API
-      // await api.put(`/customers/${user.customer_id}`, submitData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update profile
+      await customerService.updateProfile(user.customer_id, submitData);
       
       setSuccess('Profile updated successfully');
       setSaving(false);
@@ -392,7 +339,7 @@ function CustomerProfile() {
                   Customer ID
                 </Typography>
                 <Typography variant="body1">
-                  {profile?.customer_id || '123-45-6789'}
+                  {profile?.customer_id}
                 </Typography>
               </Box>
               
@@ -401,7 +348,7 @@ function CustomerProfile() {
                   Member Since
                 </Typography>
                 <Typography variant="body1">
-                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'January 1, 2025'}
+                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
                 </Typography>
               </Box>
               
@@ -440,7 +387,7 @@ function CustomerProfile() {
               <Divider sx={{ mb: 2 }} />
               
               {profile?.reviews?.length > 0 ? (
-                profile.reviews.map((review, index) => (
+                profile.reviews.slice(0, 5).map((review, index) => (
                   <Box key={index} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Rating value={review.rating} readOnly size="small" />
@@ -454,7 +401,7 @@ function CustomerProfile() {
                     <Typography variant="caption" color="textSecondary">
                       - Driver #{review.driver_id}
                     </Typography>
-                    {index < profile.reviews.length - 1 && <Divider sx={{ my: 1 }} />}
+                    {index < Math.min(profile.reviews.length - 1, 4) && <Divider sx={{ my: 1 }} />}
                   </Box>
                 ))
               ) : (

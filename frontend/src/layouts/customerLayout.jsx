@@ -1,9 +1,9 @@
 // src/layouts/CustomerLayout.jsx
-import { Outlet } from 'react-router-dom';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   AppBar,
   Box,
@@ -17,6 +17,9 @@ import {
   Typography,
   Divider,
   Avatar,
+  Container,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -25,12 +28,14 @@ import {
   Person as PersonIcon,
   ExitToApp as LogoutIcon,
   History as HistoryIcon,
+  NotificationsOutlined as NotificationIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
 function CustomerLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorElUser, setAnchorElUser] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -44,6 +49,14 @@ function CustomerLayout() {
     navigate('/login');
   };
 
+  const handleOpenUserMenu = (event) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
   const handleNavigation = (path) => {
     navigate(path);
     setMobileOpen(false);
@@ -53,7 +66,7 @@ function CustomerLayout() {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          Uber Simulation
+          Ride Sharing
         </Typography>
       </Toolbar>
       <Divider />
@@ -121,9 +134,53 @@ function CustomerLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Customer Dashboard
           </Typography>
+          <IconButton color="inherit">
+            <NotificationIcon />
+          </IconButton>
+          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 1 }}>
+            <Avatar alt={user?.first_name || 'User'}>
+              {user?.first_name?.[0] || 'U'}
+            </Avatar>
+          </IconButton>
+          <Menu
+            sx={{ mt: '45px' }}
+            id="menu-appbar"
+            anchorEl={anchorElUser}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            keepMounted
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            open={Boolean(anchorElUser)}
+            onClose={handleCloseUserMenu}
+          >
+            <MenuItem onClick={() => {
+              handleCloseUserMenu();
+              navigate('/customer/profile');
+            }}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography textAlign="center">Profile</Typography>
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={() => {
+              handleCloseUserMenu();
+              handleLogout();
+            }}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography textAlign="center">Logout</Typography>
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
       <Box
@@ -134,6 +191,9 @@ function CustomerLayout() {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile
+          }}
           sx={{
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
@@ -157,7 +217,9 @@ function CustomerLayout() {
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
         <Toolbar />
-        <Outlet />
+        <Container maxWidth="lg">
+          <Outlet />
+        </Container>
       </Box>
     </Box>
   );

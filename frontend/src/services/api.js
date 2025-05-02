@@ -1,4 +1,4 @@
-// src/services/api.js - Update to handle token refreshing
+// src/services/api.js
 import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -29,7 +29,6 @@ api.interceptors.response.use(
   (error) => {
     // Handle token expiration
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

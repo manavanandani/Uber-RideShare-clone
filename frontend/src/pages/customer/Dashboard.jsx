@@ -1,7 +1,7 @@
 // src/pages/customer/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { customerService } from '../../services/customerService';
+import { Link } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -23,7 +23,7 @@ import {
   Check as CheckIcon,
   History as HistoryIcon
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { customerService } from '../../services/customerService';
 
 function CustomerDashboard() {
   const { user } = useSelector(state => state.auth);

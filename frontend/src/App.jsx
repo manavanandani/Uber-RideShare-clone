@@ -1,57 +1,45 @@
-// src/App.jsx
+// src/App.jsx (updated with customer routes)
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { getCurrentUser } from './store/slices/authSlice';
-import RegisterAdmin from './pages/auth/RegisterAdmin';
 
-
-// Import theme
+// Theme
 import theme from './theme';
 
+// Layout Components
+import Navbar from './components/layout/Navbar';
+import CustomerLayout from './layouts/CustomerLayout';
+
 // Auth Pages
+import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import DriverApplication from './pages/auth/DriverApplication';
+import RegisterAdmin from './pages/auth/RegisterAdmin';
+import NotFound from './pages/NotFound';
 
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import BookRide from './pages/customer/BookRide';
 import RideTracking from './pages/customer/RideTracking';
-import CustomerProfile from './pages/customer/CustomerProfile';
 import RideHistory from './pages/customer/RideHistory';
-
-// Driver Pages
-import DriverDashboard from './pages/driver/Dashboard';
-import AvailableRides from './pages/driver/AvailableRides';
-import DriverProfile from './pages/driver/DriverProfile';
-import DriverRideHistory from './pages/driver/RideHistory';
-
-// Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import UserManagement from './pages/admin/UserManagment';
-import SystemAnalytics from './pages/admin/SystemAnalytics';
-import BillingManagement from './pages/admin/BillingManagment';
-
-// Layouts
-import CustomerLayout from './layouts/CustomerLayout';
-import DriverLayout from './layouts/DriverLayout';
-import AdminLayout from './layouts/AdminLayout';
+import CustomerProfile from './pages/customer/CustomerProfile';
 
 function App() {
-  const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
   
-  // Check if user is authenticated on app load
   useEffect(() => {
+    // Check if token exists in localStorage
     const token = localStorage.getItem('token');
-    if (token && !user && !loading) {
-      console.log('Token found, fetching user data...');
+    if (token) {
       dispatch(getCurrentUser());
     }
-  }, [dispatch, user, loading]);
-  
+  }, [dispatch]);
+
   // Protected route component
   const ProtectedRoute = ({ children, roles }) => {
     if (loading) {
@@ -63,7 +51,16 @@ function App() {
     }
     
     if (roles && !roles.includes(user?.role)) {
-      return <Navigate to="/" />;
+      // Redirect to appropriate dashboard based on role
+      if (user?.role === 'customer') {
+        return <Navigate to="/customer" />;
+      } else if (user?.role === 'driver') {
+        return <Navigate to="/driver" />;
+      } else if (user?.role === 'admin') {
+        return <Navigate to="/admin" />;
+      } else {
+        return <Navigate to="/" />;
+      }
     }
     
     return children;
@@ -75,8 +72,10 @@ function App() {
       <Router>
         <Routes>
           {/* Public routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/driver-application" element={<DriverApplication />} />
           <Route path="/register-admin" element={<RegisterAdmin />} />
           
           {/* Customer routes */}
@@ -91,50 +90,12 @@ function App() {
             <Route index element={<CustomerDashboard />} />
             <Route path="book" element={<BookRide />} />
             <Route path="ride/:rideId" element={<RideTracking />} />
-            <Route path="profile" element={<CustomerProfile />} />
             <Route path="history" element={<RideHistory />} />
+            <Route path="profile" element={<CustomerProfile />} />
           </Route>
           
-          {/* Driver routes */}
-          <Route
-            path="/driver"
-            element={
-              <ProtectedRoute roles={['driver']}>
-                <DriverLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DriverDashboard />} />
-            <Route path="rides" element={<AvailableRides />} />
-            <Route path="ride/:rideId" element={<RideTracking />} />
-            <Route path="profile" element={<DriverProfile />} />
-            <Route path="history" element={<DriverRideHistory />} />
-          </Route>
-          
-          {/* Admin routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute roles={['admin']}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="analytics" element={<SystemAnalytics />} />
-            <Route path="billing" element={<BillingManagement />} />
-          </Route>
-          
-          {/* Default redirect based on role */}
-          <Route path="/" element={
-            isAuthenticated ? (
-              user?.role === 'customer' ? <Navigate to="/customer" /> :
-              user?.role === 'driver' ? <Navigate to="/driver" /> :
-              user?.role === 'admin' ? <Navigate to="/admin" /> :
-              <Navigate to="/login" />
-            ) : <Navigate to="/login" />
-          } />
+          {/* Fallback route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </ThemeProvider>

@@ -1,4 +1,4 @@
-// Create a new file: frontend/src/pages/auth/RegisterAdmin.jsx
+// src/pages/auth/RegisterAdmin.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -12,13 +12,17 @@ import {
   Container,
   Paper,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 function RegisterAdmin() {
   const [formData, setFormData] = useState({
-    admin_id: '',
+    admin_id: generateRandomSsn(),
     first_name: '',
     last_name: '',
     email: '',
@@ -35,21 +39,12 @@ function RegisterAdmin() {
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
 
-  // Generate a random SSN-format ID
-  const generateRandomId = () => {
+  function generateRandomSsn() {
     const part1 = Math.floor(Math.random() * 900 + 100).toString();
     const part2 = Math.floor(Math.random() * 90 + 10).toString();
     const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
     return `${part1}-${part2}-${part3}`;
-  };
-
-  // Set a random ID when component mounts
-  useState(() => {
-    setFormData(prev => ({
-      ...prev,
-      admin_id: generateRandomId()
-    }));
-  }, []);
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,10 +60,10 @@ function RegisterAdmin() {
     setError(null);
     
     try {
-      const response = await api.post('/admin', formData);
+      await api.post('/admin', formData);
       setSuccess('Admin account created successfully!');
       setTimeout(() => {
-        navigate('/login');
+        navigate('/login?role=admin');
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create admin account');
@@ -89,8 +84,8 @@ function RegisterAdmin() {
         >
           <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
             <AdminPanelSettingsIcon />
-          </Avatar>
-          <Typography component="h1" variant="h5">
+            </Avatar>
+            <Typography component="h1" variant="h5">
             Register Admin Account
           </Typography>
           
@@ -204,16 +199,25 @@ function RegisterAdmin() {
                 />
               </Grid>
               <Grid item xs={12} sm={3}>
-                <TextField
-                  required
-                  fullWidth
-                  id="state"
-                  label="State"
-                  name="state"
-                  autoComplete="address-level1"
-                  value={formData.state}
-                  onChange={handleChange}
-                />
+                <FormControl fullWidth>
+                  <InputLabel id="state-label">State</InputLabel>
+                  <Select
+                    labelId="state-label"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    label="State"
+                    onChange={handleChange}
+                  >
+                    {['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+                      'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+                      'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+                      'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+                      'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'].map(state => (
+                      <MenuItem key={state} value={state}>{state}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={3}>
                 <TextField
@@ -239,7 +243,7 @@ function RegisterAdmin() {
             </Button>
             <Grid container justifyContent="flex-end">
               <Grid item>
-                <Link to="/login" variant="body2">
+                <Link to="/login?role=admin" style={{ textDecoration: 'none', color: 'primary.main' }}>
                   Already have an account? Sign in
                 </Link>
               </Grid>

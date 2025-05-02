@@ -1,7 +1,7 @@
 // src/pages/auth/Login.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { login, clearError } from '../../store/slices/authSlice';
 import {
   Avatar,
@@ -24,24 +24,35 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
 function Login() {
+  const [searchParams] = useSearchParams();
+  const roleParam = searchParams.get('role');
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'customer'
+    role: roleParam || 'customer'
   });
+  
   const { loading, error, isAuthenticated, user } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    const redirectPath = 
-      user?.role === 'customer' ? '/customer' :
-      user?.role === 'driver' ? '/driver' :
-      user?.role === 'admin' ? '/admin' : '/';
-    
-    navigate(redirectPath);
-  }
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      redirectToDashboard();
+    }
+  }, [isAuthenticated, user]);
+
+  const redirectToDashboard = () => {
+    if (user.role === 'customer') {
+      navigate('/customer');
+    } else if (user.role === 'driver') {
+      navigate('/driver');
+    } else if (user.role === 'admin') {
+      navigate('/admin');
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,7 +95,7 @@ function Login() {
             </Alert>
           )}
           
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -143,12 +154,12 @@ function Login() {
             
             <Grid container>
               <Grid item xs>
-                <Link to="#" variant="body2">
+                <Link to="#" style={{ textDecoration: 'none', color: 'primary.main' }}>
                   Forgot password?
                 </Link>
               </Grid>
               <Grid item>
-                <Link to="/register" variant="body2">
+                <Link to="/register" style={{ textDecoration: 'none', color: 'primary.main' }}>
                   {"Don't have an account? Sign Up"}
                 </Link>
               </Grid>

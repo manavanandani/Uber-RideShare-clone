@@ -1,4 +1,4 @@
-// src/pages/auth/Register.jsx
+// src/pages/auth/DriverApplication.jsx
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
@@ -22,9 +22,9 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 
-function Register() {
+function DriverApplication() {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
@@ -40,15 +40,9 @@ function Register() {
     state: '',
     zip_code: '',
     
-    // Step 3: Role-specific info
-    customer_id: generateRandomSsn(), // Generate SSN format ID
-    // For customer
-    credit_card: {
-      number: '',
-      expiry: '',
-      cvv: '',
-      name_on_card: ''
-    }
+    // Step 3: Vehicle Info
+    driver_id: generateRandomSsn(), // Generate SSN format ID
+    car_details: '',
   });
   
   const { loading, error } = useSelector(state => state.auth);
@@ -64,23 +58,10 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      // Handle nested objects (e.g., credit_card.number)
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     
     // Clear error when user starts typing
     if (error) {
@@ -100,19 +81,19 @@ function Register() {
     e.preventDefault();
     
     // Add role
-    const userData = { ...formData, role: 'customer' };
+    const userData = { ...formData, role: 'driver' };
     
     dispatch(register(userData))
       .unwrap()
       .then(() => {
-        navigate('/login?role=customer');
+        navigate('/login?role=driver');
       })
       .catch(() => {
         // Error is handled by the reducer
       });
   };
 
-  const steps = ['Personal Information', 'Address', 'Payment Details'];
+  const steps = ['Personal Information', 'Address', 'Vehicle Information'];
 
   const renderStepContent = (step) => {
     switch (step) {
@@ -256,69 +237,40 @@ function Register() {
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Customer ID (Automatically Generated)
+                  Driver ID (Automatically Generated)
                 </Typography>
                 <TextField
                   disabled
                   fullWidth
-                  id="customer_id"
-                  name="customer_id"
-                  value={formData.customer_id}
+                  id="driver_id"
+                  name="driver_id"
+                  value={formData.driver_id}
                 />
               </Grid>
               
               <Grid item xs={12}>
                 <Typography variant="h6" gutterBottom>
-                  Payment Information
+                  Vehicle Information
                 </Typography>
+                <TextField
+                  required
+                  fullWidth
+                  id="car_details"
+                  label="Vehicle Details"
+                  name="car_details"
+                  multiline
+                  rows={4}
+                  placeholder="Year, Make, Model, Color, License Plate Number"
+                  value={formData.car_details}
+                  onChange={handleChange}
+                  helperText="Please provide complete details about your vehicle"
+                />
               </Grid>
+              
               <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  id="credit_card.number"
-                  label="Credit Card Number"
-                  name="credit_card.number"
-                  value={formData.credit_card.number}
-                  onChange={handleChange}
-                  helperText="13-19 digits with no spaces"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  id="credit_card.expiry"
-                  label="Expiry Date"
-                  name="credit_card.expiry"
-                  value={formData.credit_card.expiry}
-                  onChange={handleChange}
-                  placeholder="MM/YY"
-                  helperText="Format: MM/YY"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  id="credit_card.cvv"
-                  label="CVV"
-                  name="credit_card.cvv"
-                  value={formData.credit_card.cvv}
-                  onChange={handleChange}
-                  helperText="3-4 digits"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
-                  id="credit_card.name_on_card"
-                  label="Name on Card"
-                  name="credit_card.name_on_card"
-                  value={formData.credit_card.name_on_card}
-                  onChange={handleChange}
-                />
+                <Alert severity="info">
+                  Your application will need to be approved by an administrator before you can start accepting rides.
+                </Alert>
               </Grid>
             </Grid>
           </Box>
@@ -338,11 +290,11 @@ function Register() {
             alignItems: 'center',
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-            <PersonAddIcon />
+          <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+            <DirectionsCarIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Customer Registration
+            Driver Application
           </Typography>
           
           {error && (
@@ -377,7 +329,7 @@ function Register() {
                       onClick={handleSubmit}
                       disabled={loading}
                     >
-                      {loading ? <CircularProgress size={24} /> : 'Register'}
+                      {loading ? <CircularProgress size={24} /> : 'Submit Application'}
                     </Button>
                   ) : (
                     <Button
@@ -394,8 +346,8 @@ function Register() {
           
           <Grid container justifyContent="flex-end" sx={{ mt: 3 }}>
             <Grid item>
-              <Link to="/login" style={{ textDecoration: 'none', color: 'primary.main' }}>
-                Already have an account? Sign in
+              <Link to="/login?role=driver" style={{ textDecoration: 'none', color: 'primary.main' }}>
+                Already have a driver account? Sign in
               </Link>
             </Grid>
           </Grid>
@@ -405,4 +357,4 @@ function Register() {
   );
 }
 
-export default Register;
+export default DriverApplication;

@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Async thunks
 export const login = createAsyncThunk(
@@ -15,7 +15,7 @@ export const login = createAsyncThunk(
       localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message || 'Login failed');
+      return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
 );
@@ -28,7 +28,7 @@ export const register = createAsyncThunk(
       const response = await axios.post(endpoint, userData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message || 'Registration failed');
+      return rejectWithValue(error.response?.data?.message || 'Registration failed');
     }
   }
 );
@@ -46,21 +46,16 @@ export const getCurrentUser = createAsyncThunk(
         }
       };
       
-      console.log('Fetching user data...');
       const response = await axios.get(`${API_URL}/auth/me`, config);
-      console.log('User data:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching user data:', error);
-      if (error.response && error.response.status === 401) {
+      if (error.response?.status === 401) {
         localStorage.removeItem('token');
       }
-      return rejectWithValue(error.response.data.message || 'Failed to get user');
+      return rejectWithValue(error.response?.data?.message || 'Failed to get user');
     }
   }
 );
-
-
 
 const authSlice = createSlice({
   name: 'auth',
