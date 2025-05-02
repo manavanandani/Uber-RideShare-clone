@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driverController');
+const bulkRequestHandler = require('../middleware/bulkRequestMiddleware');
 const verifyRole = require('../middleware/verifyRole');
 const upload = require('../config/gridFsStorage');
 const { cacheMiddleware } = require('../config/redis');
@@ -12,7 +13,7 @@ router.get('/search', verifyRole(['admin', 'customer']), driverController.search
 // Driver or admin routes
 router.get('/', verifyRole(['admin', 'driver']), cacheMiddleware(300), driverController.getAllDrivers);
 router.get('/:driver_id', verifyRole(['admin', 'driver']), cacheMiddleware(60), driverController.getDriverById);
-router.post('/', verifyRole(['admin']), driverController.createDriver);
+router.post('/', verifyRole(['admin']), bulkRequestHandler(driverController.createDriver));
 router.put('/:driver_id', verifyRole(['admin', 'driver']), driverController.updateDriver);
 router.delete('/:driver_id', verifyRole(['admin']), driverController.deleteDriver);
 

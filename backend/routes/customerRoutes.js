@@ -2,13 +2,14 @@
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customerController');
+const bulkRequestHandler = require('../middleware/bulkRequestMiddleware');
 const verifyRole = require('../middleware/verifyRole');
 const upload = require('../config/gridFsStorage');
 const { cacheMiddleware } = require('../config/redis');
 
 // Admin routes
 router.get('/', verifyRole(['admin']), cacheMiddleware(300), customerController.getAllCustomers);
-router.post('/', verifyRole(['admin']), customerController.createCustomer);
+router.post('/', verifyRole(['admin']), bulkRequestHandler(customerController.createCustomer));
 router.delete('/:customer_id', verifyRole(['admin']), customerController.deleteCustomer);
 
 // Customer or admin routes
