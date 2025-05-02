@@ -1,0 +1,483 @@
+// src/pages/driver/DriverProfile.jsx
+import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Grid,
+  Divider,
+  Alert,
+  CircularProgress,
+  Card,
+  CardContent,
+  CardMedia,
+  Rating,
+  IconButton,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  PhotoCamera as CameraIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Star as StarIcon
+} from '@mui/icons-material';
+import { driverService } from '../../services/driverService';
+
+function DriverProfile() {
+  const { user } = useSelector(state => state.auth);
+  const [profile, setProfile] = useState(null);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    car_details: ''
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch driver profile
+        const response = await driverService.getProfile(user.driver_id);
+        
+        setProfile(response.data);
+        
+        // Set form data from profile
+        setFormData({
+          first_name: response.data.first_name || '',
+          last_name: response.data.last_name || '',
+          email: response.data.email || '',
+          phone: response.data.phone || '',
+          address: response.data.address || '',
+          city: response.data.city || '',
+          state: response.data.state || '',
+          zip_code: response.data.zip_code || '',
+          car_details: response.data.car_details || ''
+        });
+        
+        setLoading(false);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load profile');
+        setLoading(false);
+      }
+    };
+    
+    if (user?.driver_id) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setSaving(true);
+      
+      // Update profile
+      await driverService.updateProfile(user.driver_id, formData);
+      
+      setSuccess('Profile updated successfully');
+      setSaving(false);
+      setIsEditing(false);
+      
+      // Update local profile state
+      setProfile(prev => ({
+        ...prev,
+        ...formData
+      }));
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update profile');
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form data to current profile data
+    if (profile) {
+      setFormData({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zip_code: profile.zip_code || '',
+        car_details: profile.car_details || ''
+      });
+    }
+    setIsEditing(false);
+  };
+  
+  const handleMediaUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setUploadingMedia(true);
+      
+      const formData = new FormData();
+      formData.append('media', file);
+      
+      await driverService.uploadMedia(user.driver_id, formData);
+      
+      // Refresh profile to get updated media
+      const response = await driverService.getProfile(user.driver_id);
+      setProfile(response.data);
+      
+      setUploadingMedia(false);
+      setSuccess('Media uploaded successfully');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload media');
+      setUploadingMedia(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Driver Profile
+      </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
+        </Alert>
+      )}
+      
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          {/* Profile Summary Card */}
+          <Card sx={{ mb: 3 }}>
+            <Box sx={{ position: 'relative' }}>
+              <CardMedia
+                sx={{ height: 140 }}
+                image={profile?.intro_media?.image_urls?.[0] || "https://via.placeholder.com/400x200?text=Driver+Profile"}
+                title="Driver Profile"
+              />
+              <Box sx={{ position: 'absolute', bottom: -40, left: 24 }}>
+                <Avatar 
+                  sx={{ width: 80, height: 80, border: '4px solid white' }}
+                  alt={profile?.first_name || 'User'}
+                >
+                  {profile?.first_name?.[0] || 'D'}
+                </Avatar>
+              </Box>
+              <Box sx={{ position: 'absolute', bottom: 8, right: 8 }}>
+                <input
+                  accept="image/*"
+                  id="upload-profile-photo"
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={handleMediaUpload}
+                />
+                <label htmlFor="upload-profile-photo">
+                  <IconButton 
+                    color="primary" 
+                    aria-label="upload picture" 
+                    component="span"
+                    disabled={uploadingMedia}
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    {uploadingMedia ? <CircularProgress size={24} /> : <CameraIcon />}
+                  </IconButton>
+                </label>
+              </Box>
+            </Box>
+            <CardContent sx={{ pt: 6 }}>
+              <Typography variant="h5" gutterBottom>
+                {profile?.first_name} {profile?.last_name}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Rating 
+                  value={profile?.rating || 0} 
+                  precision={0.5} 
+                  readOnly 
+                  size="small"
+                />
+                <Typography variant="body2" sx={{ ml: 1 }}>
+                  {profile?.rating?.toFixed(1) || '0.0'} ({profile?.reviews?.length || 0} reviews)
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="textSecondary">
+                Vehicle: {profile?.car_details || 'Not specified'}
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" gutterBottom>
+                Account Information
+              </Typography>
+              <Typography variant="body2" color="textSecondary" paragraph>
+                Driver ID: {profile?.driver_id}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" paragraph>
+                Member Since: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" paragraph>
+                Status: {profile?.status?.charAt(0).toUpperCase() + profile?.status?.slice(1) || 'Offline'}
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          {/* Reviews Card */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Reviews
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+              {profile?.reviews && profile.reviews.length > 0 ? (
+                <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+                  {profile.reviews.slice(0, 5).map((review, index) => (
+                    <ListItem key={index} divider={index < Math.min(4, profile.reviews.length - 1)}>
+                      <ListItemAvatar>
+                        <Avatar>
+                          {review.customer_id[0] || 'C'}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="subtitle2">
+                              Customer #{review.customer_id}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <StarIcon sx={{ color: 'warning.main', fontSize: 18, mr: 0.5 }} />
+                              <Typography variant="body2">{review.rating}</Typography>
+                            </Box>
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography variant="body2">
+                              "{review.comment}"
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {new Date(review.date).toLocaleDateString()}
+                            </Typography>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  No reviews yet.
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Personal Information</Typography>
+              {!isEditing ? (
+                <Button
+                  startIcon={<EditIcon />}
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </Button>
+              ) : (
+                <Box>
+                  <Button
+                    startIcon={<CancelIcon />}
+                    onClick={handleCancelEdit}
+                    sx={{ mr: 1 }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    startIcon={<SaveIcon />}
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={saving}
+                  >
+                    {saving ? <CircularProgress size={24} /> : 'Save'}
+                  </Button>
+                </Box>
+              )}
+            </Box>
+            <Divider sx={{ mb: 3 }} />
+            
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Phone Number"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="City"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="State"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="ZIP Code"
+                    name="zip_code"
+                    value={formData.zip_code}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mt: 2 }}>
+                    Vehicle Information
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Car Details"
+                    name="car_details"
+                    value={formData.car_details}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    required
+                    multiline
+                    rows={3}
+                    placeholder="Year, Make, Model, Color, License Plate"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+export default DriverProfile;

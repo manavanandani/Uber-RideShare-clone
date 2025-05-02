@@ -1,4 +1,4 @@
-// src/App.jsx (updated with customer routes)
+// src/App.jsx (updated with driver routes)
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,6 +12,7 @@ import theme from './theme';
 // Layout Components
 import Navbar from './components/layout/Navbar';
 import CustomerLayout from './layouts/CustomerLayout';
+import DriverLayout from './layouts/DriverLayout';
 
 // Auth Pages
 import Landing from './pages/Landing';
@@ -27,6 +28,15 @@ import BookRide from './pages/customer/BookRide';
 import RideTracking from './pages/customer/RideTracking';
 import RideHistory from './pages/customer/RideHistory';
 import CustomerProfile from './pages/customer/CustomerProfile';
+
+// Driver Pages
+import DriverDashboard from './pages/driver/Dashboard';
+import AvailableRides from './pages/driver/AvailableRides';
+import ActiveRide from './pages/driver/ActiveRide';
+import DriverRideHistory from './pages/driver/RideHistory';
+import RideDetail from './pages/driver/RideDetail';
+import Earnings from './pages/driver/Earnings';
+import DriverProfile from './pages/driver/DriverProfile';
 
 function App() {
   const dispatch = useDispatch();
@@ -92,6 +102,24 @@ function App() {
             <Route path="ride/:rideId" element={<RideTracking />} />
             <Route path="history" element={<RideHistory />} />
             <Route path="profile" element={<CustomerProfile />} />
+          </Route>
+          
+          {/* Driver routes */}
+          <Route 
+            path="/driver" 
+            element={
+              <ProtectedRoute roles={['driver']}>
+                <DriverLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DriverDashboard />} />
+            <Route path="rides/available" element={<AvailableRides />} />
+            <Route path="rides/active" element={<ActiveRide />} />
+            <Route path="history" element={<DriverRideHistory />} />
+            <Route path="history/:rideId" element={<RideDetail />} />
+            <Route path="earnings" element={<Earnings />} />
+            <Route path="profile" element={<DriverProfile />} />
           </Route>
           
           {/* Fallback route */}
