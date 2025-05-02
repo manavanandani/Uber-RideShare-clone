@@ -1,4 +1,3 @@
-// auth_test_v2.js
 const axios = require('axios');
 
 // Configuration
