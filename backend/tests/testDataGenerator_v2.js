@@ -1,9 +1,14 @@
-// testDataPerformance.js
+// testDataPerformanceComplete.js
 const axios = require('axios');
+const fs = require('fs');
 
 // Configuration
 const API_URL = 'http://localhost:5000/api';
 let ADMIN_TOKEN = '';
+let TEST_CUSTOMER_TOKEN = '';
+let TEST_DRIVER_TOKEN = '';
+let TEST_CUSTOMER_ID = '';
+let TEST_DRIVER_ID = '';
 
 // Helper functions
 const generateSSN = () => {
@@ -72,6 +77,93 @@ const createAdmin = async () => {
   }
 };
 
+// Create test accounts that will be used for JMeter and for creating the initial rides
+const createTestAccounts = async () => {
+  try {
+    // Create a test customer
+    const customerId = generateSSN();
+    TEST_CUSTOMER_ID = customerId;
+    const customerEmail = 'test_customer@test.com';
+    
+    const customerData = {
+      customer_id: customerId,
+      first_name: 'Test',
+      last_name: 'Customer',
+      email: customerEmail,
+      password: 'password123',
+      phone: '555-1234567',
+      address: '123 Test St',
+      city: 'San Francisco',
+      state: 'CA',
+      zip_code: '94105',
+      credit_card: {
+        number: '4111111111111111',
+        expiry: '12/25',
+        cvv: '123',
+        name_on_card: 'Test Customer'
+      }
+    };
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ADMIN_TOKEN}`
+    };
+    
+    // Post customer
+    await axios.post(`${API_URL}/customers`, customerData, { headers });
+    console.log('Created test customer:', customerEmail);
+    
+    // Login as customer
+    const customerLoginResponse = await axios.post(`${API_URL}/auth/customer/login`, {
+      email: customerEmail,
+      password: 'password123',
+      role: 'customer'
+    });
+    
+    TEST_CUSTOMER_TOKEN = customerLoginResponse.data.token;
+    console.log('Test customer logged in successfully');
+    
+    // Create a test driver
+    const driverId = generateSSN();
+    TEST_DRIVER_ID = driverId;
+    const driverEmail = 'test_driver@test.com';
+    
+    const driverData = {
+      driver_id: driverId,
+      first_name: 'Test',
+      last_name: 'Driver',
+      email: driverEmail,
+      password: 'password123',
+      phone: '555-7654321',
+      address: '456 Test St',
+      city: 'San Francisco',
+      state: 'CA',
+      zip_code: '94105',
+      car_details: 'Toyota Camry 2020',
+      status: 'available'
+    };
+    
+    // Post driver
+    await axios.post(`${API_URL}/drivers`, driverData, { headers });
+    console.log('Created test driver:', driverEmail);
+    
+    // Login as driver
+    const driverLoginResponse = await axios.post(`${API_URL}/auth/driver/login`, {
+      email: driverEmail,
+      password: 'password123',
+      role: 'driver'
+    });
+    
+    TEST_DRIVER_TOKEN = driverLoginResponse.data.token;
+    console.log('Test driver logged in successfully');
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating test accounts:', error.response?.data?.message || error.message);
+    return false;
+  }
+};
+
 // Generate drivers
 const generateDrivers = async (count) => {
   console.log(`Generating ${count} drivers...`);
@@ -87,6 +179,11 @@ const generateDrivers = async (count) => {
     const last_name = `Test${Math.floor(Math.random() * 10000)}`;
     const email = `driver${i}@test.com`;
     
+    const location = {
+      latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
+      longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
+    };
+    
     const driver = {
       driver_id,
       first_name,
@@ -99,13 +196,19 @@ const generateDrivers = async (count) => {
       state: states[Math.floor(Math.random() * states.length)],
       zip_code: String(Math.floor(Math.random() * 90000) + 10000),
       car_details: `${carMakers[Math.floor(Math.random() * carMakers.length)]} ${carModels[Math.floor(Math.random() * carModels.length)]} ${2015 + Math.floor(Math.random() * 10)}`,
-      status: 'available'  // Set all drivers to available
+      status: 'available',  // Set all drivers to available
+      intro_media: {
+        location: {
+          type: 'Point',
+          coordinates: [location.longitude, location.latitude]
+        }
+      }
     };
     
     drivers.push(driver);
     
     // Log progress
-    if ((i + 1) % 100 === 0) {
+    if ((i + 1) % 1000 === 0) {
       console.log(`Generated ${i + 1} drivers`);
     }
   }
@@ -126,6 +229,11 @@ const generateCustomers = async (count) => {
     const last_name = `Test${Math.floor(Math.random() * 10000)}`;
     const email = `customer${i}@test.com`;
     
+    const location = {
+      latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
+      longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
+    };
+    
     const customer = {
       customer_id,
       first_name,
@@ -142,13 +250,17 @@ const generateCustomers = async (count) => {
         expiry: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}/${String(Math.floor(Math.random() * 5) + 25)}`,
         cvv: String(Math.floor(Math.random() * 900) + 100),
         name_on_card: `${first_name} ${last_name}`
+      },
+      last_location: {
+        type: 'Point',
+        coordinates: [location.longitude, location.latitude]
       }
     };
     
     customers.push(customer);
     
     // Log progress
-    if ((i + 1) % 100 === 0) {
+    if ((i + 1) % 1000 === 0) {
       console.log(`Generated ${i + 1} customers`);
     }
   }
@@ -201,72 +313,78 @@ const bulkInsert = async (endpoint, data, batchSize = 100) => {
   }
 };
 
-// Create a test customer account for JMeter
-const createTestCustomer = async () => {
-  try {
-    const customerData = {
-      customer_id: generateSSN(),
-      first_name: 'JMeter',
-      last_name: 'TestCustomer',
-      email: 'jmeter_customer@test.com',
-      password: 'password123',
-      phone: '555-1234567',
-      address: '123 JMeter St',
-      city: 'San Francisco',
-      state: 'CA',
-      zip_code: '94105',
-      credit_card: {
-        number: '4111111111111111',
-        expiry: '12/25',
-        cvv: '123',
-        name_on_card: 'JMeter TestCustomer'
-      }
-    };
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ADMIN_TOKEN}`
-    };
-    
-    await axios.post(`${API_URL}/customers`, customerData, { headers });
-    console.log('Created JMeter test customer: jmeter_customer@test.com / password123');
-    return true;
-  } catch (error) {
-    console.error('Error creating JMeter test customer:', error.response?.data?.message || error.message);
-    return false;
+// Create rides and their lifecycle
+const createRidesAndBills = async (count) => {
+  console.log(`Creating ${count} test rides and bills...`);
+  
+  let successfulRides = 0;
+  let successfulBills = 0;
+  
+  const customerHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
+  };
+  
+  const driverHeaders = {
+    'Content-Type': 'application/json', 
+    'Authorization': `Bearer ${TEST_DRIVER_TOKEN}`
+  };
+  
+  for (let i = 0; i < count; i++) {
+    try {
+      // Step 1: Create a ride as customer
+      const pickup = {
+        latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
+        longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
+      };
+      
+      const dropoff = {
+        latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
+        longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
+      };
+      
+      const rideData = {
+        pickup_location: pickup,
+        dropoff_location: dropoff,
+        date_time: new Date().toISOString(),
+        passenger_count: Math.floor(Math.random() * 4) + 1,
+        driver_id: TEST_DRIVER_ID
+      };
+      
+      const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
+      const rideId = rideResponse.data.data.ride_id;
+      successfulRides++;
+      
+      console.log(`Created ride ${i+1}/${count} - ID: ${rideId}`);
+      
+      // Step 2: Accept ride as driver
+      await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+      
+      // Step 3: Start ride as driver
+      await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+      
+      // Step 4: Complete ride as driver
+      await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+      
+      // Step 5: Create bill as driver
+      const billData = {
+        ride_id: rideId
+      };
+      
+      await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
+      successfulBills++;
+      
+      console.log(`Created bill for ride ${i+1}/${count}`);
+      
+      // Random delay to mimic natural patterns
+      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+    } catch (error) {
+      console.error(`Error in ride/bill creation (${i+1}/${count}):`, error.response?.data?.message || error.message);
+    }
   }
-};
-
-// Create a test driver account for JMeter
-const createTestDriver = async () => {
-  try {
-    const driverData = {
-      driver_id: generateSSN(),
-      first_name: 'JMeter',
-      last_name: 'TestDriver',
-      email: 'jmeter_driver@test.com',
-      password: 'password123',
-      phone: '555-7654321',
-      address: '456 JMeter St',
-      city: 'San Francisco',
-      state: 'CA',
-      zip_code: '94105',
-      car_details: 'Toyota Camry 2020',
-      status: 'available'
-    };
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ADMIN_TOKEN}`
-    };
-    
-    await axios.post(`${API_URL}/drivers`, driverData, { headers });
-    console.log('Created JMeter test driver: jmeter_driver@test.com / password123');
-    return true;
-  } catch (error) {
-    console.error('Error creating JMeter test driver:', error.response?.data?.message || error.message);
-    return false;
-  }
+  
+  console.log(`Successfully created ${successfulRides} rides and ${successfulBills} bills`);
+  return { rides: successfulRides, bills: successfulBills };
 };
 
 // Main function
@@ -279,9 +397,29 @@ const main = async () => {
       return;
     }
     
+    // Create test accounts for ride and bill creation
+    const testAccountsCreated = await createTestAccounts();
+    if (!testAccountsCreated) {
+      console.error('Failed to create test accounts. Exiting.');
+      return;
+    }
+    
     // Target numbers for performance testing
-    const targetDrivers = 10000;  // 10,000 as per project requirements
-    const targetCustomers = 10000; // 10,000 as per project requirements
+    let targetDrivers, targetCustomers, targetRides;
+    
+    // Check if arguments were provided for smaller test
+    if (process.argv.includes('--small')) {
+      targetDrivers = 500;
+      targetCustomers = 500;
+      targetRides = 200;
+      console.log('Running small test data generation');
+    } else {
+      // Full dataset for performance testing
+      targetDrivers = 10000;  // 10,000 as per project requirements
+      targetCustomers = 10000; // 10,000 as per project requirements
+      targetRides = 1000;     // Create 1000 rides and bills as a starter set
+      console.log('Running full test data generation (10,000 drivers/customers)');
+    }
     
     // Generate and insert drivers in batches of 1000
     const batchSize = 1000;
@@ -300,15 +438,18 @@ const main = async () => {
       console.log(`Progress: ${Math.min(i + batchSize, targetCustomers)}/${targetCustomers} customers inserted`);
     }
     
-    // Create test accounts for JMeter
-    await createTestCustomer();
-    await createTestDriver();
+    // Create test rides and bills
+    const { rides, bills } = await createRidesAndBills(targetRides);
     
     console.log('=== DATA GENERATION COMPLETE ===');
     console.log(`${targetDrivers} drivers inserted`);
     console.log(`${targetCustomers} customers inserted`);
-    console.log('JMeter test accounts created');
-    console.log('You can now run JMeter tests using the performanceTest.jmx file');
+    console.log(`${rides} rides created`);
+    console.log(`${bills} bills generated`);
+    console.log('Test accounts created for JMeter:');
+    console.log(' - Customer: test_customer@test.com / password123');
+    console.log(' - Driver: test_driver@test.com / password123');
+    console.log('You can now run JMeter tests using the improved-performanceTest.jmx file');
     
   } catch (error) {
     console.error('Error in data generation:', error);

@@ -23,6 +23,11 @@ redisClient.on('error', (err) => {
 
 const cacheMiddleware = (duration) => {
   return async (req, res, next) => {
+    // Skip caching if X-Disable-Cache header is present (for testing)
+    if (req.headers['x-disable-cache'] === 'true') {
+      return next();
+    }
+    
     if (req.method !== 'GET') {
       return next();
     }
