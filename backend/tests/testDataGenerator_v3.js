@@ -1,4 +1,4 @@
-// testDataPerformanceComplete.js
+// testDataGenerator.js - Improved version
 const axios = require('axios');
 const fs = require('fs');
 
@@ -140,7 +140,14 @@ const createTestAccounts = async () => {
       state: 'CA',
       zip_code: '94105',
       car_details: 'Toyota Camry 2020',
-      status: 'available'
+      status: 'available',
+      account_status: 'approved', // Make sure the driver is approved
+      intro_media: {
+        location: {
+          type: 'Point',
+          coordinates: [-122.4194, 37.7749] // SF coordinates [longitude, latitude]
+        }
+      }
     };
     
     // Post driver
@@ -179,6 +186,7 @@ const generateDrivers = async (count) => {
     const last_name = `Test${Math.floor(Math.random() * 10000)}`;
     const email = `driver${i}@test.com`;
     
+    // Generate random San Francisco area coordinates
     const location = {
       latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
       longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
@@ -200,9 +208,10 @@ const generateDrivers = async (count) => {
       intro_media: {
         location: {
           type: 'Point',
-          coordinates: [location.longitude, location.latitude]
+          coordinates: [location.longitude, location.latitude] // MongoDB uses [longitude, latitude]
         }
-      }
+      },
+      account_status: 'approved'  // Make sure all drivers are approved
     };
     
     drivers.push(driver);
@@ -229,6 +238,7 @@ const generateCustomers = async (count) => {
     const last_name = `Test${Math.floor(Math.random() * 10000)}`;
     const email = `customer${i}@test.com`;
     
+    // Generate random San Francisco area coordinates
     const location = {
       latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
       longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
@@ -253,8 +263,9 @@ const generateCustomers = async (count) => {
       },
       last_location: {
         type: 'Point',
-        coordinates: [location.longitude, location.latitude]
-      }
+        coordinates: [location.longitude, location.latitude] // MongoDB uses [longitude, latitude]
+      },
+      account_status: 'active'  // Make sure all customers are active
     };
     
     customers.push(customer);
@@ -268,7 +279,7 @@ const generateCustomers = async (count) => {
   return customers;
 };
 
-// Bulk insert data
+// Bulk insert data with retry logic and better error handling
 const bulkInsert = async (endpoint, data, batchSize = 100) => {
   console.log(`Inserting ${data.length} records to ${endpoint}...`);
   
@@ -280,45 +291,73 @@ const bulkInsert = async (endpoint, data, batchSize = 100) => {
   // Process in batches
   for (let i = 0; i < data.length; i += batchSize) {
     const batch = data.slice(i, i + batchSize);
+    let retryCount = 0;
+    const maxRetries = 3;
+    let success = false;
     
-    try {
-      const response = await axios.post(`${API_URL}/${endpoint}`, {
-        bulk: true,
-        items: batch
-      }, { headers });
-      
-      console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(data.length / batchSize)} - Status: ${response.status}`);
-    } catch (error) {
-      console.error(`Error inserting batch ${Math.floor(i / batchSize) + 1}:`, error.response?.data?.message || error.message);
-      
-      // Try single insert if bulk fails
-      if (error.response?.data?.message?.includes("bulk")) {
-        console.log("Falling back to individual inserts...");
-        for (const item of batch) {
-          try {
-            await axios.post(`${API_URL}/${endpoint}`, item, { headers });
-            console.log(`Inserted individual item`);
-          } catch (itemError) {
-            console.error(`Failed to insert individual item:`, itemError.response?.data?.message || itemError.message);
-          }
+    while (!success && retryCount < maxRetries) {
+      try {
+        const response = await axios.post(`${API_URL}/${endpoint}`, {
+          bulk: true,
+          items: batch
+        }, { headers });
+        
+        console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(data.length / batchSize)} - Status: ${response.status}`);
+        success = true;
+      } catch (error) {
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          console.log(`Batch ${Math.floor(i / batchSize) + 1} failed, retrying (${retryCount}/${maxRetries})...`);
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+        } else {
+          console.error(`Error inserting batch ${Math.floor(i / batchSize) + 1} after ${maxRetries} retries:`, error.response?.data?.message || error.message);
           
-          // Add a small delay between individual inserts
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // Try single insert if bulk fails
+          if (error.response?.status === 400 || error.response?.status === 413) {
+            console.log("Falling back to individual inserts for this batch...");
+            let successCount = 0;
+            
+            for (const item of batch) {
+              try {
+                await axios.post(`${API_URL}/${endpoint}`, item, { headers });
+                successCount++;
+                
+                // Log progress every 10 items
+                if (successCount % 10 === 0) {
+                  console.log(`Inserted ${successCount}/${batch.length} individual items in this batch`);
+                }
+              } catch (itemError) {
+                // Only log the first few errors to avoid console flood
+                if (successCount < 5) {
+                  console.error(`Failed to insert individual item:`, itemError.response?.data?.message || itemError.message);
+                }
+              }
+              
+              // Add a small delay between individual inserts
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            console.log(`Completed individual inserts for batch: ${successCount}/${batch.length} successful`);
+          }
         }
       }
     }
     
-    // Add a small delay to prevent overwhelming the server
+    // Add a delay between batches regardless of success to avoid overwhelming the server
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 };
 
-// Create rides and their lifecycle
+// Create rides and their lifecycle with improved error handling and retries
 const createRidesAndBills = async (count) => {
   console.log(`Creating ${count} test rides and bills...`);
   
   let successfulRides = 0;
   let successfulBills = 0;
+  let failedRides = 0;
+  let failedBills = 0;
   
   const customerHeaders = {
     'Content-Type': 'application/json',
@@ -351,45 +390,104 @@ const createRidesAndBills = async (count) => {
         driver_id: TEST_DRIVER_ID
       };
       
-      const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
-      const rideId = rideResponse.data.data.ride_id;
-      successfulRides++;
+      // With retry logic
+      let rideId = null;
+      let retryCount = 0;
+      const maxRetries = 3;
       
-      console.log(`Created ride ${i+1}/${count} - ID: ${rideId}`);
+      while (!rideId && retryCount < maxRetries) {
+        try {
+          const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
+          rideId = rideResponse.data.data.ride_id;
+          successfulRides++;
+          
+          console.log(`Created ride ${i+1}/${count} - ID: ${rideId}`);
+        } catch (error) {
+          retryCount++;
+          console.error(`Attempt ${retryCount}/${maxRetries} failed for ride ${i+1}:`, error.response?.data?.message || error.message);
+          
+          if (retryCount >= maxRetries) {
+            failedRides++;
+            console.error(`Failed to create ride ${i+1} after ${maxRetries} attempts, skipping...`);
+            break;
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+        }
+      }
+      
+      if (!rideId) {
+        continue; // Skip to next ride if this one failed
+      }
+      
+      // Let's give a little breathing room between steps
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Step 2: Accept ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+        console.log(`Driver accepted ride ${i+1}/${count}`);
+      } catch (error) {
+        console.error(`Error accepting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue; // Skip to next ride if accept failed
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Step 3: Start ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+        console.log(`Driver started ride ${i+1}/${count}`);
+      } catch (error) {
+        console.error(`Error starting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Step 4: Complete ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+        console.log(`Driver completed ride ${i+1}/${count}`);
+      } catch (error) {
+        console.error(`Error completing ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Step 5: Create bill as driver
       const billData = {
         ride_id: rideId
       };
       
-      await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
-      successfulBills++;
+      try {
+        await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
+        successfulBills++;
+        console.log(`Created bill for ride ${i+1}/${count}`);
+      } catch (error) {
+        failedBills++;
+        console.error(`Error creating bill for ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+      }
       
-      console.log(`Created bill for ride ${i+1}/${count}`);
-      
-      // Random delay to mimic natural patterns
-      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+      // Random delay to mimic natural patterns and prevent rate-limiting
+      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
     } catch (error) {
-      console.error(`Error in ride/bill creation (${i+1}/${count}):`, error.response?.data?.message || error.message);
+      console.error(`Unexpected error in ride/bill creation (${i+1}/${count}):`, error.message);
     }
   }
   
   console.log(`Successfully created ${successfulRides} rides and ${successfulBills} bills`);
+  console.log(`Failed to create ${failedRides} rides and ${failedBills} bills`);
   return { rides: successfulRides, bills: successfulBills };
 };
 
-// Main function
+// Main function with support for smaller test runs via command line args
 const main = async () => {
   try {
+    console.log("Starting test data generation...");
+    
     // Login to get admin token
     const loggedIn = await loginAsAdmin();
     if (!loggedIn) {
@@ -421,35 +519,36 @@ const main = async () => {
       console.log('Running full test data generation (10,000 drivers/customers)');
     }
     
-    // Generate and insert drivers in batches of 1000
+    // Generate and insert drivers in batches
     const batchSize = 1000;
     for (let i = 0; i < targetDrivers; i += batchSize) {
       const count = Math.min(batchSize, targetDrivers - i);
       const drivers = await generateDrivers(count);
-      await bulkInsert('drivers', drivers);
+      await bulkInsert('drivers', drivers, 100); // Smaller batch size for more reliable insertion
       console.log(`Progress: ${Math.min(i + batchSize, targetDrivers)}/${targetDrivers} drivers inserted`);
     }
     
-    // Generate and insert customers in batches of 1000
+    // Generate and insert customers in batches
     for (let i = 0; i < targetCustomers; i += batchSize) {
       const count = Math.min(batchSize, targetCustomers - i);
       const customers = await generateCustomers(count);
-      await bulkInsert('customers', customers);
+      await bulkInsert('customers', customers, 100); // Smaller batch size for more reliable insertion
       console.log(`Progress: ${Math.min(i + batchSize, targetCustomers)}/${targetCustomers} customers inserted`);
     }
     
     // Create test rides and bills
-    const { rides, bills } = await createRidesAndBills(targetRides);
+    await createRidesAndBills(targetRides);
     
     console.log('=== DATA GENERATION COMPLETE ===');
-    console.log(`${targetDrivers} drivers inserted`);
-    console.log(`${targetCustomers} customers inserted`);
-    console.log(`${rides} rides created`);
-    console.log(`${bills} bills generated`);
-    console.log('Test accounts created for JMeter:');
+    console.log(`Generated approximately:`);
+    console.log(`- ${targetDrivers} drivers`);
+    console.log(`- ${targetCustomers} customers`);
+    console.log(`- ${targetRides} rides/bills (approx)`);
+    console.log('\nTest accounts created for JMeter:');
     console.log(' - Customer: test_customer@test.com / password123');
     console.log(' - Driver: test_driver@test.com / password123');
-    console.log('You can now run JMeter tests using the improved-performanceTest.jmx file');
+    console.log(' - Admin: admin@test.com / password123');
+    console.log('\nYou can now run JMeter tests using the fixed performanceTest.jmx file');
     
   } catch (error) {
     console.error('Error in data generation:', error);

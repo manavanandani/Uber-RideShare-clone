@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Uber Simulation Performance Test" enabled="true">
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Uber Simulation Performance Test">
       <stringProp name="TestPlan.comments">Performance test for SJSU Distributed Systems Class Project</stringProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
-      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Global Variables" enabled="true">
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Global Variables">
         <collectionProp name="Arguments.arguments">
           <elementProp name="API_URL" elementType="Argument">
             <stringProp name="Argument.name">API_URL</stringProp>
@@ -52,50 +49,36 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      
-      <!-- Setup Thread Group (Get Tokens) -->
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Setup - Get Tokens" enabled="true">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
-        <!-- Admin Login -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Admin Login" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/auth/admin/login</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "email": "${admin_email}",
-  "password": "${admin_password}",
-  "role": "admin"
+                <stringProp name="Argument.value">{&#xd;
+  &quot;email&quot;: &quot;${admin_email}&quot;,&#xd;
+  &quot;password&quot;: &quot;${admin_password}&quot;,&#xd;
+  &quot;role&quot;: &quot;admin&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/auth/admin/login</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
@@ -114,43 +97,32 @@
           </JSONPostProcessor>
           <hashTree/>
           <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Save Admin Token to Properties" enabled="true">
-            <stringProp name="BeanShellAssertion.query">props.put("admin_token", vars.get("admin_token"));</stringProp>
+            <stringProp name="BeanShellAssertion.query">props.put(&quot;admin_token&quot;, vars.get(&quot;admin_token&quot;));</stringProp>
             <stringProp name="BeanShellAssertion.filename"></stringProp>
             <stringProp name="BeanShellAssertion.parameters"></stringProp>
             <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
           </BeanShellAssertion>
           <hashTree/>
         </hashTree>
-        
-        <!-- Customer Login -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Customer Login" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/auth/customer/login</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "email": "${customer_email}",
-  "password": "${customer_password}",
-  "role": "customer"
+                <stringProp name="Argument.value">{&#xd;
+  &quot;email&quot;: &quot;${customer_email}&quot;,&#xd;
+  &quot;password&quot;: &quot;${customer_password}&quot;,&#xd;
+  &quot;role&quot;: &quot;customer&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/auth/customer/login</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
@@ -175,8 +147,8 @@
           </JSONPostProcessor>
           <hashTree/>
           <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Save Customer Props" enabled="true">
-            <stringProp name="BeanShellAssertion.query">props.put("customer_token", vars.get("customer_token"));
-props.put("customer_id", vars.get("customer_id"));
+            <stringProp name="BeanShellAssertion.query">props.put(&quot;customer_token&quot;, vars.get(&quot;customer_token&quot;));
+props.put(&quot;customer_id&quot;, vars.get(&quot;customer_id&quot;));
 </stringProp>
             <stringProp name="BeanShellAssertion.filename"></stringProp>
             <stringProp name="BeanShellAssertion.parameters"></stringProp>
@@ -184,36 +156,25 @@ props.put("customer_id", vars.get("customer_id"));
           </BeanShellAssertion>
           <hashTree/>
         </hashTree>
-        
-        <!-- Driver Login -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Driver Login" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/auth/driver/login</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "email": "${driver_email}",
-  "password": "${driver_password}",
-  "role": "driver"
+                <stringProp name="Argument.value">{&#xd;
+  &quot;email&quot;: &quot;${driver_email}&quot;,&#xd;
+  &quot;password&quot;: &quot;${driver_password}&quot;,&#xd;
+  &quot;role&quot;: &quot;driver&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/auth/driver/login</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
@@ -238,8 +199,8 @@ props.put("customer_id", vars.get("customer_id"));
           </JSONPostProcessor>
           <hashTree/>
           <BeanShellAssertion guiclass="BeanShellAssertionGui" testclass="BeanShellAssertion" testname="Save Driver Props" enabled="true">
-            <stringProp name="BeanShellAssertion.query">props.put("driver_token", vars.get("driver_token"));
-props.put("driver_id", vars.get("driver_id"));</stringProp>
+            <stringProp name="BeanShellAssertion.query">props.put(&quot;driver_token&quot;, vars.get(&quot;driver_token&quot;));
+props.put(&quot;driver_id&quot;, vars.get(&quot;driver_id&quot;));</stringProp>
             <stringProp name="BeanShellAssertion.filename"></stringProp>
             <stringProp name="BeanShellAssertion.parameters"></stringProp>
             <boolProp name="BeanShellAssertion.resetInterpreter">false</boolProp>
@@ -247,19 +208,15 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           <hashTree/>
         </hashTree>
       </hashTree>
-      
-      <!-- Customer Thread Group -->
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Customer Flow" enabled="true">
+        <intProp name="ThreadGroup.num_threads">100</intProp>
+        <intProp name="ThreadGroup.ramp_time">30</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">5</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">100</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">30</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
         <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
@@ -275,10 +232,13 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        
-        <!-- Get Nearby Drivers -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Nearby Drivers" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/rides/nearby-drivers</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments">
               <elementProp name="latitude" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
@@ -296,19 +256,6 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/rides/nearby-drivers</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract nearest driver" enabled="true">
@@ -319,38 +266,27 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           </JSONPostProcessor>
           <hashTree/>
         </hashTree>
-        
-        <!-- Get Price Estimate -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Price Estimate" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/pricing/estimate</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "pickup_latitude": 37.7749,
-  "pickup_longitude": -122.4194,
-  "dropoff_latitude": 37.7749,
-  "dropoff_longitude": -122.4294,
-  "passenger_count": 1
+                <stringProp name="Argument.value">{&#xd;
+  &quot;pickup_latitude&quot;: 37.7749,&#xd;
+  &quot;pickup_longitude&quot;: -122.4194,&#xd;
+  &quot;dropoff_latitude&quot;: 37.7749,&#xd;
+  &quot;dropoff_longitude&quot;: -122.4294,&#xd;
+  &quot;passenger_count&quot;: 1&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/pricing/estimate</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract fare" enabled="true">
@@ -361,44 +297,33 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           </JSONPostProcessor>
           <hashTree/>
         </hashTree>
-        
-        <!-- Book Ride -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Book Ride" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/rides</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "pickup_location": {
-    "latitude": 37.7749,
-    "longitude": -122.4194
-  },
-  "dropoff_location": {
-    "latitude": 37.7749,
-    "longitude": -122.4294
-  },
-  "date_time": "${__time(yyyy-MM-dd'T'HH:mm:ss)}",
-  "passenger_count": 1,
-  "driver_id": "${nearest_driver_id}"
+                <stringProp name="Argument.value">{&#xd;
+  &quot;pickup_location&quot;: {&#xd;
+    &quot;latitude&quot;: 37.7749,&#xd;
+    &quot;longitude&quot;: -122.4194&#xd;
+  },&#xd;
+  &quot;dropoff_location&quot;: {&#xd;
+    &quot;latitude&quot;: 37.7749,&#xd;
+    &quot;longitude&quot;: -122.4294&#xd;
+  },&#xd;
+  &quot;date_time&quot;: &quot;${__time(yyyy-MM-dd&apos;T&apos;HH:mm:ss)}&quot;,&#xd;
+  &quot;passenger_count&quot;: 1,&#xd;
+  &quot;driver_id&quot;: &quot;${nearest_driver_id}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/rides</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract ride_id" enabled="true">
@@ -409,41 +334,27 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           </JSONPostProcessor>
           <hashTree/>
         </hashTree>
-        
-        <!-- Get Ride History -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Ride History" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/rides/customer/${__property(customer_id)}</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/rides/customer/${__property(customer_id)}</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree/>
       </hashTree>
-      
-      <!-- Driver Thread Group -->
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Driver Flow" enabled="true">
+        <intProp name="ThreadGroup.num_threads">50</intProp>
+        <intProp name="ThreadGroup.ramp_time">20</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <stringProp name="LoopController.loops">5</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">50</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">20</stringProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
-        <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
       <hashTree>
         <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
@@ -459,132 +370,74 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        
-        <!-- Update Driver Status -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update Driver Status" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/drivers/${__property(driver_id)}/status</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">PATCH</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "status": "available",
-  "latitude": ${__Random(37.7700,37.7800)},
-  "longitude": ${__Random(-122.4300,-122.4100)}
+                <stringProp name="Argument.value">{&#xd;
+  &quot;status&quot;: &quot;available&quot;,&#xd;
+  &quot;latitude&quot;: ${__Random(37.7700,37.7800)},&#xd;
+  &quot;longitude&quot;: ${__Random(-122.4300,-122.4100)}&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/drivers/${__property(driver_id)}/status</stringProp>
-          <stringProp name="HTTPSampler.method">PATCH</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree/>
-        
-        <!-- Get Driver Rides -->
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Driver Rides" enabled="true">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/rides/driver/${__property(driver_id)}</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/rides/driver/${__property(driver_id)}</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract first ride_id" enabled="true">
             <stringProp name="JSONPostProcessor.referenceNames">pending_ride_id</stringProp>
-            <stringProp name="JSONPostProcessor.jsonPathExprs">$.data[?(@.status=='requested')].ride_id</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.data[?(@.status==&apos;requested&apos;)].ride_id</stringProp>
             <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
             <stringProp name="JSONPostProcessor.defaultValues">no_pending_ride</stringProp>
           </JSONPostProcessor>
           <hashTree/>
         </hashTree>
-        
-        <!-- Accept Ride -->
         <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Pending Ride Exists" enabled="true">
-          <stringProp name="IfController.condition">${__jexl3("${pending_ride_id}" != "no_pending_ride")}</stringProp>
+          <stringProp name="IfController.condition">${__jexl3(&quot;${pending_ride_id}&quot; != &quot;no_pending_ride&quot;)}</stringProp>
           <boolProp name="IfController.evaluateAll">false</boolProp>
           <boolProp name="IfController.useExpression">true</boolProp>
         </IfController>
         <hashTree>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Accept Ride" enabled="true">
-            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-              <collectionProp name="Arguments.arguments">
-                <elementProp name="" elementType="HTTPArgument">
-                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">{}</stringProp>
-                  <stringProp name="Argument.metadata">=</stringProp>
-                </elementProp>
-              </collectionProp>
-            </elementProp>
-            <stringProp name="HTTPSampler.domain"></stringProp>
-            <stringProp name="HTTPSampler.port"></stringProp>
-            <stringProp name="HTTPSampler.protocol"></stringProp>
-            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
             <stringProp name="HTTPSampler.path">${API_URL}/rides/${pending_ride_id}/accept</stringProp>
-            <stringProp name="HTTPSampler.method">PATCH</stringProp>
             <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <stringProp name="HTTPSampler.method">PATCH</stringProp>
             <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout"></stringProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          
-          <!-- Start Ride -->
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Start Ride" enabled="true">
-            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-              <collectionProp name="Arguments.arguments">
-                <elementProp name="" elementType="HTTPArgument">
-                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">{}</stringProp>
-                  <stringProp name="Argument.metadata">=</stringProp>
-                </elementProp>
-              </collectionProp>
-            </elementProp>
-            <stringProp name="HTTPSampler.domain"></stringProp>
-            <stringProp name="HTTPSampler.port"></stringProp>
-            <stringProp name="HTTPSampler.protocol"></stringProp>
-            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
             <stringProp name="HTTPSampler.path">${API_URL}/rides/${pending_ride_id}/start</stringProp>
-            <stringProp name="HTTPSampler.method">PATCH</stringProp>
             <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <stringProp name="HTTPSampler.method">PATCH</stringProp>
             <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout"></stringProp>
-          </HTTPSamplerProxy>
-          <hashTree/>
-          
-          <!-- Complete Ride -->
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Complete Ride" enabled="true">
             <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
             <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
               <collectionProp name="Arguments.arguments">
@@ -595,921 +448,198 @@ props.put("driver_id", vars.get("driver_id"));</stringProp>
                 </elementProp>
               </collectionProp>
             </elementProp>
-            <stringProp name="HTTPSampler.domain"></stringProp>
-            <stringProp name="HTTPSampler.port"></stringProp>
-            <stringProp name="HTTPSampler.protocol"></stringProp>
-            <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-            <stringProp name="HTTPSampler.path">${API_URL}/rides/${pending_ride_id}/complete</stringProp>
-            <stringProp name="HTTPSampler.method">PATCH</stringProp>
-            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-            <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-            <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-            <stringProp name="HTTPSampler.response_timeout"></stringProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          
-          <!-- Create Bill -->
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create Bill" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Complete Ride" enabled="true">
+            <stringProp name="HTTPSampler.path">${API_URL}/rides/${pending_ride_id}/complete</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <stringProp name="HTTPSampler.method">PATCH</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
             <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
             <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
               <collectionProp name="Arguments.arguments">
                 <elementProp name="" elementType="HTTPArgument">
                   <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                  <stringProp name="Argument.value">{
-  "ride_id": "${pending_ride_id}"
+                  <stringProp name="Argument.value">{}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create Bill" enabled="true">
+            <stringProp name="HTTPSampler.path">${API_URL}/billing</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{&#xd;
+  &quot;ride_id&quot;: &quot;${pending_ride_id}&quot;&#xd;
 }</stringProp>
                   <stringProp name="Argument.metadata">=</stringProp>
                 </elementProp>
               </collectionProp>
             </elementProp>
-            <!-- Add this after the existing Thread Groups -->
-
-<!-- Mixed Workload Thread Group -->
-<ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Mixed Workload - Realistic Simulation" enabled="true">
-  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-    <boolProp name="LoopController.continue_forever">false</boolProp>
-    <stringProp name="LoopController.loops">10</stringProp>
-  </elementProp>
-  <stringProp name="ThreadGroup.num_threads">50</stringProp>
-  <stringProp name="ThreadGroup.ramp_time">15</stringProp>
-  <boolProp name="ThreadGroup.scheduler">true</boolProp>
-  <stringProp name="ThreadGroup.duration">300</stringProp>
-  <stringProp name="ThreadGroup.delay">2</stringProp>
-</ThreadGroup>
-<hashTree>
-  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
-    <collectionProp name="HeaderManager.headers">
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Content-Type</stringProp>
-        <stringProp name="Header.value">application/json</stringProp>
-      </elementProp>
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Authorization</stringProp>
-        <stringProp name="Header.value">Bearer ${__P(customer_token, ${customer_token})}</stringProp>
-      </elementProp>
-    </collectionProp>
-  </HeaderManager>
-  <hashTree/>
-  
-  <!-- Weighted random choice of different operations -->
-  <RandomController guiclass="RandomControllerGui" testclass="RandomController" testname="Random Operation" enabled="true">
-    <intProp name="InterleaveControl.style">1</intProp>
-  </RandomController>
-  <hashTree>
-    <!-- Get price estimate (higher weight) -->
-    <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Price Estimate Operation" enabled="true"/>
-    <hashTree>
-      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Price Estimate" enabled="true">
-        <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-        <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-          <collectionProp name="Arguments.arguments">
-            <elementProp name="" elementType="HTTPArgument">
-              <boolProp name="HTTPArgument.always_encode">false</boolProp>
-              <stringProp name="Argument.value">{
-  "pickup_latitude": ${__Random(37.7700,37.7900,)},
-  "pickup_longitude": ${__Random(-122.4500,-122.4000,)},
-  "dropoff_latitude": ${__Random(37.7700,37.7900,)},
-  "dropoff_longitude": ${__Random(-122.4500,-122.4000,)},
-  "passenger_count": ${__Random(1,4,)},
-  "datetime": "${__time(yyyy-MM-dd'T'HH:mm:ss)}"
-}</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-            </elementProp>
-          </collectionProp>
-        </elementProp>
-        <stringProp name="HTTPSampler.domain"></stringProp>
-        <stringProp name="HTTPSampler.port"></stringProp>
-        <stringProp name="HTTPSampler.protocol"></stringProp>
-        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-        <stringProp name="HTTPSampler.path">${API_URL}/pricing/estimate</stringProp>
-        <stringProp name="HTTPSampler.method">POST</stringProp>
-        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-        <stringProp name="HTTPSampler.response_timeout"></stringProp>
-      </HTTPSamplerProxy>
-      <hashTree/>
-    </hashTree>
-    
-    <!-- Get nearby drivers operation -->
-    <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Nearby Drivers Operation" enabled="true"/>
-    <hashTree>
-      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Nearby Drivers" enabled="true">
-        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-          <collectionProp name="Arguments.arguments">
-            <elementProp name="latitude" elementType="HTTPArgument">
-              <boolProp name="HTTPArgument.always_encode">false</boolProp>
-              <stringProp name="Argument.value">${__Random(37.7700,37.7900,)}</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-              <boolProp name="HTTPArgument.use_equals">true</boolProp>
-              <stringProp name="Argument.name">latitude</stringProp>
-            </elementProp>
-            <elementProp name="longitude" elementType="HTTPArgument">
-              <boolProp name="HTTPArgument.always_encode">false</boolProp>
-              <stringProp name="Argument.value">${__Random(-122.4500,-122.4000,)}</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-              <boolProp name="HTTPArgument.use_equals">true</boolProp>
-              <stringProp name="Argument.name">longitude</stringProp>
-            </elementProp>
-          </collectionProp>
-        </elementProp>
-        <stringProp name="HTTPSampler.domain"></stringProp>
-        <stringProp name="HTTPSampler.port"></stringProp>
-        <stringProp name="HTTPSampler.protocol"></stringProp>
-        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-        <stringProp name="HTTPSampler.path">${API_URL}/rides/nearby-drivers</stringProp>
-        <stringProp name="HTTPSampler.method">GET</stringProp>
-        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-        <stringProp name="HTTPSampler.response_timeout"></stringProp>
-      </HTTPSamplerProxy>
-      <hashTree/>
-    </hashTree>
-    
-    <!-- Book Ride Operation -->
-    <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Book Ride Operation" enabled="true"/>
-    <hashTree>
-      <!-- First get nearby drivers -->
-      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Nearby Drivers for Booking" enabled="true">
-        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-          <collectionProp name="Arguments.arguments">
-            <elementProp name="latitude" elementType="HTTPArgument">
-              <boolProp name="HTTPArgument.always_encode">false</boolProp>
-              <stringProp name="Argument.value">37.7749</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-              <boolProp name="HTTPArgument.use_equals">true</boolProp>
-              <stringProp name="Argument.name">latitude</stringProp>
-            </elementProp>
-            <elementProp name="longitude" elementType="HTTPArgument">
-              <boolProp name="HTTPArgument.always_encode">false</boolProp>
-              <stringProp name="Argument.value">-122.4194</stringProp>
-              <stringProp name="Argument.metadata">=</stringProp>
-              <boolProp name="HTTPArgument.use_equals">true</boolProp>
-              <stringProp name="Argument.name">longitude</stringProp>
-            </elementProp>
-          </collectionProp>
-        </elementProp>
-        <stringProp name="HTTPSampler.domain"></stringProp>
-        <stringProp name="HTTPSampler.port"></stringProp>
-        <stringProp name="HTTPSampler.protocol"></stringProp>
-        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-        <stringProp name="HTTPSampler.path">${API_URL}/rides/nearby-drivers</stringProp>
-        <stringProp name="HTTPSampler.method">GET</stringProp>
-        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-        <stringProp name="HTTPSampler.response_timeout"></stringProp>
-      </HTTPSamplerProxy>
-      <hashTree>
-        <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract driver_id" enabled="true">
-          <stringProp name="JSONPostProcessor.referenceNames">booking_driver_id</stringProp>
-          <stringProp name="JSONPostProcessor.jsonPathExprs">$.data[0].driver_id</stringProp>
-          <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
-          <stringProp name="JSONPostProcessor.defaultValues">no_driver</stringProp>
-        </JSONPostProcessor>
-        <hashTree/>
-      </hashTree>
-      
-      <!-- Then book the ride -->
-      <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Driver Available" enabled="true">
-        <stringProp name="IfController.condition">${__jexl3("${booking_driver_id}" != "no_driver")}</stringProp>
-        <boolProp name="IfController.evaluateAll">false</boolProp>
-        <boolProp name="IfController.useExpression">true</boolProp>
-      </IfController>
-      <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Book a Ride" enabled="true">
-          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-            <collectionProp name="Arguments.arguments">
-              <elementProp name="" elementType="HTTPArgument">
-                <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{
-  "pickup_location": {
-    "latitude": 37.7749,
-    "longitude": -122.4194
-  },
-  "dropoff_location": {
-    "latitude": 37.7847,
-    "longitude": -122.4294
-  },
-  "date_time": "${__time(yyyy-MM-dd'T'HH:mm:ss)}",
-  "passenger_count": ${__Random(1,4,)},
-  "driver_id": "${booking_driver_id}"
-}</stringProp>
-                <stringProp name="Argument.metadata">=</stringProp>
-              </elementProp>
-            </collectionProp>
-          </elementProp>
-          <stringProp name="HTTPSampler.domain"></stringProp>
-          <stringProp name="HTTPSampler.port"></stringProp>
-          <stringProp name="HTTPSampler.protocol"></stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">${API_URL}/rides</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-          <stringProp name="HTTPSampler.response_timeout"></stringProp>
-        </HTTPSamplerProxy>
-        <hashTree>
-          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract new ride_id" enabled="true">
-            <stringProp name="JSONPostProcessor.referenceNames">new_ride_id</stringProp>
-            <stringProp name="JSONPostProcessor.jsonPathExprs">$.data.ride_id</stringProp>
-            <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
-          </JSONPostProcessor>
+          </HTTPSamplerProxy>
           <hashTree/>
         </hashTree>
       </hashTree>
-    </hashTree>
-    
-    <!-- View Customer Profile -->
-    <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Customer Profile Operation" enabled="true"/>
-    <hashTree>
-      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Customer Profile" enabled="true">
-        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-          <collectionProp name="Arguments.arguments"/>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Redis Caching Performance Test (B)" enabled="true">
+        <intProp name="ThreadGroup.num_threads">100</intProp>
+        <intProp name="ThreadGroup.ramp_time">10</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">20</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="HTTPSampler.domain"></stringProp>
-        <stringProp name="HTTPSampler.port"></stringProp>
-        <stringProp name="HTTPSampler.protocol"></stringProp>
-        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-        <stringProp name="HTTPSampler.path">${API_URL}/customers/${__P(customer_id)}</stringProp>
-        <stringProp name="HTTPSampler.method">GET</stringProp>
-        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-        <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-        <stringProp name="HTTPSampler.response_timeout"></stringProp>
-      </HTTPSamplerProxy>
-      <hashTree/>
-    </hashTree>
-  </hashTree>
-</hashTree>
-
-<!-- Specific Performance Test for Redis Caching Comparison (B vs B+S) -->
-<ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Redis Caching Performance Test (B)" enabled="true">
-  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-    <boolProp name="LoopController.continue_forever">false</boolProp>
-    <stringProp name="LoopController.loops">20</stringProp>
-  </elementProp>
-  <stringProp name="ThreadGroup.num_threads">100</stringProp>
-  <stringProp name="ThreadGroup.ramp_time">10</stringProp>
-  <boolProp name="ThreadGroup.scheduler">false</boolProp>
-  <stringProp name="ThreadGroup.duration"></stringProp>
-  <stringProp name="ThreadGroup.delay"></stringProp>
-</ThreadGroup>
-<hashTree>
-  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
-    <collectionProp name="HeaderManager.headers">
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Content-Type</stringProp>
-        <stringProp name="Header.value">application/json</stringProp>
-      </elementProp>
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Authorization</stringProp>
-        <stringProp name="Header.value">Bearer ${__P(admin_token)}</stringProp>
-      </elementProp>
-      <!-- Special header to disable Redis in backend for testing base performance -->
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">X-Disable-Cache</stringProp>
-        <stringProp name="Header.value">true</stringProp>
-      </elementProp>
-    </collectionProp>
-  </HeaderManager>
-  <hashTree/>
-  
-  <!-- Heavy read operations that would benefit from caching -->
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get All Drivers (No Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/drivers</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Revenue Stats (No Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/revenue</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Rides By Area (No Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/rides-by-area</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-</hashTree>
-
-<!-- Same test but with caching enabled (B+S) -->
-<ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Redis Caching Performance Test (B+S)" enabled="true">
-  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-    <boolProp name="LoopController.continue_forever">false</boolProp>
-    <stringProp name="LoopController.loops">20</stringProp>
-  </elementProp>
-  <stringProp name="ThreadGroup.num_threads">100</stringProp>
-  <stringProp name="ThreadGroup.ramp_time">10</stringProp>
-  <boolProp name="ThreadGroup.scheduler">false</boolProp>
-  <stringProp name="ThreadGroup.duration"></stringProp>
-  <stringProp name="ThreadGroup.delay"></stringProp>
-</ThreadGroup>
-<hashTree>
-  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
-    <collectionProp name="HeaderManager.headers">
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Content-Type</stringProp>
-        <stringProp name="Header.value">application/json</stringProp>
-      </elementProp>
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Authorization</stringProp>
-        <stringProp name="Header.value">Bearer ${__P(admin_token)}</stringProp>
-      </elementProp>
-      <!-- No cache-disable header here, so Redis is enabled -->
-    </collectionProp>
-  </HeaderManager>
-  <hashTree/>
-  
-  <!-- Same requests as before but with caching enabled -->
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get All Drivers (With Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/drivers</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Revenue Stats (With Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/revenue</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Rides By Area (With Cache)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/rides-by-area</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-</hashTree>
-
-<!-- Kafka Performance Test (B+S+K) -->
-<ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Kafka Performance Test (B+S+K)" enabled="true">
-  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-  <boolProp name="LoopController.continue_forever">false</boolProp>
-    <stringProp name="LoopController.loops">20</stringProp>
-  </elementProp>
-  <stringProp name="ThreadGroup.num_threads">100</stringProp>
-  <stringProp name="ThreadGroup.ramp_time">10</stringProp>
-  <boolProp name="ThreadGroup.scheduler">false</boolProp>
-  <stringProp name="ThreadGroup.duration"></stringProp>
-  <stringProp name="ThreadGroup.delay"></stringProp>
-</ThreadGroup>
-<hashTree>
-  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
-    <collectionProp name="HeaderManager.headers">
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Content-Type</stringProp>
-        <stringProp name="Header.value">application/json</stringProp>
-      </elementProp>
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Authorization</stringProp>
-        <stringProp name="Header.value">Bearer ${__P(customer_token)}</stringProp>
-      </elementProp>
-      <!-- Enable Kafka explicitly -->
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">X-Enable-Kafka</stringProp>
-        <stringProp name="Header.value">true</stringProp>
-      </elementProp>
-    </collectionProp>
-  </HeaderManager>
-  <hashTree/>
-  
-  <!-- Testing ride workflow with Kafka enabled -->
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Nearby Drivers (Kafka)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments">
-        <elementProp name="latitude" elementType="HTTPArgument">
-          <boolProp name="HTTPArgument.always_encode">false</boolProp>
-          <stringProp name="Argument.value">37.7749</stringProp>
-          <stringProp name="Argument.metadata">=</stringProp>
-          <boolProp name="HTTPArgument.use_equals">true</boolProp>
-          <stringProp name="Argument.name">latitude</stringProp>
-        </elementProp>
-        <elementProp name="longitude" elementType="HTTPArgument">
-          <boolProp name="HTTPArgument.always_encode">false</boolProp>
-          <stringProp name="Argument.value">-122.4194</stringProp>
-          <stringProp name="Argument.metadata">=</stringProp>
-          <boolProp name="HTTPArgument.use_equals">true</boolProp>
-          <stringProp name="Argument.name">longitude</stringProp>
-        </elementProp>
-      </collectionProp>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/rides/nearby-drivers</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree>
-    <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract driver_id" enabled="true">
-      <stringProp name="JSONPostProcessor.referenceNames">kafka_driver_id</stringProp>
-      <stringProp name="JSONPostProcessor.jsonPathExprs">$.data[0].driver_id</stringProp>
-      <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
-      <stringProp name="JSONPostProcessor.defaultValues">no_driver</stringProp>
-    </JSONPostProcessor>
-    <hashTree/>
-  </hashTree>
-  
-  <!-- Book a ride with Kafka messaging -->
-  <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Driver Available" enabled="true">
-    <stringProp name="IfController.condition">${__jexl3("${kafka_driver_id}" != "no_driver")}</stringProp>
-    <boolProp name="IfController.evaluateAll">false</boolProp>
-    <boolProp name="IfController.useExpression">true</boolProp>
-  </IfController>
-  <hashTree>
-    <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Book Ride (Kafka)" enabled="true">
-      <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-      <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-        <collectionProp name="Arguments.arguments">
-          <elementProp name="" elementType="HTTPArgument">
-            <boolProp name="HTTPArgument.always_encode">false</boolProp>
-            <stringProp name="Argument.value">{
-  "pickup_location": {
-    "latitude": 37.7749,
-    "longitude": -122.4194
-  },
-  "dropoff_location": {
-    "latitude": 37.7849,
-    "longitude": -122.4294
-  },
-  "date_time": "${__time(yyyy-MM-dd'T'HH:mm:ss)}",
-  "passenger_count": 1,
-  "driver_id": "${kafka_driver_id}"
-}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(admin_token)}</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">X-Disable-Cache</stringProp>
+              <stringProp name="Header.value">true</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get All Drivers (No Cache)" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/drivers</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
           </elementProp>
-        </collectionProp>
-      </elementProp>
-      <stringProp name="HTTPSampler.domain"></stringProp>
-      <stringProp name="HTTPSampler.port"></stringProp>
-      <stringProp name="HTTPSampler.protocol"></stringProp>
-      <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-      <stringProp name="HTTPSampler.path">${API_URL}/rides</stringProp>
-      <stringProp name="HTTPSampler.method">POST</stringProp>
-      <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-      <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-      <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-      <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-      <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-      <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-      <stringProp name="HTTPSampler.response_timeout"></stringProp>
-    </HTTPSamplerProxy>
-    <hashTree>
-      <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract ride_id" enabled="true">
-        <stringProp name="JSONPostProcessor.referenceNames">kafka_ride_id</stringProp>
-        <stringProp name="JSONPostProcessor.jsonPathExprs">$.data.ride_id</stringProp>
-        <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
-        <stringProp name="JSONPostProcessor.defaultValues">no_ride</stringProp>
-      </JSONPostProcessor>
+        </HTTPSamplerProxy>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Redis Caching Performance Test (B+S)" enabled="true">
+        <intProp name="ThreadGroup.num_threads">100</intProp>
+        <intProp name="ThreadGroup.ramp_time">10</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">20</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(admin_token)}</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get All Drivers (With Cache)" enabled="true">
+          <stringProp name="HTTPSampler.path">${API_URL}/drivers</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+      </hashTree>
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename">summary_report.csv</stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <Summariser guiclass="SummariserGui" testclass="Summariser" testname="Generate Summary Results"/>
       <hashTree/>
     </hashTree>
   </hashTree>
-</hashTree>
-
-<!-- Full Stack Performance Test (B+S+K+DS - Distributed Services) -->
-<ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Full Stack Performance Test" enabled="true">
-  <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-  <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
-    <boolProp name="LoopController.continue_forever">false</boolProp>
-    <stringProp name="LoopController.loops">20</stringProp>
-  </elementProp>
-  <stringProp name="ThreadGroup.num_threads">100</stringProp>
-  <stringProp name="ThreadGroup.ramp_time">10</stringProp>
-  <boolProp name="ThreadGroup.scheduler">false</boolProp>
-  <stringProp name="ThreadGroup.duration"></stringProp>
-  <stringProp name="ThreadGroup.delay"></stringProp>
-</ThreadGroup>
-<hashTree>
-  <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
-    <collectionProp name="HeaderManager.headers">
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Content-Type</stringProp>
-        <stringProp name="Header.value">application/json</stringProp>
-      </elementProp>
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">Authorization</stringProp>
-        <stringProp name="Header.value">Bearer ${__P(admin_token)}</stringProp>
-      </elementProp>
-      <!-- Enable all optimizations -->
-      <elementProp name="" elementType="Header">
-        <stringProp name="Header.name">X-Enable-All-Features</stringProp>
-        <stringProp name="Header.value">true</stringProp>
-      </elementProp>
-    </collectionProp>
-  </HeaderManager>
-  <hashTree/>
-  
-  <!-- Complex analysis queries that would benefit from all optimizations -->
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Performance Comparison Data" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/performance-comparison</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get System Health" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments"/>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/health</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-  
-  <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Graph Data (Drivers)" enabled="true">
-    <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
-      <collectionProp name="Arguments.arguments">
-        <elementProp name="type" elementType="HTTPArgument">
-          <boolProp name="HTTPArgument.always_encode">false</boolProp>
-          <stringProp name="Argument.value">drivers</stringProp>
-          <stringProp name="Argument.metadata">=</stringProp>
-          <boolProp name="HTTPArgument.use_equals">true</boolProp>
-          <stringProp name="Argument.name">type</stringProp>
-        </elementProp>
-      </collectionProp>
-    </elementProp>
-    <stringProp name="HTTPSampler.domain"></stringProp>
-    <stringProp name="HTTPSampler.port"></stringProp>
-    <stringProp name="HTTPSampler.protocol"></stringProp>
-    <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-    <stringProp name="HTTPSampler.path">${API_URL}/stats/graph-data</stringProp>
-    <stringProp name="HTTPSampler.method">GET</stringProp>
-    <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-    <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-    <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-    <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
-    <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
-    <stringProp name="HTTPSampler.connect_timeout"></stringProp>
-    <stringProp name="HTTPSampler.response_timeout"></stringProp>
-  </HTTPSamplerProxy>
-  <hashTree/>
-</hashTree>
-
-<!-- Additional Result Collectors for Analysis -->
-<ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
-  <boolProp name="ResultCollector.error_logging">false</boolProp>
-  <objProp>
-    <name>saveConfig</name>
-    <value class="SampleSaveConfiguration">
-      <time>true</time>
-      <latency>true</latency>
-      <timestamp>true</timestamp>
-      <success>true</success>
-      <label>true</label>
-      <code>true</code>
-      <message>true</message>
-      <threadName>true</threadName>
-      <dataType>true</dataType>
-      <encoding>false</encoding>
-      <assertions>true</assertions>
-      <subresults>true</subresults>
-      <responseData>false</responseData>
-      <samplerData>false</samplerData>
-      <xml>false</xml>
-      <fieldNames>true</fieldNames>
-      <responseHeaders>false</responseHeaders>
-      <requestHeaders>false</requestHeaders>
-      <responseDataOnError>false</responseDataOnError>
-      <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-      <assertionsResultsToSave>0</assertionsResultsToSave>
-      <bytes>true</bytes>
-      <sentBytes>true</sentBytes>
-      <url>true</url>
-      <threadCounts>true</threadCounts>
-      <idleTime>true</idleTime>
-      <connectTime>true</connectTime>
-    </value>
-  </objProp>
-  <stringProp name="filename">summary_report.csv</stringProp>
-</ResultCollector>
-<hashTree/>
-
-<ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="true">
-  <boolProp name="ResultCollector.error_logging">false</boolProp>
-  <objProp>
-    <name>saveConfig</name>
-    <value class="SampleSaveConfiguration">
-      <time>true</time>
-      <latency>true</latency>
-      <timestamp>true</timestamp>
-      <success>true</success>
-      <label>true</label>
-      <code>true</code>
-      <message>true</message>
-      <threadName>true</threadName>
-      <dataType>true</dataType>
-      <encoding>false</encoding>
-      <assertions>true</assertions>
-      <subresults>true</subresults>
-      <responseData>false</responseData>
-      <samplerData>false</samplerData>
-      <xml>false</xml>
-      <fieldNames>true</fieldNames>
-      <responseHeaders>false</responseHeaders>
-      <requestHeaders>false</requestHeaders>
-      <responseDataOnError>false</responseDataOnError>
-      <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-      <assertionsResultsToSave>0</assertionsResultsToSave>
-      <bytes>true</bytes>
-      <sentBytes>true</sentBytes>
-      <url>true</url>
-      <threadCounts>true</threadCounts>
-      <idleTime>true</idleTime>
-      <connectTime>true</connectTime>
-    </value>
-  </objProp>
-  <stringProp name="filename">results_table.csv</stringProp>
-</ResultCollector>
-<hashTree/>
-
-<ResultCollector guiclass="RespTimeGraphVisualizer" testclass="ResultCollector" testname="Response Time Graph" enabled="true">
-  <boolProp name="ResultCollector.error_logging">false</boolProp>
-  <objProp>
-    <name>saveConfig</name>
-    <value class="SampleSaveConfiguration">
-      <time>true</time>
-      <latency>true</latency>
-      <timestamp>true</timestamp>
-      <success>true</success>
-      <label>true</label>
-      <code>true</code>
-      <message>true</message>
-      <threadName>true</threadName>
-      <dataType>true</dataType>
-      <encoding>false</encoding>
-      <assertions>true</assertions>
-      <subresults>true</subresults>
-      <responseData>false</responseData>
-      <samplerData>false</samplerData>
-      <xml>false</xml>
-      <fieldNames>true</fieldNames>
-      <responseHeaders>false</responseHeaders>
-      <requestHeaders>false</requestHeaders>
-      <responseDataOnError>false</responseDataOnError>
-      <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-      <assertionsResultsToSave>0</assertionsResultsToSave>
-      <bytes>true</bytes>
-      <sentBytes>true</sentBytes>
-      <url>true</url>
-      <threadCounts>true</threadCounts>
-      <idleTime>true</idleTime>
-      <connectTime>true</connectTime>
-    </value>
-  </objProp>
-  <stringProp name="filename">response_time_graph.csv</stringProp>
-  <stringProp name="RespTimeGraph.interval">100</stringProp>
-</ResultCollector>
-<hashTree/>
-
-<!-- JSR223 PostProcessor to Generate Performance Comparison Data -->
-<JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Generate Performance Report" enabled="true">
-  <stringProp name="cacheKey">true</stringProp>
-  <stringProp name="filename"></stringProp>
-  <stringProp name="parameters"></stringProp>
-  <stringProp name="script">import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
-// Create a summary of performance test results for different configurations
-try {
-    // Paths for summary files
-    String reportPath = "performance_summary.csv";
-    String chartDataPath = "chart_data.json";
-    
-    // Create or append to summary file
-    FileWriter fileWriter = new FileWriter(reportPath, true);
-    PrintWriter printWriter = new PrintWriter(fileWriter);
-    
-    // Headers if file is new
-    if (new File(reportPath).length() == 0) {
-        printWriter.println("Timestamp,TestName,Configuration,Threads,SamplesCount,AvgResponseTime,Throughput,ErrorRate");
-    }
-    
-    // Get test information
-    String testName = ctx.getThread().getThreadGroup().getName();
-    String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-    
-    // Configuration type detection
-    String configuration = "Unknown";
-    if (testName.contains("(B)")) {
-        configuration = "Base";
-    } else if (testName.contains("(B+S)")) {
-        configuration = "Base+SQL_Caching";
-    } else if (testName.contains("(B+S+K)")) {
-        configuration = "Base+SQL_Caching+Kafka";
-    } else if (testName.contains("Full Stack")) {
-        configuration = "Base+SQL_Caching+Kafka+DS";
-    }
-    
-    // Calculate metrics
-    int totalSamples = prev.getSampleCount();
-    double avgResponseTime = prev.getAvgTime();
-    double throughput = prev.getRate();
-    double errorRate = (prev.getErrorCount() / (double)totalSamples) * 100;
-    
-    // Write to summary file
-    printWriter.println(String.format("%s,%s,%s,%d,%d,%.2f,%.2f,%.2f", 
-        timestamp, testName, configuration, 
-        ctx.getThreadGroup().getNumberOfThreads(),
-        totalSamples, avgResponseTime, throughput, errorRate));
-    
-    printWriter.close();
-    
-    // Update chart data JSON
-    Map<String, Object> chartData = new HashMap<>();
-    
-    // Try to read existing chart data if available
-    File chartFile = new File(chartDataPath);
-    if (chartFile.exists()) {
-        // In a real implementation, we would parse the existing JSON
-        // Here we'll just create a new file each time for simplicity
-    }
-    
-    // Create chart data structure
-    List<String> labels = new ArrayList<>();
-    labels.add("Base (B)");
-    labels.add("Base + SQL Caching (B+S)");
-    labels.add("Base + SQL Caching + Kafka (B+S+K)");
-    labels.add("Full Stack (B+S+K+DS)");
-    
-    List<Double> responseTimesData = new ArrayList<>();
-    List<Double> throughputData = new ArrayList<>();
-    
-    // In a real implementation, we would gather data from all test runs
-    // For now just add the current test results to demonstrate
-    
-    // Write chart data to JSON file
-    FileWriter chartWriter = new FileWriter(chartDataPath, false);
-    
-    // Simple JSON serialization (in reality, use a proper JSON library)
-    StringBuilder json = new StringBuilder();
-    json.append("{\n");
-    json.append("  \"timestamp\": \"" + timestamp + "\",\n");
-    json.append("  \"labels\": [\"Base (B)\", \"Base + SQL Caching (B+S)\", \"Base + SQL Caching + Kafka (B+S+K)\", \"Full Stack (B+S+K+DS)\"],\n");
-    json.append("  \"responseTimesData\": [250, 60, 35, 25],\n");
-    json.append("  \"throughputData\": [100, 420, 800, 1150],\n");
-    json.append("  \"currentTest\": {\n");
-    json.append("    \"name\": \"" + testName + "\",\n");
-    json.append("    \"configuration\": \"" + configuration + "\",\n");
-    json.append("    \"responseTime\": " + avgResponseTime + ",\n");
-    json.append("    \"throughput\": " + throughput + "\n");
-    json.append("  }\n");
-    json.append("}\n");
-    
-    chartWriter.write(json.toString());
-    chartWriter.close();
-    
-    log.info("Performance data saved to " + reportPath + " and " + chartDataPath);
-    
-} catch (Exception e) {
-    log.error("Error generating performance report", e);
-}
-</stringProp>
-  <stringProp name="scriptLanguage">groovy</stringProp>
-</JSR223PostProcessor>
-<hashTree/>
+</jmeterTestPlan>
