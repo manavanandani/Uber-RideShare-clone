@@ -1,6 +1,6 @@
 // src/pages/customer/BookRide.jsx
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+//import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 
 function BookRide() {
-  const { user } = useSelector(state => state.auth);
+  //const { user } = useSelector(state => state.auth);
   const navigate = useNavigate();
   
   const [activeStep, setActiveStep] = useState(0);
@@ -145,7 +145,7 @@ function BookRide() {
     if (markers.pickup && markers.dropoff) {
       calculateFare();
     }
-  }, [markers]);
+  }, [markers, rideData.date_time, rideData.dropoff_location.latitude, rideData.dropoff_location.longitude, rideData.passenger_count, rideData.pickup_location.latitude, rideData.pickup_location.longitude]);
 
   // Function to geocode an address using Nominatim
   const geocodeAddress = async (address) => {
