@@ -7,6 +7,9 @@ const { cacheMiddleware } = require('../config/redis');
 // Create a bill
 router.post('/', verifyRole('driver'), billingController.createBill);
 
+// Search bills (admin only)
+router.get('/search', verifyRole('admin'), billingController.searchBills);
+
 // Get a bill by ID
 router.get('/:bill_id', verifyRole(['admin', 'customer', 'driver']), cacheMiddleware(120), billingController.getBill);
 
@@ -21,8 +24,5 @@ router.get('/driver/:driver_id', verifyRole(['admin', 'driver']), cacheMiddlewar
 
 // Process payment
 router.post('/:bill_id/pay', verifyRole(['admin', 'customer']), billingController.processPayment);
-
-// Search bills (admin only)
-router.get('/search', verifyRole('admin'), billingController.searchBills);
 
 module.exports = router;

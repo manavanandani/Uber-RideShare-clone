@@ -84,8 +84,8 @@ try {
 const cacheMiddleware = (duration) => {
   return async (req, res, next) => {
     try {
-      // Skip caching if X-Disable-Cache header is present (for testing)
       if (req.headers['x-disable-cache'] === 'true') {
+        console.log(`[DATA SOURCE] Request ${req.originalUrl} - CACHE DISABLED`);
         return next();
       }
       
@@ -98,6 +98,7 @@ const cacheMiddleware = (duration) => {
       try {
         const cachedData = await redisClient.get(key);
         if (cachedData) {
+          console.log(`[DATA SOURCE] Request ${req.originalUrl} - FROM REDIS CACHE ✓`);
           return res.json(JSON.parse(cachedData));
         }
       } catch (cacheError) {
@@ -110,6 +111,7 @@ const cacheMiddleware = (duration) => {
       res.send = function (body) {
         if (res.statusCode === 200) {
           try {
+            console.log(`[DATA SOURCE] Caching response for ${req.originalUrl}`);
             redisClient.set(key, body, 'EX', duration);
           } catch (cacheError) {
             console.error('Cache set error:', cacheError);

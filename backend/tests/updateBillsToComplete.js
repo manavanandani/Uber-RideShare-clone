@@ -27,7 +27,7 @@ const loginAsAdmin = async () => {
 const loginAsCustomer = async () => {
   try {
     const response = await axios.post(`${API_URL}/auth/customer/login`, {
-      email: 'test@admin.com',
+      email: 'test_customer@test.com',
       password: 'password123',
       role: 'customer'
     });
