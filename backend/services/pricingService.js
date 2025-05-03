@@ -40,6 +40,10 @@ const getPredictedFare = async (pickup, dropoff, dateTime, passengerCount) => {
     try {
         const timestamp = new Date(dateTime).toISOString();
         
+        console.log('Sending prediction request to ML API with data:', {
+            pickup, dropoff, dateTime, passengerCount
+        });
+        
         const response = await axios.post(process.env.ML_API_URL || 'http://localhost:8000/predict', {
             pickup_datetime: timestamp,
             passenger_count: passengerCount,
@@ -49,6 +53,7 @@ const getPredictedFare = async (pickup, dropoff, dateTime, passengerCount) => {
             dropoff_latitude: dropoff.latitude
         });
         
+        console.log('Received ML prediction response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error getting fare prediction from ML model:', error);
@@ -74,37 +79,66 @@ const getPredictedFare = async (pickup, dropoff, dateTime, passengerCount) => {
  */
 const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passengerCount = 1) => {
     try {
-        // Try to get from cache first
-        const cacheKey = `price:${pickup.latitude.toFixed(4)}:${pickup.longitude.toFixed(4)}:${dropoff.latitude.toFixed(4)}:${dropoff.longitude.toFixed(4)}:${passengerCount}:${dateTime.getHours()}`;
-        const cachedPrice = await redisClient.get(cacheKey);
+        console.log('getDynamicPrice called with:', { pickup, dropoff, dateTime, passengerCount });
         
-        if (cachedPrice) {
-            return JSON.parse(cachedPrice);
-        }
-        
-        // Get ML prediction with surge factors included
-        const prediction = await getPredictedFare(pickup, dropoff, dateTime, passengerCount);
-        
-        // Calculate distance and duration for reference
-        const distance = prediction.distance_km || calculateDistance(pickup, dropoff);
+        // Calculate distance and duration directly for immediate use
+        const distance = calculateDistance(pickup, dropoff);
         const duration = estimateRideDuration(distance);
         
-        // Build a reference breakdown for transparency
+        // Basic fare calculation as fallback
         const baseFare = BASE_FARE;
         const distanceFare = distance * COST_PER_KM;
         const timeFare = duration * COST_PER_MINUTE;
+        const basicFare = baseFare + distanceFare + timeFare;
         
-        // Calculate implied surge factor
-        const rawFare = baseFare + distanceFare + timeFare;
-        const surgeFactor = prediction.surge_factor || (prediction.predicted_fare / rawFare);
+        // Try to get from cache first
+        const cacheKey = `price:${pickup.latitude.toFixed(4)}:${pickup.longitude.toFixed(4)}:${dropoff.latitude.toFixed(4)}:${dropoff.longitude.toFixed(4)}:${passengerCount}:${dateTime.getHours()}`;
         
-        // Bundle all the information together
+        try {
+            const cachedPrice = await redisClient.get(cacheKey);
+            if (cachedPrice) {
+                console.log('Using cached price');
+                return JSON.parse(cachedPrice);
+            }
+        } catch (cacheError) {
+            console.error('Cache error, continuing with calculation:', cacheError);
+            // Continue with calculation if cache fails
+        }
+        
+        // Try ML model but handle gracefully if it fails
+        let mlPrediction;
+        let surgeFactor = 1.0;
+        
+        try {
+            mlPrediction = await getPredictedFare(pickup, dropoff, dateTime, passengerCount);
+            surgeFactor = mlPrediction.surge_factor || 1.2; // Default surge if not provided
+        } catch (mlError) {
+            console.log('ML model error, using basic calculation:', mlError);
+            // Apply time-based surge as fallback
+            const hour = dateTime.getHours();
+            const isWeekend = [0, 6].includes(dateTime.getDay());
+            
+            // Simple surge logic based on time of day
+            if ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) {
+                // Rush hour surge
+                surgeFactor = 1.5;
+            } else if (hour >= 22 || hour <= 3) {
+                // Night surge
+                surgeFactor = isWeekend ? 1.8 : 1.3;
+            }
+            
+            mlPrediction = {
+                predicted_fare: basicFare * surgeFactor,
+                distance_km: distance
+            };
+        }
+        
+        // Final result with all needed info
         const result = {
-            fare: prediction.predicted_fare,
+            fare: Math.round(mlPrediction.predicted_fare * 100) / 100, // Round to 2 decimal places
             distance: distance,
             duration: duration,
-            usedMlModel: prediction.status === 'success',
-            surge_factor: surgeFactor,
+            demandSurge: surgeFactor,
             breakdown: {
                 base_fare: baseFare,
                 distance_fare: distanceFare,
@@ -113,16 +147,42 @@ const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passenger
             }
         };
         
+        console.log('Final price calculation result:', result);
+        
         // Cache for 3 minutes
-        await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 180);
+        try {
+            await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 180);
+        } catch (cacheError) {
+            console.error('Failed to cache result:', cacheError);
+            // Continue without caching
+        }
         
         return result;
     } catch (error) {
         console.error('Error in dynamic pricing:', error);
-        throw error;
+        
+        // Emergency fallback if everything else fails
+        const distance = calculateDistance(pickup, dropoff);
+        const duration = estimateRideDuration(distance);
+        const fare = BASE_FARE + (distance * COST_PER_KM) + (duration * COST_PER_MINUTE);
+        
+        const result = {
+            fare: Math.round(fare * 100) / 100,
+            distance: distance,
+            duration: duration,
+            demandSurge: 1.0,
+            breakdown: {
+                base_fare: BASE_FARE,
+                distance_fare: distance * COST_PER_KM,
+                time_fare: duration * COST_PER_MINUTE,
+                surge_multiplier: 1.0
+            }
+        };
+        
+        console.log('Emergency fallback price calculation:', result);
+        return result;
     }
 };
-
 
 /**
  * Record actual pricing data for model improvement
@@ -144,9 +204,13 @@ const recordPricingData = async (rideData) => {
       was_accepted: true // Could be updated later when we know if ride was accepted
     };
     
-    // Store in MongoDB for later analysis and model retraining
-    // This is a simplified example - implement as needed
-    await redisClient.rpush('pricing_data_queue', JSON.stringify(pricingRecord));
+    // Store in Redis for later analysis and model retraining
+    try {
+      await redisClient.rpush('pricing_data_queue', JSON.stringify(pricingRecord));
+    } catch (redisError) {
+      console.error('Error storing pricing data in Redis:', redisError);
+      // Continue without storing
+    }
     
     return true;
   } catch (error) {

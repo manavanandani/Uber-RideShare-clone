@@ -1,58 +1,128 @@
+// In config/redis.js, add these modifications:
+
 const Redis = require('ioredis');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-const redisClient = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || '',
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  }
-});
+// Create a mock Redis client that doesn't fail if Redis is unavailable
+const createMockRedisClient = () => {
+  const cache = new Map();
+  
+  return {
+    get: async (key) => {
+      console.log('Mock Redis: Getting key', key);
+      return cache.get(key);
+    },
+    set: async (key, value, expiryType, duration) => {
+      console.log('Mock Redis: Setting key', key);
+      cache.set(key, value);
+      if (expiryType === 'EX') {
+        setTimeout(() => cache.delete(key), duration * 1000);
+      }
+      return 'OK';
+    },
+    rpush: async (key, value) => {
+      console.log('Mock Redis: Pushing to list', key);
+      const list = cache.get(key) || [];
+      list.push(value);
+      cache.set(key, list);
+      return list.length;
+    },
+    keys: async (pattern) => {
+      console.log('Mock Redis: Listing keys with pattern', pattern);
+      return Array.from(cache.keys()).filter(key => 
+        pattern === '*' || key.includes(pattern.replace('*', '')));
+    },
+    del: async (...keys) => {
+      console.log('Mock Redis: Deleting keys', keys);
+      let count = 0;
+      for (const key of keys) {
+        if (cache.delete(key)) count++;
+      }
+      return count;
+    }
+  };
+};
 
-redisClient.on('connect', () => {
-  console.log('Redis client connected');
-});
-
-redisClient.on('error', (err) => {
-  console.error('Redis connection error:', err);
-});
+let redisClient;
+try {
+  redisClient = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASSWORD || '',
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
+    connectTimeout: 5000,  // 5 seconds
+    maxRetriesPerRequest: 3
+  });
+  
+  redisClient.on('connect', () => {
+    console.log('Redis client connected');
+  });
+  
+  redisClient.on('error', (err) => {
+    console.error('Redis connection error:', err);
+    console.log('Switching to mock Redis client');
+    redisClient = createMockRedisClient();
+  });
+  
+  // Test connection
+  redisClient.ping().catch(err => {
+    console.error('Redis ping failed:', err);
+    console.log('Switching to mock Redis client');
+    redisClient = createMockRedisClient();
+  });
+} catch (error) {
+  console.error('Error creating Redis client:', error);
+  console.log('Using mock Redis client instead');
+  redisClient = createMockRedisClient();
+}
 
 const cacheMiddleware = (duration) => {
   return async (req, res, next) => {
-    // Skip caching if X-Disable-Cache header is present (for testing)
-    if (req.headers['x-disable-cache'] === 'true') {
-      return next();
-    }
-    
-    if (req.method !== 'GET') {
-      return next();
-    }
-
-    const key = `__cache__${req.originalUrl || req.url}`;
-
     try {
-      const cachedData = await redisClient.get(key);
-      if (cachedData) {
-        return res.json(JSON.parse(cachedData));
+      // Skip caching if X-Disable-Cache header is present (for testing)
+      if (req.headers['x-disable-cache'] === 'true') {
+        return next();
+      }
+      
+      if (req.method !== 'GET') {
+        return next();
+      }
+
+      const key = `__cache__${req.originalUrl || req.url}`;
+
+      try {
+        const cachedData = await redisClient.get(key);
+        if (cachedData) {
+          return res.json(JSON.parse(cachedData));
+        }
+      } catch (cacheError) {
+        console.error('Cache retrieval error:', cacheError);
+        // Continue without caching
       }
 
       const originalSend = res.send;
 
       res.send = function (body) {
         if (res.statusCode === 200) {
-          redisClient.set(key, body, 'EX', duration);
+          try {
+            redisClient.set(key, body, 'EX', duration);
+          } catch (cacheError) {
+            console.error('Cache set error:', cacheError);
+            // Continue without caching
+          }
         }
         originalSend.call(this, body);
       };
 
       next();
     } catch (error) {
-      console.error('Redis cache error:', error);
-      next();
+      console.error('Redis cache middleware error:', error);
+      next(); // Continue without caching
     }
   };
 };
@@ -63,8 +133,10 @@ const invalidateCache = async (pattern) => {
     if (keys.length > 0) {
       await redisClient.del(...keys);
     }
+    return true;
   } catch (error) {
     console.error('Error invalidating cache:', error);
+    return false;
   }
 };
 

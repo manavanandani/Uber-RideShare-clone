@@ -1,4 +1,4 @@
-// Fixed BookRide.jsx with proper use of the user state
+// src/pages/customer/BookRide.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -111,22 +111,82 @@ function BookRide() {
       if (rideData.pickup_location.latitude && rideData.dropoff_location.latitude) {
         try {
           setLoading(true);
-          const response = await customerService.getFareEstimate({
-            pickup_latitude: rideData.pickup_location.latitude,
-            pickup_longitude: rideData.pickup_location.longitude,
-            dropoff_latitude: rideData.dropoff_location.latitude,
-            dropoff_longitude: rideData.dropoff_location.longitude,
+          
+          console.log('Starting fare calculation with data:', {
+            pickup: rideData.pickup_location,
+            dropoff: rideData.dropoff_location,
             datetime: rideData.date_time,
-            passenger_count: rideData.passenger_count
+            passengers: rideData.passenger_count
           });
-          setFareEstimate(response.data);
+          
+          // Set a timeout to prevent infinite loading
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Fare calculation timeout')), 5000)
+          );
+          
+          // Race the API call with a timeout
+          const response = await Promise.race([
+            customerService.getFareEstimate({
+              pickup_latitude: rideData.pickup_location.latitude,
+              pickup_longitude: rideData.pickup_location.longitude,
+              dropoff_latitude: rideData.dropoff_location.latitude,
+              dropoff_longitude: rideData.dropoff_location.longitude,
+              datetime: rideData.date_time,
+              passenger_count: rideData.passenger_count
+            }),
+            timeoutPromise
+          ]);
+          
+          console.log('Fare estimate response:', response);
+          setFareEstimate(response);
           setLoading(false);
         } catch (err) {
-          setError(err.response?.data?.message || 'Failed to calculate fare');
+          console.error('Fare calculation error:', err);
+          
+          // Fallback fare calculation on frontend
+          const directDistance = calculateDirectDistance(
+            rideData.pickup_location.latitude,
+            rideData.pickup_location.longitude,
+            rideData.dropoff_location.latitude,
+            rideData.dropoff_location.longitude
+          );
+          
+          // Simple fare calculation - should match backend's emergency fallback
+          const baseFare = 3.0;
+          const distanceFare = directDistance * 1.5;
+          const duration = directDistance * 2; // Rough estimate: 2 minutes per km
+          const timeFare = duration * 0.2;
+          const fare = baseFare + distanceFare + timeFare;
+          
+          // Set a fallback fare estimate
+          setFareEstimate({
+            data: {
+              fare: Math.round(fare * 100) / 100,
+              distance: directDistance,
+              duration: duration,
+              demandSurge: 1.0
+            }
+          });
+          
+          setError('Could not fetch exact fare estimate. Using approximate calculation.');
           setLoading(false);
         }
       }
     };
+
+    // Add this helper function within useEffect
+    function calculateDirectDistance(lat1, lon1, lat2, lon2) {
+      // Haversine formula to calculate direct distance
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c; // Distance in km
+    }
 
     if (markers.pickup && markers.dropoff) {
       calculateFare();
@@ -409,12 +469,6 @@ function BookRide() {
   // Simplified steps without driver selection
   const steps = ['Set Locations', 'Confirm Booking'];
   
-  // Debug log - remove in production
-  console.log('Current step:', activeStep);
-  console.log('User:', user);
-  console.log('Markers:', markers);
-  console.log('Fare estimate:', fareEstimate);
-  
   const renderStepContent = (step) => {
     if (step === 0) {
       return (
@@ -564,7 +618,11 @@ function BookRide() {
                 <Divider sx={{ my: 2 }} />
                 
                 <Typography variant="subtitle1">Fare Estimate</Typography>
-                {fareEstimate ? (
+                {loading ? (
+                  <Typography variant="body1" color="textSecondary">
+                    Calculating...
+                  </Typography>
+                ) : fareEstimate && fareEstimate.data ? (
                   <Box>
                     <Typography variant="h5" color="primary">
                       ${fareEstimate.data.fare.toFixed(2)}
@@ -573,7 +631,7 @@ function BookRide() {
                       Distance: {fareEstimate.data.distance.toFixed(2)} km
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
-                      Duration: {fareEstimate.data.duration.toFixed(0)} mins
+                      Duration: {Math.round(fareEstimate.data.duration)} mins
                     </Typography>
                     {fareEstimate.data.demandSurge > 1 && (
                       <Typography variant="body2" color="error">
@@ -582,8 +640,8 @@ function BookRide() {
                     )}
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="textSecondary">
-                    Calculating...
+                  <Typography variant="body2" color="error">
+                    Could not calculate fare. Please try again.
                   </Typography>
                 )}
               </CardContent>
