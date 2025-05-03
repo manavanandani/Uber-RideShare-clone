@@ -146,16 +146,24 @@ exports.customerLogin = async (req, res) => {
     
     // Generate token
     const token = generateToken(customer.customer_id, 'customer');
-    
+
+    const sanitizedCustomer = {
+      customer_id: customer.customer_id,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      city: customer.city,
+      state: customer.state,
+      zip_code: customer.zip_code,
+      rating: customer.rating,
+      // omit password & card info unless needed
+    };
+
     res.status(200).json({
       message: 'Customer login successful',
-      token,
-      data: {
-        customer_id: customer.customer_id,
-        name: `${customer.first_name} ${customer.last_name}`,
-        email: customer.email,
-        role: 'customer'
-      }
+      token, data: sanitizedCustomer
     });
   } catch (error) {
     console.error('Customer login error:', error);
