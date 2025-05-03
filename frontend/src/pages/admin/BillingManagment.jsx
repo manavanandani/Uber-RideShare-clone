@@ -117,6 +117,35 @@ function BillingManagement() {
     setPaymentStatus('all');
   };
 
+  // Add this to BillingManagement.jsx
+
+useEffect(() => {
+    // Load some initial billing data when the component mounts
+    const fetchInitialBills = async () => {
+      try {
+        setLoading(true);
+        // Get default bills (e.g., most recent)
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        const queryParams = new URLSearchParams({
+          start_date: thirtyDaysAgo.toISOString().split('T')[0],
+          end_date: today.toISOString().split('T')[0]
+        });
+        
+        const response = await api.get(`/billing/search?${queryParams.toString()}`);
+        setBills(response.data.data || []);
+        setLoading(false);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to fetch recent bills');
+        setLoading(false);
+      }
+    };
+  
+    fetchInitialBills();
+  }, []); // Empty dependency array means it runs once on component mount
+  
   // Get color for payment status chip
   const getStatusColor = (status) => {
     switch (status) {

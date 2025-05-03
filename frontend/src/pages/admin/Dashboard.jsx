@@ -1,6 +1,6 @@
 // src/pages/admin/Dashboard.jsx
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+//import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -23,7 +23,7 @@ import {
 import api from '../../services/api';
 
 function AdminDashboard() {
-  const { user } = useSelector(state => state.auth);
+  //const { user } = useSelector(state => state.auth);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

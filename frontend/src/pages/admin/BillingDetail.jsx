@@ -48,6 +48,11 @@ function BillingDetail() {
   const fetchBillDetails = async () => {
     try {
       setLoading(true);
+      if (!billId) {
+        setError("No bill ID provided");
+        setLoading(false);
+        return;
+      }
       const response = await api.get(`/billing/${billId}`);
       setBill(response.data.data);
       setLoading(false);
@@ -97,11 +102,10 @@ function BillingDetail() {
     try {
       const [latitude, longitude] = coordinateString.split(',').map(parseFloat);
       return { lat: latitude, lng: longitude };
-    } catch (err) {
+    } catch {
       return null;
     }
-  };
-  
+  };  
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
