@@ -1,10 +1,11 @@
-// Updated App.jsx with admin routes
-import React, { useEffect } from 'react';
+// Updated App.jsx with proper authentication state handling
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { getCurrentUser } from './store/slices/authSlice';
+import { CircularProgress, Box } from '@mui/material';
 
 // Theme
 import theme from './theme';
@@ -53,35 +54,85 @@ import BillingDetail from './pages/admin/BillingDetail';
 function App() {
   const dispatch = useDispatch();
   const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
+  const [authChecked, setAuthChecked] = useState(false);
   
   useEffect(() => {
     // Check if token exists in localStorage
     const token = localStorage.getItem('token');
     if (token) {
-      dispatch(getCurrentUser());
+      dispatch(getCurrentUser())
+        .unwrap()
+        .then(() => {
+          setAuthChecked(true);
+        })
+        .catch(() => {
+          // If token is invalid, clear it
+          localStorage.removeItem('token');
+          setAuthChecked(true);
+        });
+    } else {
+      setAuthChecked(true);
     }
   }, [dispatch]);
+
+  // Show loading spinner while checking authentication
+  if (!authChecked) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   // Protected route component
   const ProtectedRoute = ({ children, roles }) => {
     if (loading) {
-      return <div>Loading...</div>;
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh' 
+        }}>
+          <CircularProgress />
+        </Box>
+      );
     }
     
     if (!isAuthenticated) {
-      return <Navigate to="/login" />;
+      return <Navigate to="/login" replace />;
     }
     
     if (roles && !roles.includes(user?.role)) {
       // Redirect to appropriate dashboard based on role
       if (user?.role === 'customer') {
-        return <Navigate to="/customer" />;
+        return <Navigate to="/customer" replace />;
       } else if (user?.role === 'driver') {
-        return <Navigate to="/driver" />;
+        return <Navigate to="/driver" replace />;
       } else if (user?.role === 'admin') {
-        return <Navigate to="/admin" />;
+        return <Navigate to="/admin" replace />;
       } else {
-        return <Navigate to="/" />;
+        return <Navigate to="/" replace />;
+      }
+    }
+    
+    return children;
+  };
+
+  // Public route component - redirects to dashboard if already authenticated
+  const PublicRoute = ({ children }) => {
+    if (isAuthenticated) {
+      if (user?.role === 'customer') {
+        return <Navigate to="/customer" replace />;
+      } else if (user?.role === 'driver') {
+        return <Navigate to="/driver" replace />;
+      } else if (user?.role === 'admin') {
+        return <Navigate to="/admin" replace />;
       }
     }
     
@@ -94,11 +145,11 @@ function App() {
       <Router>
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/driver-application" element={<DriverApplication />} />
-          <Route path="/register-admin" element={<RegisterAdmin />} />
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/driver-application" element={<PublicRoute><DriverApplication /></PublicRoute>} />
+          <Route path="/register-admin" element={<PublicRoute><RegisterAdmin /></PublicRoute>} />
           
           {/* Customer routes */}
           <Route 
