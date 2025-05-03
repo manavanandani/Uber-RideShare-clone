@@ -43,7 +43,9 @@ function RideTracking() {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [pollingInterval, setPollingInterval] = useState(null);
 
+  // Initial load of ride details
   useEffect(() => {
     const fetchRideDetails = async () => {
       try {
@@ -72,6 +74,60 @@ function RideTracking() {
       fetchRideDetails();
     }
   }, [rideId, user]);
+
+  // Real-time status polling for active rides
+  useEffect(() => {
+    // Only set up polling if we have a ride and it's not completed
+    if (ride && ride.status !== 'completed' && ride.status !== 'cancelled') {
+      // Clear any existing interval first
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+      
+      // Set up a new polling interval
+      const interval = setInterval(async () => {
+        try {
+          // Check if the ride status has updated
+          const response = await api.get(`/rides/customer/${user.customer_id}/active`);
+          
+          if (response.data && response.data.data) {
+            const updatedRide = response.data.data;
+            
+            // Only update if the ride ID matches and there's an actual change
+            if (updatedRide.ride_id === rideId && 
+                (updatedRide.status !== ride.status || 
+                 JSON.stringify(updatedRide) !== JSON.stringify(ride))) {
+              
+              console.log('Ride status updated:', updatedRide.status);
+              setRide(updatedRide);
+              
+              // If the ride is completed, stop polling and show rating dialog
+              if (updatedRide.status === 'completed') {
+                clearInterval(interval);
+                setPollingInterval(null);
+                
+                // Only show rating dialog if not already rated
+                if (!updatedRide.rating?.customer_to_driver) {
+                  setShowRatingDialog(true);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error polling for ride updates:', err);
+          // Don't set the error state to avoid disrupting the UI
+          // Just log it and continue polling
+        }
+      }, 10000); // Poll every 10 seconds
+      
+      setPollingInterval(interval);
+      
+      // Clean up interval on component unmount
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [ride, rideId, user?.customer_id]);
 
   const handleRateDriver = async () => {
     try {
@@ -294,6 +350,18 @@ function RideTracking() {
                 {ride.status === 'requested' && (
                   <Typography color="warning.main">
                     Waiting for a driver to accept your ride...
+                  </Typography>
+                )}
+                
+                {ride.status === 'accepted' && (
+                  <Typography color="info.main">
+                    Driver has accepted your ride and is on the way to pick you up!
+                  </Typography>
+                )}
+                
+                {ride.status === 'in_progress' && (
+                  <Typography color="primary.main">
+                    You're on your way to your destination.
                   </Typography>
                 )}
               </Box>

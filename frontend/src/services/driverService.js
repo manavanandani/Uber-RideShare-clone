@@ -33,6 +33,7 @@ export const driverService = {
     const response = await api.get(`/rides/nearby?latitude=${latitude}&longitude=${longitude}`);
     return response.data;
   },
+ 
   
   // Accept a ride
   acceptRide: async (rideId) => {

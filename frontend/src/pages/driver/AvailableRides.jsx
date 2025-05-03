@@ -1,3 +1,4 @@
+// src/pages/driver/AvailableRides.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -136,7 +137,6 @@ function AvailableRides() {
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              // src/pages/driver/AvailableRides.jsx (continued)
               {availableRides.length === 0 ? (
                 <Typography>No ride requests available at the moment. Try refreshing later.</Typography>
               ) : (
@@ -214,6 +214,15 @@ function AvailableRides() {
                           {selectedRide.duration ? `${Math.round(selectedRide.duration)} mins` : 'N/A'}
                         </Typography>
                       </Grid>
+                      {selectedRide.customer_info && (
+                        <Grid item xs={12}>
+                          <Typography variant="subtitle2">Customer</Typography>
+                          <Typography variant="body2">
+                            {`${selectedRide.customer_info.first_name || ''} ${selectedRide.customer_info.last_name || ''}`}
+                            {selectedRide.customer_info.rating && ` (Rating: ${selectedRide.customer_info.rating.toFixed(1)})`}
+                          </Typography>
+                        </Grid>
+                      )}
                     </Grid>
                   </Box>
                   
@@ -229,6 +238,15 @@ function AvailableRides() {
                       }}
                       showDirections={true}
                       height={250}
+                      markers={location ? [
+                        {
+                          position: {
+                            lat: location.latitude,
+                            lng: location.longitude
+                          },
+                          title: 'Your Location'
+                        }
+                      ] : []}
                     />
                   </Box>
                   

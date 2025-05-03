@@ -1,6 +1,6 @@
-// src/pages/customer/BookRide.jsx
+// Fixed BookRide.jsx with proper use of the user state
 import { useState, useEffect } from 'react';
-//import { useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 
 function BookRide() {
-  //const { user } = useSelector(state => state.auth);
+  const { user } = useSelector(state => state.auth);
   const navigate = useNavigate();
   
   const [activeStep, setActiveStep] = useState(0);
@@ -45,18 +45,28 @@ function BookRide() {
       longitude: null
     },
     date_time: new Date().toISOString().slice(0, 16),
-    passenger_count: 1
+    passenger_count: 1,
+    customer_id: null // Will be set after user is loaded
   });
-  const [nearbyDrivers, setNearbyDrivers] = useState([]);
-  const [selectedDriver, setSelectedDriver] = useState(null);
   const [fareEstimate, setFareEstimate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [booking, setBooking] = useState(false);
   
   // New state for address inputs
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [geocoding, setGeocoding] = useState(false);
+  
+  // Set customer_id from user when component mounts or user changes
+  useEffect(() => {
+    if (user && user.customer_id) {
+      setRideData(prev => ({
+        ...prev,
+        customer_id: user.customer_id
+      }));
+    }
+  }, [user]);
   
   // Get user's current location
   useEffect(() => {
@@ -94,30 +104,6 @@ function BookRide() {
       );
     }
   }, []);
-  
-  // Fetch nearby drivers when pickup is set
-  useEffect(() => {
-    const fetchNearbyDrivers = async () => {
-      if (rideData.pickup_location.latitude && rideData.pickup_location.longitude) {
-        try {
-          setLoading(true);
-          const response = await customerService.getNearbyDrivers(
-            rideData.pickup_location.latitude,
-            rideData.pickup_location.longitude
-          );
-          setNearbyDrivers(response.data);
-          setLoading(false);
-        } catch (err) {
-          setError(err.response?.data?.message || 'Failed to fetch nearby drivers');
-          setLoading(false);
-        }
-      }
-    };
-    
-    if (activeStep === 1) {
-      fetchNearbyDrivers();
-    }
-  }, [activeStep, rideData.pickup_location]);
   
   // Calculate fare when both pickup and dropoff are set
   useEffect(() => {
@@ -267,7 +253,7 @@ function BookRide() {
     }
   };
   
-  // New functions for handling address input
+  // Functions for handling address input
   const handlePickupAddressChange = (e) => {
     setPickupAddress(e.target.value);
   };
@@ -334,10 +320,6 @@ function BookRide() {
     }
   };
   
-  const handleDriverSelect = (driver) => {
-    setSelectedDriver(driver);
-  };
-  
   const handleRideDataChange = (e) => {
     const { name, value } = e.target;
     setRideData(prev => ({
@@ -347,30 +329,56 @@ function BookRide() {
   };
   
   const handleNext = () => {
-    setActiveStep((prevStep) => prevStep + 1);
+    // Validate data before proceeding
+    if (!markers.pickup || !markers.dropoff) {
+      setError('Please set both pickup and dropoff locations');
+      return;
+    }
+    
+    // Check if the user is authenticated
+    if (!user || !user.customer_id) {
+      setError('You must be logged in to book a ride');
+      return;
+    }
+    
+    // Clear any previous errors
+    setError(null);
+    setActiveStep(1);
   };
   
   const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
+    setActiveStep(0);
   };
   
   const handleBookRide = async () => {
     try {
-      setLoading(true);
-      // Add selected driver to ride data
+      setBooking(true);
+      setError(null);
+      
+      // Verify user is authenticated
+      if (!user || !user.customer_id) {
+        setError('You must be logged in to book a ride');
+        setBooking(false);
+        return;
+      }
+      
+      // Book ride without specifying a driver (system will assign one)
       const bookingData = {
         ...rideData,
-        driver_id: selectedDriver.driver_id
+        customer_id: user.customer_id // Ensure customer_id is included
       };
       
       const response = await customerService.bookRide(bookingData);
-      setLoading(false);
       
       // Navigate to ride tracking page
-      navigate(`/customer/ride/${response.data.ride_id}`);
+      const createdRide = response.data.data;
+      setBooking(false);
+      
+      // Navigate to ride tracking page with the new ride ID
+      navigate(`/customer/ride/${createdRide.ride_id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to book ride');
-      setLoading(false);
+      setBooking(false);
     }
   };
   
@@ -398,234 +406,193 @@ function BookRide() {
     }
   };
   
-  const steps = ['Set Locations', 'Select Driver', 'Confirm Booking'];
+  // Simplified steps without driver selection
+  const steps = ['Set Locations', 'Confirm Booking'];
+  
+  // Debug log - remove in production
+  console.log('Current step:', activeStep);
+  console.log('User:', user);
+  console.log('Markers:', markers);
+  console.log('Fare estimate:', fareEstimate);
   
   const renderStepContent = (step) => {
-    switch (step) {
-      case 0:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="body1" gutterBottom>
-                Click on the map to set pickup and drop-off locations, or enter addresses below.
-              </Typography>
-            </Grid>
-            
-            {/* Pickup Address Input */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Pickup Address"
-                value={pickupAddress}
-                onChange={handlePickupAddressChange}
-                placeholder="Enter a pickup address"
-                InputProps={{
-                  endAdornment: (
-                    <Button 
-                      size="small" 
-                      onClick={() => handleGeocode('pickup')}
-                      disabled={geocoding || !pickupAddress}
-                    >
-                      {geocoding ? <CircularProgress size={20} /> : 'Search'}
-                    </Button>
-                  )
-                }}
-              />
-            </Grid>
-            
-            {/* Dropoff Address Input */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Dropoff Address"
-                value={dropoffAddress}
-                onChange={handleDropoffAddressChange}
-                placeholder="Enter a dropoff address"
-                InputProps={{
-                  endAdornment: (
-                    <Button 
-                      size="small" 
-                      onClick={() => handleGeocode('dropoff')}
-                      disabled={geocoding || !dropoffAddress}
-                    >
-                      {geocoding ? <CircularProgress size={20} /> : 'Search'}
-                    </Button>
-                  )
-                }}
-              />
-            </Grid>
-            
-            {/* Coordinates Display */}
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Pickup Coordinates"
-                value={markers.pickup ? `${markers.pickup.lat.toFixed(6)}, ${markers.pickup.lng.toFixed(6)}` : ''}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: markers.pickup && (
-                    <Button size="small" onClick={() => resetLocationMarker('pickup')}>
-                      Clear
-                    </Button>
-                  )
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Drop-off Coordinates"
-                value={markers.dropoff ? `${markers.dropoff.lat.toFixed(6)}, ${markers.dropoff.lng.toFixed(6)}` : ''}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: markers.dropoff && (
-                    <Button size="small" onClick={() => resetLocationMarker('dropoff')}>
-                      Clear
-                    </Button>
-                  )
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Date & Time"
-                type="datetime-local"
-                name="date_time"
-                value={rideData.date_time}
+    if (step === 0) {
+      return (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="body1" gutterBottom>
+              Click on the map to set pickup and drop-off locations, or enter addresses below.
+            </Typography>
+          </Grid>
+          
+          {/* Pickup Address Input */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Pickup Address"
+              value={pickupAddress}
+              onChange={handlePickupAddressChange}
+              placeholder="Enter a pickup address"
+              InputProps={{
+                endAdornment: (
+                  <Button 
+                    size="small" 
+                    onClick={() => handleGeocode('pickup')}
+                    disabled={geocoding || !pickupAddress}
+                  >
+                    {geocoding ? <CircularProgress size={20} /> : 'Search'}
+                  </Button>
+                )
+              }}
+            />
+          </Grid>
+          
+          {/* Dropoff Address Input */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Dropoff Address"
+              value={dropoffAddress}
+              onChange={handleDropoffAddressChange}
+              placeholder="Enter a dropoff address"
+              InputProps={{
+                endAdornment: (
+                  <Button 
+                    size="small" 
+                    onClick={() => handleGeocode('dropoff')}
+                    disabled={geocoding || !dropoffAddress}
+                  >
+                    {geocoding ? <CircularProgress size={20} /> : 'Search'}
+                  </Button>
+                )
+              }}
+            />
+          </Grid>
+          
+          {/* Coordinates Display */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Pickup Coordinates"
+              value={markers.pickup ? `${markers.pickup.lat.toFixed(6)}, ${markers.pickup.lng.toFixed(6)}` : ''}
+              InputProps={{
+                readOnly: true,
+                endAdornment: markers.pickup && (
+                  <Button size="small" onClick={() => resetLocationMarker('pickup')}>
+                    Clear
+                  </Button>
+                )
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Drop-off Coordinates"
+              value={markers.dropoff ? `${markers.dropoff.lat.toFixed(6)}, ${markers.dropoff.lng.toFixed(6)}` : ''}
+              InputProps={{
+                readOnly: true,
+                endAdornment: markers.dropoff && (
+                  <Button size="small" onClick={() => resetLocationMarker('dropoff')}>
+                    Clear
+                  </Button>
+                )
+              }}
+            />
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Date & Time"
+              type="datetime-local"
+              name="date_time"
+              value={rideData.date_time}
+              onChange={handleRideDataChange}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel id="passengers-label">Passengers</InputLabel>
+              <Select
+                labelId="passengers-label"
+                name="passenger_count"
+                value={rideData.passenger_count}
                 onChange={handleRideDataChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel id="passengers-label">Passengers</InputLabel>
-                <Select
-                  labelId="passengers-label"
-                  name="passenger_count"
-                  value={rideData.passenger_count}
-                  onChange={handleRideDataChange}
-                  label="Passengers"
-                >
-                  {[1, 2, 3, 4, 5, 6].map(num => (
-                    <MenuItem key={num} value={num}>{num}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                label="Passengers"
+              >
+                {[1, 2, 3, 4, 5, 6].map(num => (
+                  <MenuItem key={num} value={num}>{num}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
-        );
-      case 1:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Available Drivers Nearby
-              </Typography>
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  <CircularProgress />
-                </Box>
-              ) : nearbyDrivers.length === 0 ? (
-                <Alert severity="info">No drivers available in your area at the moment.</Alert>
-              ) : (
-                <Grid container spacing={2}>
-                  {nearbyDrivers.map(driver => (
-                    <Grid item xs={12} sm={6} key={driver.driver_id}>
-                      <Card 
-                        sx={{ 
-                          cursor: 'pointer',
-                          border: selectedDriver?.driver_id === driver.driver_id ? '2px solid #1976d2' : 'none',
-                          bgcolor: selectedDriver?.driver_id === driver.driver_id ? 'action.selected' : 'background.paper'
-                        }}
-                        onClick={() => handleDriverSelect(driver)}
-                      >
-                        <CardContent>
-                          <Typography variant="h6">{`${driver.first_name} ${driver.last_name}`}</Typography>
-                          <Typography variant="body2" color="textSecondary">{driver.car_details}</Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                            <Typography variant="body2" sx={{ mr: 1 }}>Rating:</Typography>
-                            <Typography variant="body1">{driver.rating?.toFixed(1) || "N/A"}</Typography>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </Grid>
-          </Grid>
-        );
-      case 2:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Ride Summary
-              </Typography>
-              <Card sx={{ mb: 3 }}>
-                <CardContent>
-                  <Typography variant="subtitle1">Pickup Location</Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {pickupAddress || `${rideData.pickup_location.latitude.toFixed(6)}, ${rideData.pickup_location.longitude.toFixed(6)}`}
-                  </Typography>
-                  
-                  <Typography variant="subtitle1" sx={{ mt: 2 }}>Drop-off Location</Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {dropoffAddress || `${rideData.dropoff_location.latitude.toFixed(6)}, ${rideData.dropoff_location.longitude.toFixed(6)}`}
-                  </Typography>
-                  
-                  <Typography variant="subtitle1" sx={{ mt: 2 }}>Date & Time</Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {new Date(rideData.date_time).toLocaleString()}
-                  </Typography>
-                  
-                  <Typography variant="subtitle1" sx={{ mt: 2 }}>Passengers</Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {rideData.passenger_count}
-                  </Typography>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle1">Driver</Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {selectedDriver ? `${selectedDriver.first_name} ${selectedDriver.last_name} (${selectedDriver.car_details})` : 'No driver selected'}
-                  </Typography>
-
-                  <Typography variant="subtitle1" sx={{ mt: 2 }}>Fare Estimate</Typography>
-                  {fareEstimate ? (
-                    <Box>
-                      <Typography variant="h5" color="primary">
-                        ${fareEstimate.data.fare.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Distance: {fareEstimate.data.distance.toFixed(2)} km
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Duration: {fareEstimate.data.duration.toFixed(0)} mins
-                      </Typography>
-                      {fareEstimate.data.demandSurge > 1 && (
-                        <Typography variant="body2" color="error">
-                          Surge pricing: {fareEstimate.data.demandSurge.toFixed(1)}x
-                        </Typography>
-                      )}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      Calculating...
+        </Grid>
+      );
+    } else if (step === 1) {
+      return (
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Ride Summary
+            </Typography>
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="subtitle1">Pickup Location</Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {pickupAddress || `${rideData.pickup_location.latitude.toFixed(6)}, ${rideData.pickup_location.longitude.toFixed(6)}`}
+                </Typography>
+                
+                <Typography variant="subtitle1" sx={{ mt: 2 }}>Drop-off Location</Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {dropoffAddress || `${rideData.dropoff_location.latitude.toFixed(6)}, ${rideData.dropoff_location.longitude.toFixed(6)}`}
+                </Typography>
+                
+                <Typography variant="subtitle1" sx={{ mt: 2 }}>Date & Time</Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {new Date(rideData.date_time).toLocaleString()}
+                </Typography>
+                
+                <Typography variant="subtitle1" sx={{ mt: 2 }}>Passengers</Typography>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {rideData.passenger_count}
+                </Typography>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle1">Fare Estimate</Typography>
+                {fareEstimate ? (
+                  <Box>
+                    <Typography variant="h5" color="primary">
+                      ${fareEstimate.data.fare.toFixed(2)}
                     </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
+                    <Typography variant="body2" color="textSecondary">
+                      Distance: {fareEstimate.data.distance.toFixed(2)} km
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Duration: {fareEstimate.data.duration.toFixed(0)} mins
+                    </Typography>
+                    {fareEstimate.data.demandSurge > 1 && (
+                      <Typography variant="body2" color="error">
+                        Surge pricing: {fareEstimate.data.demandSurge.toFixed(1)}x
+                      </Typography>
+                    )}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">
+                    Calculating...
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
           </Grid>
-        );
-      default:
-        return null;
+        </Grid>
+      );
     }
+    return null;
   };
 
   return (
@@ -665,7 +632,7 @@ function BookRide() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
             <Button 
               onClick={handleBack} 
-              disabled={activeStep === 0 || loading}
+              disabled={activeStep === 0 || loading || booking}
             >
               Back
             </Button>
@@ -676,9 +643,9 @@ function BookRide() {
                   variant="contained"
                   color="primary"
                   onClick={handleBookRide}
-                  disabled={loading || !selectedDriver || !fareEstimate}
+                  disabled={loading || booking || !fareEstimate}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Book Ride'}
+                  {booking ? <CircularProgress size={24} /> : 'Book Ride'}
                 </Button>
               ) : (
                 <Button
@@ -687,8 +654,9 @@ function BookRide() {
                   onClick={handleNext}
                   disabled={
                     loading || 
-                    (activeStep === 0 && (!markers.pickup || !markers.dropoff)) ||
-                    (activeStep === 1 && !selectedDriver)
+                    !markers.pickup || 
+                    !markers.dropoff ||
+                    !user?.customer_id
                   }
                 >
                   Next

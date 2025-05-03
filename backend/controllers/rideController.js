@@ -19,8 +19,7 @@ exports.createRide = async (req, res) => {
       pickup_location,
       dropoff_location,
       date_time,
-      passenger_count,
-      driver_id: requestedDriverId
+      passenger_count
     } = req.body;
 
     // Generate a ride_id in SSN format
@@ -28,35 +27,27 @@ exports.createRide = async (req, res) => {
     
     const customer_id = req.user.customer_id; // Extracted from JWT
 
-    let driver_id = requestedDriverId;
-    if (!driver_id) {
-      // Find nearby drivers
-      const nearbyDrivers = await Driver.find({
-        'intro_media.location': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [pickup_location.longitude, pickup_location.latitude]
-            },
-            $maxDistance: 10000 // 10km in meters
-          }
-        },
-        status: 'available'
-      }).limit(5);
+    // Find nearby available drivers
+    const nearbyDrivers = await Driver.find({
+      'intro_media.location': {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [pickup_location.longitude, pickup_location.latitude]
+          },
+          $maxDistance: 10000 // 10km in meters
+        }
+      },
+      status: 'available'
+    }).limit(5);
 
-    if (nearbyDrivers.length === 0) {
-      return res.status(404).json({ message: 'No drivers available nearby' });
+    // If no drivers are available, still create the ride but leave it in "requested" state
+    let driver_id = null;
+    if (nearbyDrivers.length > 0) {
+      // Select the closest driver
+      const driver = nearbyDrivers[0];
+      driver_id = driver.driver_id;
     }
-
-    // For now, just pick the first driver
-    const driver = nearbyDrivers[0];
-    driver_id = driver.driver_id;
-  } else {
-    const driver = await Driver.findOne({ driver_id: requestedDriverId });
-    if (!driver) {
-      return res.status(404).json({ message: 'Driver not found' });
-    }
-  }
 
     // Calculate fare using the dynamic pricing algorithm
     const priceData = await getDynamicPrice(
@@ -72,7 +63,7 @@ exports.createRide = async (req, res) => {
       dropoff_location,
       date_time: new Date(date_time || Date.now()),
       customer_id,
-      driver_id,
+      driver_id, // This might be null if no drivers are available
       fare_amount: priceData.fare,
       passenger_count: passenger_count || 1,
       distance: priceData.distance,
@@ -106,7 +97,9 @@ exports.createRide = async (req, res) => {
     // Invalidate related caches
     await invalidateCache('*rides*');
     await invalidateCache(`*customer*${customer_id}*`);
-    await invalidateCache(`*driver*${driver_id}*`);
+    if (driver_id) {
+      await invalidateCache(`*driver*${driver_id}*`);
+    }
 
     res.status(201).json({
       message: 'Ride created successfully',
@@ -295,54 +288,51 @@ exports.getRideStatsByLocation = async (req, res) => {
   }
 };
 
-exports.getNearbyDrivers = async (req, res) => {
+// Add to rideController.js
+exports.getNearbyRides = async (req, res) => {
   const { latitude, longitude } = req.query;
 
   if (!latitude || !longitude) {
     return res.status(400).json({ message: 'Latitude and longitude are required' });
   }
 
-  const customerLat = parseFloat(latitude);
-  const customerLng = parseFloat(longitude);
+  const driverLat = parseFloat(latitude);
+  const driverLng = parseFloat(longitude);
 
   try {
-    // Find drivers within 10 miles (approx 16km)
-    const drivers = await Driver.find({
-      'intro_media.location': {
+    // Find requested rides within 10km of the driver
+    const rides = await Ride.find({
+      status: 'requested',
+      'pickup_location': {
         $near: {
           $geometry: {
             type: 'Point',
-            coordinates: [customerLng, customerLat]
+            coordinates: [driverLng, driverLat]
           },
-          $maxDistance: 16000 // 16km in meters (approx 10 miles)
+          $maxDistance: 10000 // 10km in meters
         }
-      },
-      status: 'available'
-    }).select('driver_id first_name last_name car_details intro_media.location rating');
-
-    // Convert location data format for frontend consumption
-    const formattedDrivers = drivers.map(driver => {
-      const driverObj = driver.toObject();
-      
-      // If location exists, convert from MongoDB format to simple lat/lng
-      if (driver.intro_media && driver.intro_media.location && driver.intro_media.location.coordinates) {
-        driverObj.intro_media.location = {
-          latitude: driver.intro_media.location.coordinates[1],
-          longitude: driver.intro_media.location.coordinates[0]
-        };
       }
+    }).sort({ date_time: 1 }); // Sort by time, most immediate first
+
+    // Get customer info for each ride
+    const ridesWithCustomerInfo = await Promise.all(rides.map(async (ride) => {
+      const customer = await Customer.findOne({ customer_id: ride.customer_id })
+        .select('first_name last_name rating');
       
-      return driverObj;
-    });
+      return {
+        ...ride.toObject(),
+        customer_info: customer
+      };
+    }));
 
     res.status(200).json({
-      message: 'Drivers within 10 miles',
-      data: formattedDrivers
+      message: 'Nearby ride requests',
+      data: ridesWithCustomerInfo
     });
 
   } catch (err) {
-    console.error('Error fetching nearby drivers:', err);
-    res.status(500).json({ message: 'Failed to find nearby drivers' });
+    console.error('Error fetching nearby rides:', err);
+    res.status(500).json({ message: 'Failed to find nearby rides' });
   }
 };
 
