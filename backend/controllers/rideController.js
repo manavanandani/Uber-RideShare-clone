@@ -393,6 +393,65 @@ exports.acceptRide = async (req, res) => {
   }
 };
 
+// In rideController.js
+exports.getActiveRideForCustomer = async (req, res) => {
+  const { customer_id } = req.params;
+  
+  try {
+    // Verify authorization
+    if (customer_id !== req.user.customer_id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized access' });
+    }
+    
+    // Find the active ride (either accepted or in_progress)
+    const activeRide = await Ride.findOne({
+      customer_id,
+      status: { $in: ['requested', 'accepted', 'in_progress'] }
+    }).sort({ date_time: -1 });
+    
+    if (!activeRide) {
+      return res.status(404).json({ message: 'No active ride found' });
+    }
+    
+    res.status(200).json({
+      message: 'Active ride retrieved successfully',
+      data: activeRide
+    });
+  } catch (err) {
+    console.error('Error retrieving active ride:', err);
+    res.status(500).json({ message: 'Failed to retrieve active ride' });
+  }
+};
+
+exports.getActiveRideForDriver = async (req, res) => {
+  const { driver_id } = req.params;
+  
+  try {
+    // Verify authorization
+    if (driver_id !== req.user.driver_id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Unauthorized access' });
+    }
+    
+    // Find the active ride (either accepted or in_progress)
+    const activeRide = await Ride.findOne({
+      driver_id,
+      status: { $in: ['accepted', 'in_progress'] }
+    }).sort({ date_time: -1 });
+    
+    if (!activeRide) {
+      return res.status(404).json({ message: 'No active ride found' });
+    }
+    
+    res.status(200).json({
+      message: 'Active ride retrieved successfully',
+      data: activeRide
+    });
+  } catch (err) {
+    console.error('Error retrieving active ride:', err);
+    res.status(500).json({ message: 'Failed to retrieve active ride' });
+  }
+};
+
 exports.completeRide = async (req, res) => {
   const { ride_id } = req.params;
   
