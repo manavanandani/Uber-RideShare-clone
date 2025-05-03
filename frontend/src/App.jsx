@@ -1,4 +1,4 @@
-// src/App.jsx (updated with driver routes)
+// Updated App.jsx with admin routes
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,6 +13,7 @@ import theme from './theme';
 import Navbar from './components/layout/Navbar';
 import CustomerLayout from './layouts/CustomerLayout';
 import DriverLayout from './layouts/DriverLayout';
+import AdminLayout from './layouts/AdminLayout';
 
 // Auth Pages
 import Landing from './pages/Landing';
@@ -37,6 +38,17 @@ import DriverRideHistory from './pages/driver/RideHistory';
 import RideDetail from './pages/driver/RideDetail';
 import Earnings from './pages/driver/Earnings';
 import DriverProfile from './pages/driver/DriverProfile';
+
+// Admin Pages
+import AdminDashboard from './pages/admin/Dashboard';
+import DriversManagement from './pages/admin/DriversManagement';
+import CustomersManagement from './pages/admin/CustomersManagement';
+import RidesManagement from './pages/admin/RidesManagement';
+import BillingManagement from './pages/admin/BillingManagement';
+import Analytics from './pages/admin/Analytics';
+import AddDriver from './pages/admin/AddDriver';
+import AddCustomer from './pages/admin/AddCustomer';
+import BillingDetail from './pages/admin/BillingDetail';
 
 function App() {
   const dispatch = useDispatch();
@@ -120,6 +132,39 @@ function App() {
             <Route path="history/:rideId" element={<RideDetail />} />
             <Route path="earnings" element={<Earnings />} />
             <Route path="profile" element={<DriverProfile />} />
+          </Route>
+          
+          {/* Admin routes */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            
+            {/* Driver management */}
+            <Route path="drivers" element={<DriversManagement />} />
+            <Route path="drivers/add" element={<AddDriver />} />
+            <Route path="drivers/:driverId" element={<DriverProfile />} />
+            
+            {/* Customer management */}
+            <Route path="customers" element={<CustomersManagement />} />
+            <Route path="customers/add" element={<AddCustomer />} />
+            <Route path="customers/:customerId" element={<CustomerProfile />} />
+            
+            {/* Ride management */}
+            <Route path="rides" element={<RidesManagement />} />
+            <Route path="rides/:rideId" element={<RideDetail />} />
+            
+            {/* Billing management */}
+            <Route path="billing" element={<BillingManagement />} />
+            <Route path="billing/:billId" element={<BillingDetail />} />
+            
+            {/* Analytics */}
+            <Route path="analytics" element={<Analytics />} />
           </Route>
           
           {/* Fallback route */}

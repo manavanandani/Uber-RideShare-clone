@@ -370,7 +370,7 @@ props.put(&quot;driver_id&quot;, vars.get(&quot;driver_id&quot;));</stringProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update Driver Status" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update Driver Status">
           <stringProp name="HTTPSampler.path">${API_URL}/drivers/${__property(driver_id)}/status</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">PATCH</stringProp>
@@ -802,8 +802,6 @@ props.put(&quot;driver_id&quot;, vars.get(&quot;driver_id&quot;));</stringProp>
         </objProp>
         <stringProp name="filename"></stringProp>
       </ResultCollector>
-      <hashTree/>
-      <Summariser guiclass="SummariserGui" testclass="Summariser" testname="Generate Summary Results"/>
       <hashTree/>
     </hashTree>
   </hashTree>

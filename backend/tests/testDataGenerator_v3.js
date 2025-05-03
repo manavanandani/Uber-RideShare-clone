@@ -1,4 +1,4 @@
-// testDataGenerator.js - Fixed Version
+// testDataGenerator.js - Updated Version
 const axios = require('axios');
 const fs = require('fs');
 
@@ -380,10 +380,63 @@ const generateCustomers = async (count, batchSize = 100) => {
   return true;
 };
 
-// Create rides and their lifecycle with billing - with better error handling
+// UPDATED: Create rides and bills with diverse customer-driver pairs
 const createRidesAndBills = async (count) => {
   console.log(`Creating ${count} test rides and bills...`);
   
+  // Get available customers and drivers
+  const adminHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${ADMIN_TOKEN}`
+  };
+  
+  // Get customers
+  let customers = [];
+  try {
+    const customerResponse = await axios.get(`${API_URL}/customers`, { 
+      headers: adminHeaders
+    });
+    customers = customerResponse.data.data || [];
+    console.log(`Retrieved ${customers.length} customers for ride generation`);
+    
+    // If not enough customers were found, add our test customer
+    if (!customers.find(c => c.customer_id === TEST_CUSTOMER_ID)) {
+      customers.push({ customer_id: TEST_CUSTOMER_ID });
+    }
+  } catch (error) {
+    console.error('Error retrieving customers:', error.message);
+    // Fallback to test customer
+    customers = [{ customer_id: TEST_CUSTOMER_ID }];
+  }
+  
+  // Get available drivers
+  let drivers = [];
+  try {
+    const driverResponse = await axios.get(`${API_URL}/drivers`, { 
+      headers: adminHeaders,
+      params: { status: 'available' } 
+    });
+    drivers = driverResponse.data.data || [];
+    console.log(`Retrieved ${drivers.length} drivers for ride generation`);
+    
+    // If not enough drivers were found, add our test driver
+    if (!drivers.find(d => d.driver_id === TEST_DRIVER_ID)) {
+      drivers.push({ driver_id: TEST_DRIVER_ID });
+    }
+  } catch (error) {
+    console.error('Error retrieving drivers:', error.message);
+    // Fallback to test driver
+    drivers = [{ driver_id: TEST_DRIVER_ID }];
+  }
+  
+  // If we still don't have enough customers or drivers, don't proceed
+  if (customers.length === 0 || drivers.length === 0) {
+    console.error('No customers or drivers available for test ride generation. Aborting.');
+    return { rides: 0, bills: 0 };
+  }
+  
+  // We'll use our test customer and driver tokens for now, but in a real system
+  // we would authenticate as each customer
   const customerHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
@@ -401,23 +454,38 @@ const createRidesAndBills = async (count) => {
   
   for (let i = 0; i < count; i++) {
     try {
-      // Step 1: Create a ride as customer
+      // Generate a ride with random customer and driver
+      // Note: In a real system, we'd need to authenticate as each customer
+      // For now, we're using our test customer to create rides for all customers
+      
+      // Select random customer and driver for variety
+      // For a more realistic pattern, use weighted selection (some drivers more popular, etc.)
+      const customerIndex = Math.floor(Math.random() * customers.length);
+      const driverIndex = Math.floor(Math.random() * drivers.length);
+      
+      const selectedCustomer = customers[customerIndex];
+      const selectedDriver = drivers[driverIndex];
+      
+      // Random pickup/dropoff within San Francisco area (with some variety in distances)
+      const distanceVariation = Math.random() < 0.2 ? 0.2 : 0.05; // 20% chance of longer ride
+      
       const pickup = {
         latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
         longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
       };
       
       const dropoff = {
-        latitude: 37.7749 + (Math.random() * 0.1 - 0.05),
-        longitude: -122.4194 + (Math.random() * 0.1 - 0.05)
+        latitude: pickup.latitude + (Math.random() * distanceVariation * 2 - distanceVariation),
+        longitude: pickup.longitude + (Math.random() * distanceVariation * 2 - distanceVariation)
       };
       
+      // Create a ride with random data but specify the selected driver
       const rideData = {
         pickup_location: pickup,
         dropoff_location: dropoff,
         date_time: new Date().toISOString(),
         passenger_count: Math.floor(Math.random() * 4) + 1,
-        driver_id: TEST_DRIVER_ID
+        driver_id: selectedDriver.driver_id
       };
       
       // With retry logic
@@ -432,7 +500,7 @@ const createRidesAndBills = async (count) => {
           successfulRides++;
           
           if (i % 10 === 0) {
-            console.log(`Created ride ${i+1}/${count} - ID: ${rideId}`);
+            console.log(`Created ride ${i+1}/${count} - ID: ${rideId} - Customer: ${selectedCustomer.customer_id} - Driver: ${selectedDriver.driver_id}`);
           }
         } catch (error) {
           retryCount++;
@@ -511,7 +579,7 @@ const createRidesAndBills = async (count) => {
   return { rides: successfulRides, bills: successfulBills };
 };
 
-// Performance test data creation - with fixed headers
+// Performance test data creation
 const createPerformanceTestData = async (sampleSize = 200) => {
   console.log(`Creating performance test data with ${sampleSize} samples...`);
   
@@ -663,12 +731,13 @@ const main = async () => {
     // Check command line args for smaller test
     const isSmallTest = process.argv.includes('--small');
     
-    const targetDrivers = isSmallTest ? 100 : 10000;
-    const targetCustomers = isSmallTest ? 100 : 10000;
-    const targetRides = isSmallTest ? 20 : 1000;
+    const targetDrivers = isSmallTest ? 100 : 5000; // Reduced from 10000 to avoid overwhelming the system
+    const targetCustomers = isSmallTest ? 100 : 5000; // Reduced from 10000 to avoid overwhelming the system
+    const targetRides = isSmallTest ? 20 : 500; // Reduced from 1000 to avoid overwhelming the system
     
     console.log(`Running ${isSmallTest ? 'small' : 'full'} test data generation`);
     
+    // Generate drivers
     // Generate drivers
     await generateDrivers(targetDrivers);
     
