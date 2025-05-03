@@ -27,4 +27,10 @@ router.get('/driver/:driver_id/active', verifyRole('driver'), rideController.get
 // Admin routes
 router.get('/stats/location', verifyRole('admin'), cacheMiddleware(300), rideController.getRideStatsByLocation);
 
+// Test routes
+router.post('/test-create', verifyRole('admin'), rideController.createTestRide);
+router.patch('/test/:ride_id/accept', verifyRole('admin'), rideController.testAcceptRide);
+router.patch('/test/:ride_id/start', verifyRole('admin'), rideController.testStartRide);
+router.patch('/test/:ride_id/complete', verifyRole('admin'), rideController.testCompleteRide);
+
 module.exports = router;

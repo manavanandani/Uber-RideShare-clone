@@ -381,6 +381,8 @@ const generateCustomers = async (count, batchSize = 100) => {
 };
 
 // UPDATED: Create rides and bills with diverse customer-driver pairs
+// UPDATED: Create rides and bills with diverse customer-driver pairs
+// UPDATED: Create rides and bills with test-specific endpoints
 const createRidesAndBills = async (count) => {
   console.log(`Creating ${count} test rides and bills...`);
   
@@ -409,39 +411,6 @@ const createRidesAndBills = async (count) => {
     customers = [{ customer_id: TEST_CUSTOMER_ID }];
   }
   
-  // Get available drivers
-  let drivers = [];
-  try {
-    const driverResponse = await axios.get(`${API_URL}/drivers`, { 
-      headers: adminHeaders,
-      params: { status: 'available' } 
-    });
-    drivers = driverResponse.data.data || [];
-    console.log(`Retrieved ${drivers.length} drivers for ride generation`);
-    
-    // If not enough drivers were found, add our test driver
-    if (!drivers.find(d => d.driver_id === TEST_DRIVER_ID)) {
-      drivers.push({ driver_id: TEST_DRIVER_ID });
-    }
-  } catch (error) {
-    console.error('Error retrieving drivers:', error.message);
-    // Fallback to test driver
-    drivers = [{ driver_id: TEST_DRIVER_ID }];
-  }
-  
-  // If we still don't have enough customers or drivers, don't proceed
-  if (customers.length === 0 || drivers.length === 0) {
-    console.error('No customers or drivers available for test ride generation. Aborting.');
-    return { rides: 0, bills: 0 };
-  }
-  
-  // We'll use our test customer and driver tokens for now, but in a real system
-  // we would authenticate as each customer
-  const customerHeaders = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
-  };
-  
   const driverHeaders = {
     'Content-Type': 'application/json', 
     'Authorization': `Bearer ${TEST_DRIVER_TOKEN}`
@@ -454,17 +423,9 @@ const createRidesAndBills = async (count) => {
   
   for (let i = 0; i < count; i++) {
     try {
-      // Generate a ride with random customer and driver
-      // Note: In a real system, we'd need to authenticate as each customer
-      // For now, we're using our test customer to create rides for all customers
-      
-      // Select random customer and driver for variety
-      // For a more realistic pattern, use weighted selection (some drivers more popular, etc.)
+      // Select random customer for variety
       const customerIndex = Math.floor(Math.random() * customers.length);
-      const driverIndex = Math.floor(Math.random() * drivers.length);
-      
       const selectedCustomer = customers[customerIndex];
-      const selectedDriver = drivers[driverIndex];
       
       // Random pickup/dropoff within San Francisco area (with some variety in distances)
       const distanceVariation = Math.random() < 0.2 ? 0.2 : 0.05; // 20% chance of longer ride
@@ -479,13 +440,14 @@ const createRidesAndBills = async (count) => {
         longitude: pickup.longitude + (Math.random() * distanceVariation * 2 - distanceVariation)
       };
       
-      // Create a ride with random data but specify the selected driver
+      // Create a ride with random data using our test-create endpoint
       const rideData = {
         pickup_location: pickup,
         dropoff_location: dropoff,
         date_time: new Date().toISOString(),
         passenger_count: Math.floor(Math.random() * 4) + 1,
-        driver_id: selectedDriver.driver_id
+        driver_id: TEST_DRIVER_ID,
+        customer_id: selectedCustomer.customer_id
       };
       
       // With retry logic
@@ -495,12 +457,13 @@ const createRidesAndBills = async (count) => {
       
       while (!rideId && retryCount < maxRetries) {
         try {
-          const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
+          // Use the new test-create endpoint with admin token
+          const rideResponse = await axios.post(`${API_URL}/rides/test-create`, rideData, { headers: adminHeaders });
           rideId = rideResponse.data.data.ride_id;
           successfulRides++;
           
           if (i % 10 === 0) {
-            console.log(`Created ride ${i+1}/${count} - ID: ${rideId} - Customer: ${selectedCustomer.customer_id} - Driver: ${selectedDriver.driver_id}`);
+            console.log(`Created ride ${i+1}/${count} - ID: ${rideId} - Customer: ${selectedCustomer.customer_id} - Driver: ${TEST_DRIVER_ID}`);
           }
         } catch (error) {
           retryCount++;
@@ -524,9 +487,9 @@ const createRidesAndBills = async (count) => {
       // Let's give a little breathing room between steps
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 2: Accept ride as driver
+      // Step 2: Accept ride using test endpoint
       try {
-        await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+        await axios.patch(`${API_URL}/rides/test/${rideId}/accept`, { driver_id: TEST_DRIVER_ID }, { headers: adminHeaders });
       } catch (error) {
         console.error(`Error accepting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
         continue; // Skip to next ride if accept failed
@@ -534,9 +497,9 @@ const createRidesAndBills = async (count) => {
       
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 3: Start ride as driver
+      // Step 3: Start ride using test endpoint
       try {
-        await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+        await axios.patch(`${API_URL}/rides/test/${rideId}/start`, {}, { headers: adminHeaders });
       } catch (error) {
         console.error(`Error starting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
         continue;
@@ -544,17 +507,17 @@ const createRidesAndBills = async (count) => {
       
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Step 4: Complete ride as driver
+      // Step 4: Complete ride using test endpoint
       try {
-        await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+        await axios.patch(`${API_URL}/rides/test/${rideId}/complete`, {}, { headers: adminHeaders });
       } catch (error) {
         console.error(`Error completing ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
         continue;
       }
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Step 5: Create bill as driver
+      // Step 5: Create bill as driver (use the regular endpoint here)
       const billData = {
         ride_id: rideId
       };
@@ -563,8 +526,14 @@ const createRidesAndBills = async (count) => {
         await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
         successfulBills++;
       } catch (error) {
-        failedBills++;
-        console.error(`Error creating bill for ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        // If error is "Bill already exists", count it as a success
+        if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
+          console.log(`Bill already exists for ride ${i+1}/${count}`);
+          successfulBills++;
+        } else {
+          failedBills++;
+          console.error(`Error creating bill for ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        }
       }
       
       // A longer delay between full ride cycles to avoid rate-limiting
@@ -577,6 +546,57 @@ const createRidesAndBills = async (count) => {
   console.log(`Successfully created ${successfulRides} rides and ${successfulBills} bills`);
   console.log(`Failed to create ${failedRides} rides and ${failedBills} bills`);
   return { rides: successfulRides, bills: successfulBills };
+};
+
+// Add this function to your testDataGenerator.js file
+const updateBillsToCompleted = async () => {
+  console.log('Updating all pending bills to completed status...');
+  
+  try {
+    const adminHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ADMIN_TOKEN}`
+    };
+    
+    // Step 1: Get all pending bills
+    const searchResponse = await axios.get(`${API_URL}/billing/search`, {
+      params: { payment_status: 'pending' },
+      headers: adminHeaders
+    });
+    
+    const pendingBills = searchResponse.data.data || [];
+    console.log(`Found ${pendingBills.length} pending bills`);
+    
+    // Step 2: Update each bill
+    let updatedCount = 0;
+    
+    for (const bill of pendingBills) {
+      try {
+        await axios.post(`${API_URL}/billing/${bill.bill_id}/pay`, {
+          payment_method: 'credit_card'
+        }, {
+          headers: customerHeaders // Use customer token for payment
+        });
+        
+        updatedCount++;
+        
+        // Log progress for large batches
+        if (pendingBills.length > 100 && updatedCount % 50 === 0) {
+          console.log(`Processed ${updatedCount}/${pendingBills.length} bills`);
+        }
+      } catch (error) {
+        console.error(`Error updating bill ${bill.bill_id}:`, error.response?.data?.message || error.message);
+      }
+      
+      // Add a small delay to avoid overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`Successfully updated ${updatedCount} bills to completed status`);
+    
+  } catch (error) {
+    console.error('Error in bill update process:', error.message);
+  }
 };
 
 // Performance test data creation
@@ -738,7 +758,6 @@ const main = async () => {
     console.log(`Running ${isSmallTest ? 'small' : 'full'} test data generation`);
     
     // Generate drivers
-    // Generate drivers
     await generateDrivers(targetDrivers);
     
     // Generate customers
@@ -746,6 +765,9 @@ const main = async () => {
     
     // Create rides and bills
     await createRidesAndBills(targetRides);
+
+    // complete bills
+    await updateBillsToCompleted();
     
     // Run performance tests
     await createPerformanceTestData(200);
