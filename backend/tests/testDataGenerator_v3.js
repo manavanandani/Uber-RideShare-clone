@@ -1,4 +1,4 @@
-// testDataGenerator.js - Enhanced Version
+// testDataGenerator.js - Fixed Version
 const axios = require('axios');
 const fs = require('fs');
 
@@ -131,8 +131,16 @@ const createTestAccounts = async () => {
     };
     
     // Post customer
-    await axios.post(`${API_URL}/customers`, customerData, { headers });
-    console.log('Created test customer:', customerEmail);
+    try {
+      await axios.post(`${API_URL}/customers`, customerData, { headers });
+      console.log('Created test customer:', customerEmail);
+    } catch (error) {
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
+        console.log('Test customer already exists, proceeding...');
+      } else {
+        throw error;
+      }
+    }
     
     // Login as customer
     const customerLoginResponse = await axios.post(`${API_URL}/auth/customer/login`, {
@@ -172,8 +180,16 @@ const createTestAccounts = async () => {
     };
     
     // Post driver
-    await axios.post(`${API_URL}/drivers`, driverData, { headers });
-    console.log('Created test driver:', driverEmail);
+    try {
+      await axios.post(`${API_URL}/drivers`, driverData, { headers });
+      console.log('Created test driver:', driverEmail);
+    } catch (error) {
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
+        console.log('Test driver already exists, proceeding...');
+      } else {
+        throw error;
+      }
+    }
     
     // Login as driver
     const driverLoginResponse = await axios.post(`${API_URL}/auth/driver/login`, {
@@ -364,7 +380,7 @@ const generateCustomers = async (count, batchSize = 100) => {
   return true;
 };
 
-// Create rides and their lifecycle with billing
+// Create rides and their lifecycle with billing - with better error handling
 const createRidesAndBills = async (count) => {
   console.log(`Creating ${count} test rides and bills...`);
   
@@ -380,6 +396,8 @@ const createRidesAndBills = async (count) => {
   
   let successfulRides = 0;
   let successfulBills = 0;
+  let failedRides = 0;
+  let failedBills = 0;
   
   for (let i = 0; i < count; i++) {
     try {
@@ -395,7 +413,6 @@ const createRidesAndBills = async (count) => {
       };
       
       const rideData = {
-        ride_id: generateRideId(),
         pickup_location: pickup,
         dropoff_location: dropoff,
         date_time: new Date().toISOString(),
@@ -403,55 +420,114 @@ const createRidesAndBills = async (count) => {
         driver_id: TEST_DRIVER_ID
       };
       
-      const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
-      const rideId = rideResponse.data.data.ride_id;
+      // With retry logic
+      let rideId = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (!rideId && retryCount < maxRetries) {
+        try {
+          const rideResponse = await axios.post(`${API_URL}/rides`, rideData, { headers: customerHeaders });
+          rideId = rideResponse.data.data.ride_id;
+          successfulRides++;
+          
+          if (i % 10 === 0) {
+            console.log(`Created ride ${i+1}/${count} - ID: ${rideId}`);
+          }
+        } catch (error) {
+          retryCount++;
+          console.error(`Attempt ${retryCount}/${maxRetries} failed for ride ${i+1}:`, error.response?.data?.message || error.message);
+          
+          if (retryCount >= maxRetries) {
+            failedRides++;
+            console.error(`Failed to create ride ${i+1} after ${maxRetries} attempts, skipping...`);
+            break;
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+        }
+      }
+      
+      if (!rideId) {
+        continue; // Skip to next ride if this one failed
+      }
+      
+      // Let's give a little breathing room between steps
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Step 2: Accept ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/accept`, {}, { headers: driverHeaders });
+      } catch (error) {
+        console.error(`Error accepting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue; // Skip to next ride if accept failed
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Step 3: Start ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/start`, {}, { headers: driverHeaders });
+      } catch (error) {
+        console.error(`Error starting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Step 4: Complete ride as driver
-      await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+      try {
+        await axios.patch(`${API_URL}/rides/${rideId}/complete`, {}, { headers: driverHeaders });
+      } catch (error) {
+        console.error(`Error completing ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+        continue;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Step 5: Create bill as driver
       const billData = {
         ride_id: rideId
       };
       
-      await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
-      
-      successfulRides++;
-      successfulBills++;
-      
-      if (i % 10 === 0) {
-        console.log(`Created ${i + 1}/${count} rides and bills`);
+      try {
+        await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
+        successfulBills++;
+      } catch (error) {
+        failedBills++;
+        console.error(`Error creating bill for ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
       }
       
-      // Random delay to prevent rate limiting
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 100));
+      // A longer delay between full ride cycles to avoid rate-limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`Error creating ride/bill ${i + 1}:`, error.message);
+      console.error(`Unexpected error in ride/bill creation for ${i+1}/${count}:`, error.message);
     }
   }
   
   console.log(`Successfully created ${successfulRides} rides and ${successfulBills} bills`);
+  console.log(`Failed to create ${failedRides} rides and ${failedBills} bills`);
   return { rides: successfulRides, bills: successfulBills };
 };
 
-// Performance test data creation
-const createPerformanceTestData = async (sampleSize = 1000) => {
+// Performance test data creation - with fixed headers
+const createPerformanceTestData = async (sampleSize = 200) => {
   console.log(`Creating performance test data with ${sampleSize} samples...`);
   
-  // We'll create 3 test datasets:
-  // 1. Base (B) - No caching, no Kafka
-  // 2. Base+SQL Caching (B+S) - Redis caching enabled
-  // 3. Base+SQL Caching+Kafka (B+S+K) - Redis and Kafka enabled
-  
-  const headers = {
+  const adminHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${ADMIN_TOKEN}`
+  };
+  
+  const customerHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
+  };
+  
+  const driverHeaders = {
+    'Content-Type': 'application/json', 
+    'Authorization': `Bearer ${TEST_DRIVER_TOKEN}`
   };
   
   // Create test data for each configuration
@@ -465,11 +541,11 @@ const createPerformanceTestData = async (sampleSize = 1000) => {
   console.log("Testing Base configuration (B)...");
   try {
     // Disable caching for baseline test
-    headers['X-Disable-Cache'] = 'true';
+    const baseHeaders = { ...adminHeaders, 'X-Disable-Cache': 'true' };
     
     const startB = Date.now();
     for (let i = 0; i < sampleSize; i++) {
-      await axios.get(`${API_URL}/drivers`, { headers });
+      await axios.get(`${API_URL}/drivers`, { headers: baseHeaders });
       if (i % 100 === 0) console.log(`Base test: ${i}/${sampleSize}`);
     }
     const endB = Date.now();
@@ -488,14 +564,15 @@ const createPerformanceTestData = async (sampleSize = 1000) => {
   console.log("Testing Base + SQL Caching configuration (B+S)...");
   try {
     // Enable caching
-    delete headers['X-Disable-Cache'];
+    const cachedHeaders = { ...adminHeaders };
+    delete cachedHeaders['X-Disable-Cache'];
     
     // First request to warm up cache
-    await axios.get(`${API_URL}/drivers`, { headers });
+    await axios.get(`${API_URL}/drivers`, { headers: cachedHeaders });
     
     const startBS = Date.now();
     for (let i = 0; i < sampleSize; i++) {
-      await axios.get(`${API_URL}/drivers`, { headers });
+      await axios.get(`${API_URL}/drivers`, { headers: cachedHeaders });
       if (i % 100 === 0) console.log(`B+S test: ${i}/${sampleSize}`);
     }
     const endBS = Date.now();
@@ -521,7 +598,7 @@ const createPerformanceTestData = async (sampleSize = 1000) => {
       const operation = i % 3;
       if (operation === 0) {
         // Read operation with caching
-        await axios.get(`${API_URL}/drivers`, { headers });
+        await axios.get(`${API_URL}/drivers`, { headers: adminHeaders });
       } else if (operation === 1) {
         // Status update (triggers Kafka)
         await axios.patch(`${API_URL}/drivers/${TEST_DRIVER_ID}/status`, {
@@ -601,16 +678,14 @@ const main = async () => {
     // Create rides and bills
     await createRidesAndBills(targetRides);
     
-    // Run performance tests if not small test
-    if (!isSmallTest) {
-      await createPerformanceTestData(200); // Smaller sample for perf test
-    }
+    // Run performance tests
+    await createPerformanceTestData(200);
     
     console.log('=== DATA GENERATION COMPLETE ===');
     console.log(`Generated approximately:`);
     console.log(`- ${targetDrivers} drivers`);
     console.log(`- ${targetCustomers} customers`);
-    console.log(`- ${targetRides} rides/bills`);
+    console.log(`- ${targetRides} rides/bills (approx)`);
     console.log('\nTest accounts created for JMeter:');
     console.log(' - Customer: test_customer@test.com / password123');
     console.log(' - Driver: test_driver@test.com / password123');
