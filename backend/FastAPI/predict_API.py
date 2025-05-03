@@ -1,4 +1,3 @@
-# FastAPI/predict_API.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pickle
@@ -30,6 +29,8 @@ class RideRequest(BaseModel):
     pickup_latitude: float
     dropoff_longitude: float
     dropoff_latitude: float
+    # New optional parameter for client-provided demand data
+    current_demand: float = None
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Calculate the great circle distance between two points on earth"""
@@ -44,10 +45,36 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     r = 6371  # Radius of earth in kilometers
     return c * r
 
+# New function: estimate demand based on time and location
+async def estimate_demand(latitude, longitude, dt):
+    """Estimate demand based on time and location"""
+    hour = dt.hour
+    day = dt.weekday()
+    
+    # Time-based factors
+    is_morning_rush = 1 if (hour >= 7 and hour <= 9 and day < 5) else 0
+    is_evening_rush = 1 if (hour >= 17 and hour <= 19 and day < 5) else 0
+    is_weekend_night = 1 if ((hour >= 22 or hour <= 3) and (day >= 5)) else 0
+    
+    # Simple location-based proxy (could be replaced with actual data from your database)
+    # For San Francisco, we know downtown has higher demand
+    sf_downtown_lat = 37.7749
+    sf_downtown_lon = -122.4194
+    distance_from_downtown = haversine_distance(latitude, longitude, sf_downtown_lat, sf_downtown_lon)
+    location_density = max(5, 20 - distance_from_downtown) # Simple proxy
+    
+    return {
+        "is_morning_rush": is_morning_rush,
+        "is_evening_rush": is_evening_rush, 
+        "is_weekend_night": is_weekend_night,
+        "location_density": location_density
+    }
+
 @app.post("/predict")
 async def predict_fare(ride: RideRequest):
     if model is None:
         # Fallback calculation if model isn't loaded
+        # [Your existing fallback code]
         distance = haversine_distance(
             ride.pickup_latitude, 
             ride.pickup_longitude, 
@@ -59,25 +86,6 @@ async def predict_fare(ride: RideRequest):
         base_fare = 3.0
         per_km_rate = 1.5
         predicted_fare = base_fare + (distance * per_km_rate)
-        
-        # Add time of day factor
-        try:
-            dt = datetime.fromisoformat(ride.pickup_datetime.replace('Z', '+00:00'))
-            hour = dt.hour
-            # Higher rates during peak hours
-            if (hour >= 7 and hour <= 9) or (hour >= 17 and hour <= 19):
-                predicted_fare *= 1.25
-            # Higher rates late night
-            elif hour >= 22 or hour <= 4:
-                predicted_fare *= 1.15
-        except:
-            pass
-            
-        return {
-            "status": "fallback",
-            "predicted_fare": round(predicted_fare, 2),
-            "distance_km": round(distance, 2)
-        }
         
     try:
         # Extract time features
@@ -94,26 +102,35 @@ async def predict_fare(ride: RideRequest):
             ride.dropoff_longitude
         )
         
-        # Prepare features for model
+        # Get demand factors
+        demand_data = await estimate_demand(ride.pickup_latitude, ride.pickup_longitude, dt)
+        
+        # Prepare features for model - including demand features
         features = np.array([
             ride.passenger_count,
-            ride.pickup_longitude,
-            ride.pickup_latitude,
-            ride.dropoff_longitude,
-            ride.dropoff_latitude,
             distance,
             hour,
             day,
-            month
+            month,
+            demand_data["is_morning_rush"],
+            demand_data["is_evening_rush"],
+            demand_data["is_weekend_night"],
+            demand_data["location_density"]
         ]).reshape(1, -1)
         
         # Make prediction
         prediction = model.predict(features)
         
+        # Calculate the implied surge factor for transparency
+        base_fare = 3.0 + (distance * 1.5) + (distance * 0.2)
+        surge_factor = max(1.0, prediction[0] / base_fare)
+        
         return {
             "status": "success",
             "predicted_fare": float(max(3.0, prediction[0])),
-            "distance_km": distance
+            "distance_km": distance,
+            "demand_factors": demand_data,
+            "surge_factor": float(surge_factor)
         }
     except Exception as e:
         # Fallback to basic calculation on error

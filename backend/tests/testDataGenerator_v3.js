@@ -380,8 +380,6 @@ const generateCustomers = async (count, batchSize = 100) => {
   return true;
 };
 
-// UPDATED: Create rides and bills with diverse customer-driver pairs
-// UPDATED: Create rides and bills with diverse customer-driver pairs
 // UPDATED: Create rides and bills with test-specific endpoints
 const createRidesAndBills = async (count) => {
   console.log(`Creating ${count} test rides and bills...`);
@@ -548,7 +546,6 @@ const createRidesAndBills = async (count) => {
   return { rides: successfulRides, bills: successfulBills };
 };
 
-// Add this function to your testDataGenerator.js file
 const updateBillsToCompleted = async () => {
   console.log('Updating all pending bills to completed status...');
   
