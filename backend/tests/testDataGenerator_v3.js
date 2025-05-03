@@ -546,6 +546,7 @@ const createRidesAndBills = async (count) => {
   return { rides: successfulRides, bills: successfulBills };
 };
 
+
 const updateBillsToCompleted = async () => {
   console.log('Updating all pending bills to completed status...');
   
@@ -553,6 +554,11 @@ const updateBillsToCompleted = async () => {
     const adminHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ADMIN_TOKEN}`
+    };
+    
+    const customerHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
     };
     
     // Step 1: Get all pending bills
@@ -569,6 +575,9 @@ const updateBillsToCompleted = async () => {
     
     for (const bill of pendingBills) {
       try {
+        // Add debugging
+        console.log(`Processing bill ${bill.bill_id}`);
+        
         await axios.post(`${API_URL}/billing/${bill.bill_id}/pay`, {
           payment_method: 'credit_card'
         }, {
@@ -583,6 +592,12 @@ const updateBillsToCompleted = async () => {
         }
       } catch (error) {
         console.error(`Error updating bill ${bill.bill_id}:`, error.response?.data?.message || error.message);
+        
+        // Additional debugging
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+        }
       }
       
       // Add a small delay to avoid overwhelming the server
@@ -593,6 +608,12 @@ const updateBillsToCompleted = async () => {
     
   } catch (error) {
     console.error('Error in bill update process:', error.message);
+    
+    // Additional debugging
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
   }
 };
 
@@ -748,9 +769,9 @@ const main = async () => {
     // Check command line args for smaller test
     const isSmallTest = process.argv.includes('--small');
     
-    const targetDrivers = isSmallTest ? 100 : 5000; // Reduced from 10000 to avoid overwhelming the system
-    const targetCustomers = isSmallTest ? 100 : 5000; // Reduced from 10000 to avoid overwhelming the system
-    const targetRides = isSmallTest ? 20 : 500; // Reduced from 1000 to avoid overwhelming the system
+    const targetDrivers = isSmallTest ? 100 : 10000; // Reduced from 10000 to avoid overwhelming the system
+    const targetCustomers = isSmallTest ? 100 : 10000; // Reduced from 10000 to avoid overwhelming the system
+    const targetRides = isSmallTest ? 20 : 100000; // Reduced from 1000 to avoid overwhelming the system
     
     console.log(`Running ${isSmallTest ? 'small' : 'full'} test data generation`);
     

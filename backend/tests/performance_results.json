@@ -1,17 +1,17 @@
 {
   "B": {
-    "requestsPerSecond": 4,
-    "responseTime": 246,
-    "throughput": 3.2
+    "requestsPerSecond": 111,
+    "responseTime": 9,
+    "throughput": 88.80000000000001
   },
   "BS": {
-    "requestsPerSecond": 36,
-    "responseTime": 28,
-    "throughput": 28.8
+    "requestsPerSecond": 255,
+    "responseTime": 4,
+    "throughput": 204
   },
   "BSK": {
-    "requestsPerSecond": 52,
-    "responseTime": 19,
-    "throughput": 41.6
+    "requestsPerSecond": 229,
+    "responseTime": 4,
+    "throughput": 183.20000000000002
   }
 }
