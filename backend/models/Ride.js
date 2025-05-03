@@ -38,6 +38,10 @@ const RideSchema = new mongoose.Schema({
     required: false,
     default: 1
   },
+  surge_factor: {
+    type: Number,
+    default: 1.0
+  },
   status: {
     type: String,
     enum: ['requested', 'accepted', 'in_progress', 'completed', 'cancelled'],

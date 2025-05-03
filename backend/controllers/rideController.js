@@ -287,10 +287,14 @@ exports.createRide = async (req, res) => {
       passenger_count: passenger_count || 1,
       distance: priceData.distance,
       duration: priceData.duration,
+      surge_factor: priceData.surge_factor || 1.0,
       status: 'requested'
     });
 
     const savedRide = await ride.save();
+
+    await recordPricingData(savedRide);
+
 
     // Update customer's ride history
     await Customer.findOneAndUpdate(

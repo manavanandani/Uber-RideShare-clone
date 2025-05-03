@@ -123,42 +123,9 @@ const getDynamicPrice = async (pickup, dropoff, dateTime = new Date(), passenger
     }
 };
 
-
-/**
- * Record actual pricing data for model improvement
- */
-const recordPricingData = async (rideData) => {
-  try {
-    // This could write to a database table or send to a data collection service
-    const pricingRecord = {
-      timestamp: new Date(),
-      pickup_location: rideData.pickup_location,
-      dropoff_location: rideData.dropoff_location,
-      passenger_count: rideData.passenger_count,
-      predicted_fare: rideData.fare_amount,
-      actual_fare: rideData.fare_amount, // Same for now, could be adjusted
-      surge_factor: rideData.surge_factor,
-      distance_km: rideData.distance,
-      duration: rideData.duration,
-      // Customer behavior data
-      was_accepted: true // Could be updated later when we know if ride was accepted
-    };
-    
-    // Store in MongoDB for later analysis and model retraining
-    // This is a simplified example - implement as needed
-    await redisClient.rpush('pricing_data_queue', JSON.stringify(pricingRecord));
-    
-    return true;
-  } catch (error) {
-    console.error('Error recording pricing data:', error);
-    return false;
-  }
-};
-
 module.exports = {
     calculateDistance,
     estimateRideDuration,
     getPredictedFare,
-    getDynamicPrice,
-    recordPricingData
+    getDynamicPrice
 };
