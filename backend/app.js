@@ -1,6 +1,7 @@
 // app.js
 const express = require('express');
 const cors = require('cors');
+const databaseSelectorMiddleware = require('./middleware/databaseSelectorMiddleware');
 
 const adminRoutes = require('./routes/adminRoutes');
 const driverRoutes = require('./routes/driverRoutes');
@@ -26,6 +27,8 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+app.use(databaseSelectorMiddleware);
 
 // Initialize Kafka
 initKafka().catch(err => {

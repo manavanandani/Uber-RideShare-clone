@@ -616,6 +616,8 @@ const updateBillsToCompleted = async () => {
 };
 
 // Update the performance test data function
+// Modified section of testDataGenerator_v3.js to include MongoDB measurement
+
 const createPerformanceTestData = async (sampleSize = 10000) => {
   console.log(`Creating performance test data with ${sampleSize} samples...`);
   
@@ -659,15 +661,20 @@ const createPerformanceTestData = async (sampleSize = 10000) => {
   // Create test data for each configuration
   const testData = {
     B: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
+    BM: { requestsPerSecond: 0, responseTime: 0, throughput: 0 }, // MongoDB specific
     BS: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
-    BSK: { requestsPerSecond: 0, responseTime: 0, throughput: 0 }
+    BMSK: { requestsPerSecond: 0, responseTime: 0, throughput: 0 } // Full stack with MongoDB
   };
   
-  // Test Base configuration (B)
+  // Test Base configuration (B) - Simulated relational database
   console.log("Testing Base configuration (B)...");
   try {
-    // Disable caching for baseline test
-    const baseHeaders = { ...adminHeaders, 'X-Disable-Cache': 'true' };
+    // Disable both MongoDB and caching for baseline test
+    const baseHeaders = { 
+      ...adminHeaders, 
+      'X-Disable-Cache': 'true',
+      'X-Use-MongoDB': 'false' // New header to control database choice
+    };
     
     const startB = Date.now();
     for (let i = 0; i < sampleSize; i++) {
@@ -686,11 +693,41 @@ const createPerformanceTestData = async (sampleSize = 10000) => {
     console.error("Error testing Base configuration:", error.message);
   }
   
+  // Test Base + MongoDB (B+M)
+  console.log("Testing Base + MongoDB configuration (B+M)...");
+  try {
+    // Enable MongoDB, disable caching
+    const mongoHeaders = { 
+      ...adminHeaders, 
+      'X-Disable-Cache': 'true',
+      'X-Use-MongoDB': 'true' 
+    };
+    
+    const startBM = Date.now();
+    for (let i = 0; i < sampleSize; i++) {
+      await axios.get(`${API_URL}/drivers`, { headers: mongoHeaders });
+      if (i % 100 === 0) console.log(`B+M test: ${i}/${sampleSize}`);
+    }
+    const endBM = Date.now();
+    
+    const durationBM = (endBM - startBM) / 1000; // in seconds
+    testData.BM.requestsPerSecond = Math.round(sampleSize / durationBM);
+    testData.BM.responseTime = Math.round(durationBM * 1000 / sampleSize); // in ms
+    testData.BM.throughput = testData.BM.requestsPerSecond * 0.8; // estimated
+    
+    console.log(`B+M test completed: ${testData.BM.requestsPerSecond} req/s, ${testData.BM.responseTime}ms avg`);
+  } catch (error) {
+    console.error("Error testing B+M configuration:", error.message);
+  }
+  
   // Test Base + SQL Caching (B+S)
   console.log("Testing Base + SQL Caching configuration (B+S)...");
   try {
-    // Enable caching
-    const cachedHeaders = { ...adminHeaders };
+    // Enable caching, disable MongoDB
+    const cachedHeaders = { 
+      ...adminHeaders,
+      'X-Use-MongoDB': 'false'
+    };
     delete cachedHeaders['X-Disable-Cache'];
     
     // First request to warm up cache
@@ -713,11 +750,19 @@ const createPerformanceTestData = async (sampleSize = 10000) => {
     console.error("Error testing B+S configuration:", error.message);
   }
   
-  // Test Base + SQL Caching + Kafka (B+S+K)
-  // For this test we'll use operations that trigger Kafka messaging
-  console.log("Testing Base + SQL Caching + Kafka configuration (B+S+K)...");
+  // Test Base + MongoDB + SQL Caching + Kafka (B+M+S+K)
+  console.log("Testing full stack configuration (B+M+S+K)...");
   try {
-    const startBSK = Date.now();
+    // Enable MongoDB and caching
+    const fullStackHeaders = { 
+      ...adminHeaders,
+      'X-Use-MongoDB': 'true'
+    };
+    
+    // Warm up cache first
+    await axios.get(`${API_URL}/drivers`, { headers: fullStackHeaders });
+    
+    const startBMSK = Date.now();
     
     // Use a mixture of operations that trigger Kafka events with different drivers
     for (let i = 0; i < sampleSize; i++) {
@@ -727,36 +772,36 @@ const createPerformanceTestData = async (sampleSize = 10000) => {
       const randomDriver = drivers[i % drivers.length];
       
       if (operation === 0) {
-        // Read operation with caching
-        await axios.get(`${API_URL}/drivers`, { headers: adminHeaders });
+        // Read operation with caching and MongoDB
+        await axios.get(`${API_URL}/drivers`, { headers: fullStackHeaders });
       } else if (operation === 1) {
         // Status update (triggers Kafka) using different drivers
         await axios.patch(`${API_URL}/drivers/${randomDriver.driver_id}/status`, {
           status: i % 2 === 0 ? 'available' : 'offline',
           latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
           longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
-        }, { headers: adminHeaders });
+        }, { headers: fullStackHeaders });
       } else {
         // Customer location update (triggers Kafka)
         await axios.patch(`${API_URL}/customers/${TEST_CUSTOMER_ID}/location`, {
           latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
           longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
-        }, { headers: customerHeaders });
+        }, { headers: { ...customerHeaders, 'X-Use-MongoDB': 'true' } });
       }
       
-      if (i % 100 === 0) console.log(`B+S+K test: ${i}/${sampleSize}`);
+      if (i % 100 === 0) console.log(`B+M+S+K test: ${i}/${sampleSize}`);
     }
     
-    const endBSK = Date.now();
+    const endBMSK = Date.now();
     
-    const durationBSK = (endBSK - startBSK) / 1000; // in seconds
-    testData.BSK.requestsPerSecond = Math.round(sampleSize / durationBSK);
-    testData.BSK.responseTime = Math.round(durationBSK * 1000 / sampleSize); // in ms
-    testData.BSK.throughput = testData.BSK.requestsPerSecond * 0.8; // estimated
+    const durationBMSK = (endBMSK - startBMSK) / 1000; // in seconds
+    testData.BMSK.requestsPerSecond = Math.round(sampleSize / durationBMSK);
+    testData.BMSK.responseTime = Math.round(durationBMSK * 1000 / sampleSize); // in ms
+    testData.BMSK.throughput = testData.BMSK.requestsPerSecond * 0.8; // estimated
     
-    console.log(`B+S+K test completed: ${testData.BSK.requestsPerSecond} req/s, ${testData.BSK.responseTime}ms avg`);
+    console.log(`B+M+S+K test completed: ${testData.BMSK.requestsPerSecond} req/s, ${testData.BMSK.responseTime}ms avg`);
   } catch (error) {
-    console.error("Error testing B+S+K configuration:", error.message);
+    console.error("Error testing B+M+S+K configuration:", error.message);
   }
   
   // Save performance test results to a file
@@ -812,7 +857,7 @@ const main = async () => {
     await updateBillsToCompleted();
     
     // Run performance tests with database drivers
-    await createPerformanceTestData(200);
+    await createPerformanceTestData(99);
     
     console.log('=== DATA GENERATION COMPLETE ===');
     console.log(`Generated approximately:`);
