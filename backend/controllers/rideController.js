@@ -6,7 +6,9 @@ const {
   publishRideRequest, 
   publishRideAccepted, 
   publishRideCompleted,
-  publishRideRejected
+  publishRideRejected,
+  publishBillingCreated,
+  publishPaymentProcessed
 } = require('../services/messageService');
 const { v4: uuidv4 } = require('uuid');
 const { invalidateCache } = require('../config/redis');
@@ -681,6 +683,7 @@ exports.completeRide = async (req, res) => {
       return res.status(400).json({ message: `Ride is ${ride.status}, not in progress` });
     }
     
+    // Update ride status to completed
     const updatedRide = await Ride.findOneAndUpdate(
       { ride_id },
       { $set: { status: 'completed' } },
@@ -699,17 +702,64 @@ exports.completeRide = async (req, res) => {
       { $push: { ride_history: ride_id } }
     );
     
-    // Publish event
+    // Create bill automatically
+    const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
+    
+    const newBill = new Billing({
+      bill_id,
+      date: new Date(),
+      pickup_time: ride.date_time,
+      dropoff_time: new Date(),
+      distance_covered: ride.distance,
+      total_amount: ride.fare_amount,
+      source_location: `${ride.pickup_location.latitude},${ride.pickup_location.longitude}`,
+      destination_location: `${ride.dropoff_location.latitude},${ride.dropoff_location.longitude}`,
+      driver_id: ride.driver_id,
+      customer_id: ride.customer_id,
+      payment_status: 'completed', // Set to completed directly
+      payment_method: 'credit_card',
+      ride_id,
+      breakdown: {
+        base_fare: 3.0,
+        distance_fare: ride.distance * 1.5,
+        time_fare: ride.duration * 0.2,
+        surge_multiplier: ride.surge_factor || 1.0
+      }
+    });
+    
+    await newBill.save();
+    
+    // Publish events
     await publishRideCompleted(ride_id);
+    await publishBillingCreated({
+      bill_id,
+      date: newBill.date,
+      total_amount: newBill.total_amount,
+      driver_id: newBill.driver_id,
+      customer_id: newBill.customer_id,
+      ride_id,
+      payment_status: 'completed'
+    });
+    
+    // Publish payment processed event
+    await publishPaymentProcessed(bill_id, 'completed');
     
     // Invalidate caches
     await invalidateCache('*rides*');
     await invalidateCache(`*driver*${req.user.driver_id}*`);
     await invalidateCache(`*customer*${ride.customer_id}*`);
+    await invalidateCache(`*billing*${bill_id}*`);
     
     res.status(200).json({
-      message: 'Ride completed successfully',
-      data: updatedRide
+      message: 'Ride completed successfully and bill processed',
+      data: {
+        ride: updatedRide,
+        bill: {
+          bill_id,
+          total_amount: newBill.total_amount,
+          payment_status: 'completed'
+        }
+      }
     });
     
   } catch (err) {
