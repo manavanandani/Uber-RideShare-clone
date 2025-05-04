@@ -1,6 +1,6 @@
 // backend/tests/pricingModelTest.js
 const axios = require('axios');
-const { getDynamicPrice } = require('../services/pricingService');
+const { getDynamicPrice } = require('../../services/pricingService');
 
 // Test multiple scenarios
 const testScenarios = [
