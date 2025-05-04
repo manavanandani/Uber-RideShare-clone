@@ -98,7 +98,7 @@ const createAdmin = async () => {
   }
 };
 
-// Create test accounts for JMeter testing
+// Create test accounts
 const createTestAccounts = async () => {
   try {
     // Create a test customer
@@ -122,7 +122,8 @@ const createTestAccounts = async () => {
         expiry: '12/25',
         cvv: '123',
         name_on_card: 'Test Customer'
-      }
+      },
+      account_status: 'active'  // Ensure account is active
     };
     
     const headers = {
@@ -152,58 +153,9 @@ const createTestAccounts = async () => {
     TEST_CUSTOMER_TOKEN = customerLoginResponse.data.token;
     console.log('Test customer logged in successfully');
     
-    // Create a test driver
-    const driverId = generateSSN('driver');
-    TEST_DRIVER_ID = driverId;
-    const driverEmail = 'test_driver@test.com';
-    
-    const driverData = {
-      driver_id: driverId,
-      first_name: 'Test',
-      last_name: 'Driver',
-      email: driverEmail,
-      password: 'password123',
-      phone: '555-7654321',
-      address: '456 Test St',
-      city: 'San Francisco',
-      state: 'CA',
-      zip_code: '94105',
-      car_details: 'Toyota Camry 2020',
-      status: 'available',
-      account_status: 'approved', // Make sure the driver is approved
-      intro_media: {
-        location: {
-          type: 'Point',
-          coordinates: [-122.4194, 37.7749] // SF coordinates [longitude, latitude]
-        }
-      }
-    };
-    
-    // Post driver
-    try {
-      await axios.post(`${API_URL}/drivers`, driverData, { headers });
-      console.log('Created test driver:', driverEmail);
-    } catch (error) {
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
-        console.log('Test driver already exists, proceeding...');
-      } else {
-        throw error;
-      }
-    }
-    
-    // Login as driver
-    const driverLoginResponse = await axios.post(`${API_URL}/auth/driver/login`, {
-      email: driverEmail,
-      password: 'password123',
-      role: 'driver'
-    });
-    
-    TEST_DRIVER_TOKEN = driverLoginResponse.data.token;
-    console.log('Test driver logged in successfully');
-    
     return true;
   } catch (error) {
-    console.error('Error creating test accounts:', error.response?.data?.message || error.message);
+    console.error('Error creating test customer account:', error.response?.data?.message || error.message);
     return false;
   }
 };
@@ -380,172 +332,215 @@ const generateCustomers = async (count, batchSize = 100) => {
   return true;
 };
 
-// UPDATED: Create rides and bills with test-specific endpoints
+// Updated createRidesAndBills function to use drivers from the database
+// Updated createRidesAndBills function
 const createRidesAndBills = async (count) => {
-  console.log(`Creating ${count} test rides and bills...`);
-  
-  // Get available customers and drivers
-  const adminHeaders = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${ADMIN_TOKEN}`
-  };
-  
-  // Get customers
-  let customers = [];
-  try {
-    const customerResponse = await axios.get(`${API_URL}/customers`, { 
-      headers: adminHeaders
-    });
-    customers = customerResponse.data.data || [];
-    console.log(`Retrieved ${customers.length} customers for ride generation`);
+    console.log(`Creating ${count} test rides and bills...`);
     
-    // If not enough customers were found, add our test customer
-    if (!customers.find(c => c.customer_id === TEST_CUSTOMER_ID)) {
-      customers.push({ customer_id: TEST_CUSTOMER_ID });
-    }
-  } catch (error) {
-    console.error('Error retrieving customers:', error.message);
-    // Fallback to test customer
-    customers = [{ customer_id: TEST_CUSTOMER_ID }];
-  }
-  
-  const driverHeaders = {
-    'Content-Type': 'application/json', 
-    'Authorization': `Bearer ${TEST_DRIVER_TOKEN}`
-  };
-  
-  let successfulRides = 0;
-  let successfulBills = 0;
-  let failedRides = 0;
-  let failedBills = 0;
-  
-  for (let i = 0; i < count; i++) {
+    // Get available customers and drivers
+    const adminHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ADMIN_TOKEN}`
+    };
+    
+    // Get customers
+    let customers = [];
     try {
-      // Select random customer for variety
-      const customerIndex = Math.floor(Math.random() * customers.length);
-      const selectedCustomer = customers[customerIndex];
+      const customerResponse = await axios.get(`${API_URL}/customers`, { 
+        headers: adminHeaders
+      });
+      customers = customerResponse.data.data || [];
+      console.log(`Retrieved ${customers.length} customers for ride generation`);
       
-      // Random pickup/dropoff within San Francisco area (with some variety in distances)
-      const distanceVariation = Math.random() < 0.2 ? 0.2 : 0.05; // 20% chance of longer ride
-      
-      const pickup = {
-        latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
-        longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
-      };
-      
-      const dropoff = {
-        latitude: pickup.latitude + (Math.random() * distanceVariation * 2 - distanceVariation),
-        longitude: pickup.longitude + (Math.random() * distanceVariation * 2 - distanceVariation)
-      };
-      
-      // Create a ride with random data using our test-create endpoint
-      const rideData = {
-        pickup_location: pickup,
-        dropoff_location: dropoff,
-        date_time: new Date().toISOString(),
-        passenger_count: Math.floor(Math.random() * 4) + 1,
-        driver_id: TEST_DRIVER_ID,
-        customer_id: selectedCustomer.customer_id
-      };
-      
-      // With retry logic
-      let rideId = null;
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (!rideId && retryCount < maxRetries) {
-        try {
-          // Use the new test-create endpoint with admin token
-          const rideResponse = await axios.post(`${API_URL}/rides/test-create`, rideData, { headers: adminHeaders });
-          rideId = rideResponse.data.data.ride_id;
-          successfulRides++;
-          
-          if (i % 10 === 0) {
-            console.log(`Created ride ${i+1}/${count} - ID: ${rideId} - Customer: ${selectedCustomer.customer_id} - Driver: ${TEST_DRIVER_ID}`);
-          }
-        } catch (error) {
-          retryCount++;
-          console.error(`Attempt ${retryCount}/${maxRetries} failed for ride ${i+1}:`, error.response?.data?.message || error.message);
-          
-          if (retryCount >= maxRetries) {
-            failedRides++;
-            console.error(`Failed to create ride ${i+1} after ${maxRetries} attempts, skipping...`);
-            break;
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
-        }
+      // If not enough customers were found, add our test customer
+      if (!customers.find(c => c.customer_id === TEST_CUSTOMER_ID)) {
+        customers.push({ customer_id: TEST_CUSTOMER_ID });
       }
-      
-      if (!rideId) {
-        continue; // Skip to next ride if this one failed
-      }
-      
-      // Let's give a little breathing room between steps
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Step 2: Accept ride using test endpoint
-      try {
-        await axios.patch(`${API_URL}/rides/test/${rideId}/accept`, { driver_id: TEST_DRIVER_ID }, { headers: adminHeaders });
-      } catch (error) {
-        console.error(`Error accepting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
-        continue; // Skip to next ride if accept failed
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Step 3: Start ride using test endpoint
-      try {
-        await axios.patch(`${API_URL}/rides/test/${rideId}/start`, {}, { headers: adminHeaders });
-      } catch (error) {
-        console.error(`Error starting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
-        continue;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Step 4: Complete ride using test endpoint
-      try {
-        await axios.patch(`${API_URL}/rides/test/${rideId}/complete`, {}, { headers: adminHeaders });
-      } catch (error) {
-        console.error(`Error completing ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
-        continue;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Step 5: Create bill as driver (use the regular endpoint here)
-      const billData = {
-        ride_id: rideId
-      };
-      
-      try {
-        await axios.post(`${API_URL}/billing`, billData, { headers: driverHeaders });
-        successfulBills++;
-      } catch (error) {
-        // If error is "Bill already exists", count it as a success
-        if (error.response?.status === 400 && error.response?.data?.message?.includes('already exists')) {
-          console.log(`Bill already exists for ride ${i+1}/${count}`);
-          successfulBills++;
-        } else {
-          failedBills++;
-          console.error(`Error creating bill for ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
-        }
-      }
-      
-      // A longer delay between full ride cycles to avoid rate-limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`Unexpected error in ride/bill creation for ${i+1}/${count}:`, error.message);
+      console.error('Error retrieving customers:', error.message);
+      // Fallback to test customer
+      customers = [{ customer_id: TEST_CUSTOMER_ID }];
     }
-  }
-  
-  console.log(`Successfully created ${successfulRides} rides and ${successfulBills} bills`);
-  console.log(`Failed to create ${failedRides} rides and ${failedBills} bills`);
-  return { rides: successfulRides, bills: successfulBills };
-};
-
+    
+    // Get available drivers from database
+    let drivers = [];
+    try {
+      // Get drivers with 'available' status
+      const driverResponse = await axios.get(`${API_URL}/drivers/available`, { 
+        headers: adminHeaders
+      });
+      drivers = driverResponse.data.data || [];
+      console.log(`Retrieved ${drivers.length} available drivers for ride generation`);
+      
+      // If not enough drivers were found, get all drivers
+      if (drivers.length < 10) {
+        console.log('Not enough available drivers, fetching all drivers...');
+        const allDriversResponse = await axios.get(`${API_URL}/drivers`, { 
+          headers: adminHeaders
+        });
+        drivers = allDriversResponse.data.data || [];
+        console.log(`Retrieved ${drivers.length} total drivers`);
+      }
+      
+      // Use a subset of drivers if there are too many (for better performance)
+      if (drivers.length > 100) {
+        drivers = drivers.slice(0, 100);
+        console.log(`Using a subset of 100 drivers for testing`);
+      }
+      
+      // Make sure we have at least one driver
+      if (drivers.length === 0) {
+        console.log('No drivers found, using test driver as fallback');
+        drivers = [{ driver_id: TEST_DRIVER_ID }];
+      }
+    } catch (error) {
+      console.error('Error retrieving drivers:', error.message);
+      // Fallback to test driver
+      drivers = [{ driver_id: TEST_DRIVER_ID }];
+    }
+    
+    let successfulRides = 0;
+    let failedRides = 0;
+    let completedRides = [];
+    
+    // For tracking driver usage for statistics
+    const driverUsage = {};
+    
+    for (let i = 0; i < count; i++) {
+      try {
+        // Select random customer and driver for variety
+        const customerIndex = Math.floor(Math.random() * customers.length);
+        const selectedCustomer = customers[customerIndex];
+        
+        const driverIndex = Math.floor(Math.random() * drivers.length);
+        const selectedDriver = drivers[driverIndex];
+        
+        // Track driver usage for statistics
+        if (!driverUsage[selectedDriver.driver_id]) {
+          driverUsage[selectedDriver.driver_id] = 0;
+        }
+        driverUsage[selectedDriver.driver_id]++;
+        
+        // Random pickup/dropoff within San Francisco area (with some variety in distances)
+        const distanceVariation = Math.random() < 0.2 ? 0.2 : 0.05; // 20% chance of longer ride
+        
+        const pickup = {
+          latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
+          longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
+        };
+        
+        const dropoff = {
+          latitude: pickup.latitude + (Math.random() * distanceVariation * 2 - distanceVariation),
+          longitude: pickup.longitude + (Math.random() * distanceVariation * 2 - distanceVariation)
+        };
+        
+        // Create a ride with random data using our test-create endpoint
+        const rideData = {
+          pickup_location: pickup,
+          dropoff_location: dropoff,
+          date_time: new Date().toISOString(),
+          passenger_count: Math.floor(Math.random() * 4) + 1,
+          driver_id: selectedDriver.driver_id,
+          customer_id: selectedCustomer.customer_id
+        };
+        
+        // With retry logic
+        let rideId = null;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (!rideId && retryCount < maxRetries) {
+          try {
+            // Use the test-create endpoint with admin token
+            const rideResponse = await axios.post(`${API_URL}/rides/test-create`, rideData, { headers: adminHeaders });
+            rideId = rideResponse.data.data.ride_id;
+            successfulRides++;
+            
+            if (i % 10 === 0) {
+              console.log(`Created ride ${i+1}/${count} - ID: ${rideId} - Customer: ${selectedCustomer.customer_id} - Driver: ${selectedDriver.driver_id}`);
+            }
+          } catch (error) {
+            retryCount++;
+            console.error(`Attempt ${retryCount}/${maxRetries} failed for ride ${i+1}:`, error.response?.data?.message || error.message);
+            
+            if (retryCount >= maxRetries) {
+              failedRides++;
+              console.error(`Failed to create ride ${i+1} after ${maxRetries} attempts, skipping...`);
+              break;
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+          }
+        }
+        
+        if (!rideId) {
+          continue; // Skip to next ride if this one failed
+        }
+        
+        // Let's give a little breathing room between steps
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Step 2: Accept ride using test endpoint
+        try {
+          await axios.patch(`${API_URL}/rides/test/${rideId}/accept`, { driver_id: selectedDriver.driver_id }, { headers: adminHeaders });
+        } catch (error) {
+          console.error(`Error accepting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+          continue; // Skip to next ride if accept failed
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Step 3: Start ride using test endpoint
+        try {
+          await axios.patch(`${API_URL}/rides/test/${rideId}/start`, {}, { headers: adminHeaders });
+        } catch (error) {
+          console.error(`Error starting ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+          continue;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Step 4: Complete ride using test endpoint
+        try {
+          await axios.patch(`${API_URL}/rides/test/${rideId}/complete`, {}, { headers: adminHeaders });
+          // Add the ride ID to the list of completed rides
+          completedRides.push(rideId);
+        } catch (error) {
+          console.error(`Error completing ride ${i+1}/${count}:`, error.response?.data?.message || error.message);
+          continue;
+        }
+        
+        // A longer delay between full ride cycles to avoid rate-limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`Unexpected error in ride creation for ${i+1}/${count}:`, error.message);
+      }
+    }
+    
+    // Report on driver distribution
+    console.log('\nDriver usage statistics:');
+    const driverIds = Object.keys(driverUsage);
+    console.log(`Used ${driverIds.length} different drivers`);
+    
+    // Sort drivers by usage
+    const sortedDrivers = driverIds.sort((a, b) => driverUsage[b] - driverUsage[a]);
+    console.log('Top 5 most used drivers:');
+    for (let i = 0; i < Math.min(5, sortedDrivers.length); i++) {
+      const driverId = sortedDrivers[i];
+      console.log(`- Driver ${driverId}: ${driverUsage[driverId]} rides (${(driverUsage[driverId] / successfulRides * 100).toFixed(1)}%)`);
+    }
+    
+    console.log(`Successfully created and completed ${completedRides.length} rides`);
+    console.log(`Failed to create ${failedRides} rides`);
+    console.log('Skipping bill creation - will let updateBillsToCompleted handle bills');
+    
+    return { 
+      rides: successfulRides, 
+      completedRides: completedRides.length, 
+      driversUsed: driverIds.length 
+    };
+  };
 
 const updateBillsToCompleted = async () => {
   console.log('Updating all pending bills to completed status...');
@@ -554,11 +549,6 @@ const updateBillsToCompleted = async () => {
     const adminHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ADMIN_TOKEN}`
-    };
-    
-    const customerHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
     };
     
     // Step 1: Get all pending bills
@@ -575,16 +565,28 @@ const updateBillsToCompleted = async () => {
     
     for (const bill of pendingBills) {
       try {
-        // Add debugging
         console.log(`Processing bill ${bill.bill_id}`);
         
+        // First verify the bill exists and get its details
+        const billDetails = await axios.get(`${API_URL}/billing/${bill.bill_id}`, {
+          headers: adminHeaders
+        });
+        
+        if (!billDetails.data.data) {
+          console.error(`Bill ${bill.bill_id} not found`);
+          continue;
+        }
+        
+        // Process payment as admin
         await axios.post(`${API_URL}/billing/${bill.bill_id}/pay`, {
-          payment_method: 'credit_card'
+          payment_method: 'credit_card',
+          amount: billDetails.data.data.total_amount
         }, {
-          headers: customerHeaders // Use customer token for payment
+          headers: adminHeaders
         });
         
         updatedCount++;
+        console.log(`Successfully processed payment for bill ${bill.bill_id}`);
         
         // Log progress for large batches
         if (pendingBills.length > 100 && updatedCount % 50 === 0) {
@@ -592,12 +594,8 @@ const updateBillsToCompleted = async () => {
         }
       } catch (error) {
         console.error(`Error updating bill ${bill.bill_id}:`, error.response?.data?.message || error.message);
-        
-        // Additional debugging
-        if (error.response) {
-          console.error('Response status:', error.response.status);
-          console.error('Response data:', error.response.data);
-        }
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
       }
       
       // Add a small delay to avoid overwhelming the server
@@ -617,10 +615,11 @@ const updateBillsToCompleted = async () => {
   }
 };
 
-// Performance test data creation
-const createPerformanceTestData = async (sampleSize = 200) => {
+// Update the performance test data function
+const createPerformanceTestData = async (sampleSize = 10000) => {
   console.log(`Creating performance test data with ${sampleSize} samples...`);
   
+  // Get available drivers
   const adminHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${ADMIN_TOKEN}`
@@ -631,10 +630,31 @@ const createPerformanceTestData = async (sampleSize = 200) => {
     'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
   };
   
-  const driverHeaders = {
-    'Content-Type': 'application/json', 
-    'Authorization': `Bearer ${TEST_DRIVER_TOKEN}`
-  };
+  // Get available drivers from database
+  let drivers = [];
+  try {
+    const driverResponse = await axios.get(`${API_URL}/drivers`, { 
+      headers: adminHeaders
+    });
+    drivers = driverResponse.data.data || [];
+    console.log(`Retrieved ${drivers.length} drivers for performance testing`);
+    
+    // Use a subset of drivers if there are too many
+    if (drivers.length > 50) {
+      drivers = drivers.slice(0, 50);
+      console.log(`Using a subset of 50 drivers for performance testing`);
+    }
+    
+    // Make sure we have at least one driver
+    if (drivers.length === 0) {
+      console.log('No drivers found, using test driver as fallback');
+      drivers = [{ driver_id: TEST_DRIVER_ID }];
+    }
+  } catch (error) {
+    console.error('Error retrieving drivers:', error.message);
+    // Fallback to test driver
+    drivers = [{ driver_id: TEST_DRIVER_ID }];
+  }
   
   // Create test data for each configuration
   const testData = {
@@ -699,24 +719,28 @@ const createPerformanceTestData = async (sampleSize = 200) => {
   try {
     const startBSK = Date.now();
     
-    // Use a mixture of operations that trigger Kafka events
+    // Use a mixture of operations that trigger Kafka events with different drivers
     for (let i = 0; i < sampleSize; i++) {
       const operation = i % 3;
+      
+      // Select a random driver for this operation
+      const randomDriver = drivers[i % drivers.length];
+      
       if (operation === 0) {
         // Read operation with caching
         await axios.get(`${API_URL}/drivers`, { headers: adminHeaders });
       } else if (operation === 1) {
-        // Status update (triggers Kafka)
-        await axios.patch(`${API_URL}/drivers/${TEST_DRIVER_ID}/status`, {
+        // Status update (triggers Kafka) using different drivers
+        await axios.patch(`${API_URL}/drivers/${randomDriver.driver_id}/status`, {
           status: i % 2 === 0 ? 'available' : 'offline',
-          latitude: 37.7749,
-          longitude: -122.4194
-        }, { headers: driverHeaders });
+          latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
+          longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
+        }, { headers: adminHeaders });
       } else {
         // Customer location update (triggers Kafka)
         await axios.patch(`${API_URL}/customers/${TEST_CUSTOMER_ID}/location`, {
-          latitude: 37.7749,
-          longitude: -122.4194
+          latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
+          longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
         }, { headers: customerHeaders });
       }
       
@@ -758,10 +782,10 @@ const main = async () => {
       return;
     }
     
-    // Create test accounts for ride and bill creation
+    // Create test customer account
     const testAccountsCreated = await createTestAccounts();
     if (!testAccountsCreated) {
-      console.error('Failed to create test accounts. Exiting.');
+      console.error('Failed to create test customer account. Exiting.');
       return;
     }
     
@@ -769,9 +793,9 @@ const main = async () => {
     // Check command line args for smaller test
     const isSmallTest = process.argv.includes('--small');
     
-    const targetDrivers = isSmallTest ? 100 : 10000; // Reduced from 10000 to avoid overwhelming the system
-    const targetCustomers = isSmallTest ? 100 : 10000; // Reduced from 10000 to avoid overwhelming the system
-    const targetRides = isSmallTest ? 20 : 100000; // Reduced from 1000 to avoid overwhelming the system
+    const targetDrivers = isSmallTest ? 100 : 10000;
+    const targetCustomers = isSmallTest ? 100 : 10000;
+    const targetRides = isSmallTest ? 20 : 100000;
     
     console.log(`Running ${isSmallTest ? 'small' : 'full'} test data generation`);
     
@@ -781,13 +805,13 @@ const main = async () => {
     // Generate customers
     await generateCustomers(targetCustomers);
     
-    // Create rides and bills
-    await createRidesAndBills(targetRides);
+    // Create rides and bills with database drivers
+    const rideResults = await createRidesAndBills(targetRides);
 
-    // complete bills
+    // Complete bills
     await updateBillsToCompleted();
     
-    // Run performance tests
+    // Run performance tests with database drivers
     await createPerformanceTestData(200);
     
     console.log('=== DATA GENERATION COMPLETE ===');
@@ -795,9 +819,9 @@ const main = async () => {
     console.log(`- ${targetDrivers} drivers`);
     console.log(`- ${targetCustomers} customers`);
     console.log(`- ${targetRides} rides/bills (approx)`);
+    console.log(`- Used ${rideResults.driversUsed} different drivers from database`);
     console.log('\nTest accounts created for JMeter:');
     console.log(' - Customer: test_customer@test.com / password123');
-    console.log(' - Driver: test_driver@test.com / password123');
     console.log(' - Admin: admin@test.com / password123');
     
     console.log('\nYou can now run JMeter tests for performance analysis');
