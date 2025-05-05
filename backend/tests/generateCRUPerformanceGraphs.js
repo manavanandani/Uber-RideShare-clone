@@ -1,3 +1,5 @@
+// generateCRUPerformanceGraphs.js
+
 const fs = require('fs');
 const path = require('path');
 
@@ -21,7 +23,7 @@ const generateGraphs = () => {
     console.log("Loaded performance data from file");
     
     // Validate basic structure
-    const requiredConfigs = ['B', 'BM', 'BS', 'BMSK'];
+    const requiredConfigs = ['B', 'BS', 'BSK'];
     const requiredOperations = ['create', 'read', 'update', 'overall'];
     const requiredMetrics = ['requestsPerSecond', 'responseTime', 'throughput'];
     
@@ -71,7 +73,7 @@ const generateGraphs = () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uber Simulation CRU Performance Analysis</title>
+    <title>Uber Simulation Performance Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <style>
         body {
@@ -160,15 +162,14 @@ const generateGraphs = () => {
     </style>
 </head>
 <body>
-    <h1>Uber Simulation CRU Performance Analysis</h1>
+    <h1>Uber Simulation Performance Analysis</h1>
     
     <div class="legend">
         <h3>Configuration Legend:</h3>
         <ul>
-            <li><strong>B</strong>: Base implementation (SQL database)</li>
-            <li><strong>BM</strong>: Base + MongoDB</li>
+            <li><strong>B</strong>: Base implementation</li>
             <li><strong>BS</strong>: Base + SQL Caching with Redis</li>
-            <li><strong>BMSK</strong>: Base + MongoDB + SQL Caching + Kafka Messaging (full stack)</li>
+            <li><strong>BSK</strong>: Base + SQL Caching + Kafka</li>
         </ul>
     </div>
     
@@ -279,7 +280,7 @@ const generateGraphs = () => {
     </div>
     
     <p>
-        <strong>Analysis:</strong> This CRU performance comparison demonstrates how different database and infrastructure choices impact each type of operation. MongoDB shows superior performance for document creation and retrieval, while SQL databases might perform better for complex relational queries. Redis caching significantly improves read performance in all configurations. The addition of Kafka messaging introduces a small overhead for write operations but provides essential distributed functionality for the ride-sharing application.
+        <strong>Analysis:</strong> This performance comparison demonstrates how different infrastructure choices impact the system. Redis caching significantly improves read operations by reducing database queries. The addition of Kafka messaging provides essential distributed functionality for the ride-sharing application while introducing minimal overhead. The full stack (BSK) configuration shows the best overall performance, demonstrating the benefits of a properly architected distributed system.
     </p>
 
     <script>
@@ -287,7 +288,7 @@ const generateGraphs = () => {
         const data = ${JSON.stringify(performanceData, null, 2)};
         
         // Configuration labels
-        const labels = ['B', 'BM', 'BS', 'BMSK'];
+        const labels = ['B', 'BS', 'BSK'];
         
         // Chart colors
         const colors = {
@@ -392,6 +393,16 @@ const generateGraphs = () => {
             const opColors = [colors.create, colors.read, colors.update];
             
             operations.forEach((op, index) => {
+                // Skip ride_read since it's not implemented
+                if (entityType === 'ride' && op === 'read') {
+                    return;
+                }
+                
+                // Skip billing create/update since they're not implemented
+                if (entityType === 'billing' && op !== 'read') {
+                    return;
+                }
+                
                 const chartData = [];
                 
                 for (let i = 0; i < labels.length; i++) {
@@ -525,6 +536,16 @@ const generateGraphs = () => {
             labels.forEach(config => {
                 entities.forEach(entity => {
                     entityOps.forEach(op => {
+                        // Skip ride_read since it's not implemented
+                        if (entity === 'ride' && op === 'read') {
+                            return;
+                        }
+                        
+                        // Skip billing create/update since they're not implemented
+                        if (entity === 'billing' && op !== 'read') {
+                            return;
+                        }
+                        
                         const key = \`\${entity}_\${op}\`;
                         if (hasEntityData(config, entity, op)) {
                             const row = document.createElement('tr');
@@ -564,10 +585,10 @@ const generateGraphs = () => {
   `;
 
   // Write the HTML file
-  const outputPath = path.join(__dirname, 'cru_performance_graphs.html');
+  const outputPath = path.join(__dirname, 'performance_graphs.html');
   fs.writeFileSync(outputPath, html);
 
-  console.log(`CRU performance graphs created at: ${outputPath}`);
+  console.log(`Performance graphs created at: ${outputPath}`);
   console.log('Open this file in a web browser to view the graphs');
   
   return true;
