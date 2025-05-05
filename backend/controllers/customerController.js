@@ -332,13 +332,26 @@ exports.updateCustomerLocation = async (req, res) => {
       return res.status(400).json({ message: 'Latitude and longitude are required' });
     }
     
+    // Convert to numbers and validate range
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ message: 'Invalid coordinates' });
+    }
+    
+    // Allow admin to update any customer, or customer to update only their own
+    if (req.user.role !== 'admin' && req.user.customer_id !== customer_id) {
+      return res.status(403).json({ message: 'Unauthorized to update this customer location' });
+    }
+    
     const customer = await Customer.findOneAndUpdate(
       { customer_id },
       { 
         $set: { 
           last_location: {
             type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+            coordinates: [lng, lat] // MongoDB uses [longitude, latitude]
           }
         }
       },
@@ -349,32 +362,19 @@ exports.updateCustomerLocation = async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
     
-    // Invalidate relevant caches
+    // Invalidate cache
     await invalidateCache(`customers:${customer_id}`);
-    
-    // Publish customer location update event
-    await publishCustomerEvent(
-      customer_id,
-      'CUSTOMER_LOCATION_UPDATED',
-      { location: { latitude: parseFloat(latitude), longitude: parseFloat(longitude) } }
-    );
     
     res.status(200).json({
       message: 'Customer location updated successfully',
       data: {
         customer_id,
-        location: {
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude)
-        }
+        location: { latitude: lat, longitude: lng }
       }
     });
   } catch (error) {
     console.error('Error updating customer location:', error);
-    res.status(500).json({
-      message: 'Failed to update customer location',
-      error: error.message
-    });
+    res.status(500).json({ message: 'Failed to update customer location' });
   }
 };
 

@@ -81,41 +81,43 @@ try {
   redisClient = createMockRedisClient();
 }
 
+// Update your Redis cache middleware for better performance
 const cacheMiddleware = (duration) => {
   return async (req, res, next) => {
     try {
+      // Skip caching for testing scenarios
       if (req.headers['x-disable-cache'] === 'true') {
-        console.log(`[DATA SOURCE] Request ${req.originalUrl} - CACHE DISABLED`);
         return next();
       }
       
+      // Only cache GET requests
       if (req.method !== 'GET') {
         return next();
       }
 
-      const key = `__cache__${req.originalUrl || req.url}`;
+      // Generate a unique cache key based on URL and any query parameters
+      const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+      const key = `__cache__${req.originalUrl}__${req.user ? req.user.role : 'anonymous'}`;
 
       try {
         const cachedData = await redisClient.get(key);
         if (cachedData) {
-          console.log(`[DATA SOURCE] Request ${req.originalUrl} - FROM REDIS CACHE ✓`);
+          console.log(`Cache hit for ${req.originalUrl}`);
           return res.json(JSON.parse(cachedData));
         }
       } catch (cacheError) {
         console.error('Cache retrieval error:', cacheError);
-        // Continue without caching
       }
 
+      // Capture the original send to intercept the response
       const originalSend = res.send;
-
       res.send = function (body) {
         if (res.statusCode === 200) {
           try {
-            console.log(`[DATA SOURCE] Caching response for ${req.originalUrl}`);
+            // Only cache successful responses
             redisClient.set(key, body, 'EX', duration);
           } catch (cacheError) {
             console.error('Cache set error:', cacheError);
-            // Continue without caching
           }
         }
         originalSend.call(this, body);
@@ -124,7 +126,7 @@ const cacheMiddleware = (duration) => {
       next();
     } catch (error) {
       console.error('Redis cache middleware error:', error);
-      next(); // Continue without caching
+      next();
     }
   };
 };

@@ -5,6 +5,7 @@ const { invalidateCache } = require('../config/redis');
  * Middleware to handle bulk operations
  * This is used for performance testing with many operations
  */
+// Add this to middleware/bulkRequestMiddleware.js
 const bulkRequestHandler = (controller) => {
   return async (req, res) => {
     try {
@@ -28,11 +29,15 @@ const bulkRequestHandler = (controller) => {
         for (let i = 0; i < items.length; i += batchSize) {
           const batch = items.slice(i, i + batchSize);
           
-          // Process batch in parallel
+          // Process batch using Promise.all for parallelism
           const batchPromises = batch.map(async (item) => {
             try {
               // Create a mock request object with the item as body
-              const mockReq = { body: item, user: req.user };
+              const mockReq = { 
+                body: item, 
+                user: req.user,
+                headers: req.headers
+              };
               
               // Create a mock response object to capture results
               const mockRes = {

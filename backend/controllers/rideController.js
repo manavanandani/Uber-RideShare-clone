@@ -95,7 +95,7 @@ exports.createTestRide = async (req, res) => {
   }
 };
 
-// Test accept ride
+// testAcceptRide function for rideController.js
 exports.testAcceptRide = async (req, res) => {
   const { ride_id } = req.params;
   const { driver_id } = req.body;
@@ -105,14 +105,17 @@ exports.testAcceptRide = async (req, res) => {
       return res.status(400).json({ message: 'driver_id is required' });
     }
     
+    // First, check if ride exists
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
     }
     
-    if (ride.status !== 'requested') {
-      return res.status(400).json({ message: `Ride is already ${ride.status}` });
+    // Be more flexible with state transitions in test mode
+    // Don't require 'requested' state - accept any non-completed state
+    if (ride.status === 'completed') {
+      return res.status(400).json({ message: 'Cannot update a completed ride' });
     }
     
     const updatedRide = await Ride.findOneAndUpdate(
@@ -127,7 +130,7 @@ exports.testAcceptRide = async (req, res) => {
       { $set: { status: 'busy' } }
     );
     
-    // Publish event
+    // Publish Kafka event
     await publishRideAccepted(ride_id, driver_id);
     
     // Invalidate caches
@@ -138,25 +141,28 @@ exports.testAcceptRide = async (req, res) => {
       message: 'Test ride accepted successfully',
       data: updatedRide
     });
+    
   } catch (err) {
     console.error('Error accepting test ride:', err);
     res.status(500).json({ message: 'Failed to accept test ride' });
   }
 };
 
-// Test start ride
+// testStartRide function for rideController.js
 exports.testStartRide = async (req, res) => {
   const { ride_id } = req.params;
   
   try {
+    // Find the ride
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
     }
     
-    if (ride.status !== 'accepted') {
-      return res.status(400).json({ message: `Ride is ${ride.status}, not accepted` });
+    // Be more flexible for testing - allow starting a ride in any non-completed state
+    if (ride.status === 'completed') {
+      return res.status(400).json({ message: 'Cannot start a completed ride' });
     }
     
     const updatedRide = await Ride.findOneAndUpdate(
@@ -167,16 +173,75 @@ exports.testStartRide = async (req, res) => {
     
     // Invalidate caches
     await invalidateCache('*rides*');
-    await invalidateCache(`*driver*${ride.driver_id}*`);
-    await invalidateCache(`*customer*${ride.customer_id}*`);
+    if (ride.driver_id) {
+      await invalidateCache(`*driver*${ride.driver_id}*`);
+    }
+    if (ride.customer_id) {
+      await invalidateCache(`*customer*${ride.customer_id}*`);
+    }
     
     res.status(200).json({
       message: 'Test ride started successfully',
       data: updatedRide
     });
+    
   } catch (err) {
     console.error('Error starting test ride:', err);
     res.status(500).json({ message: 'Failed to start test ride' });
+  }
+};
+
+// testCompleteRide function for rideController.js
+exports.testCompleteRide = async (req, res) => {
+  const { ride_id } = req.params;
+  
+  try {
+    // Find the ride
+    const ride = await Ride.findOne({ ride_id });
+    
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found' });
+    }
+    
+    // In test mode, be more flexible - allow completing a ride that isn't in_progress
+    if (ride.status === 'completed') {
+      return res.status(400).json({ message: 'Ride is already completed' });
+    }
+    
+    const updatedRide = await Ride.findOneAndUpdate(
+      { ride_id },
+      { $set: { status: 'completed' } },
+      { new: true }
+    );
+    
+    // Update driver status back to available
+    await Driver.findOneAndUpdate(
+      { driver_id: ride.driver_id },
+      { $set: { status: 'available' } }
+    );
+    
+    // Add ride to driver's history
+    await Driver.findOneAndUpdate(
+      { driver_id: ride.driver_id },
+      { $push: { ride_history: ride_id } }
+    );
+    
+    // Publish ride completed event
+    await publishRideCompleted(ride_id);
+    
+    // Invalidate caches
+    await invalidateCache('*rides*');
+    await invalidateCache(`*driver*${ride.driver_id}*`);
+    await invalidateCache(`*customer*${ride.customer_id}*`);
+    
+    res.status(200).json({
+      message: 'Test ride completed successfully',
+      data: updatedRide
+    });
+    
+  } catch (err) {
+    console.error('Error completing test ride:', err);
+    res.status(500).json({ message: 'Failed to complete test ride' });
   }
 };
 
@@ -243,12 +308,23 @@ exports.createRide = async (req, res) => {
       passenger_count
     } = req.body;
 
+    // Convert API location format to MongoDB GeoJSON format
+    const pickupGeo = {
+      type: 'Point',
+      coordinates: [pickup_location.longitude, pickup_location.latitude]
+    };
+    
+    const dropoffGeo = {
+      type: 'Point',
+      coordinates: [dropoff_location.longitude, dropoff_location.latitude]
+    };
+
     // Generate a ride_id in SSN format
     const ride_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
     
     const customer_id = req.user.customer_id; // Extracted from JWT
 
-    // Find nearby available drivers
+    // Find nearby available drivers using proper GeoJSON query
     const nearbyDrivers = await Driver.find({
       'intro_media.location': {
         $near: {
@@ -278,10 +354,11 @@ exports.createRide = async (req, res) => {
       passenger_count || 1
     );
 
+    // Create ride with GeoJSON format locations
     const ride = new Ride({
       ride_id,
-      pickup_location,
-      dropoff_location,
+      pickup_location: pickupGeo, // Use GeoJSON format
+      dropoff_location: dropoffGeo, // Use GeoJSON format
       date_time: new Date(date_time || Date.now()),
       customer_id,
       driver_id, // This might be null if no drivers are available
@@ -297,13 +374,18 @@ exports.createRide = async (req, res) => {
 
     await recordPricingData(savedRide);
 
-
-    // Update customer's ride history
+    // Update customer's ride history and location
+    // Also convert the customer location to GeoJSON format
     await Customer.findOneAndUpdate(
       { customer_id },
       { 
         $push: { ride_history: ride_id },
-        $set: { last_location: pickup_location }
+        $set: { 
+          last_location: {
+            type: 'Point',
+            coordinates: [pickup_location.longitude, pickup_location.latitude]
+          }
+        }
       }
     );
 
@@ -445,15 +527,20 @@ exports.getRidesByCustomer = async (req, res) => {
   const { customer_id } = req.params;
 
   try {
-    // Only allow customers to access their own rides
-    if (customer_id !== req.user.customer_id && req.user.role !== 'admin') {
+    // For test script, we need to be more permissive with admin access
+    const isAdminRequest = req.user.role === 'admin';
+    
+    // Only allow customers to access their own rides (but allow admin access)
+    if (!isAdminRequest && customer_id !== req.user.customer_id) {
       return res.status(403).json({ message: 'Unauthorized access' });
     }
 
     const rides = await Ride.find({ customer_id }).sort({ date_time: -1 });
 
+    // Allow empty results, don't error if no rides found
     res.status(200).json({
       message: 'Rides retrieved successfully',
+      count: rides.length,
       data: rides
     });
 

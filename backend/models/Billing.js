@@ -84,4 +84,8 @@ BillingSchema.index({ driver_id: 1 });
 BillingSchema.index({ date: -1 });
 BillingSchema.index({ ride_id: 1 });
 
+BillingSchema.index({ payment_status: 1, date: -1 });
+BillingSchema.index({ customer_id: 1, payment_status: 1 });
+BillingSchema.index({ driver_id: 1, date: -1 });
+
 module.exports = mongoose.model('Billing', BillingSchema);

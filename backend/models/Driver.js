@@ -63,4 +63,7 @@ DriverSchema.methods.matchPassword = async function (enteredPassword) {
 // Add index for geospatial queries
 DriverSchema.index({ 'intro_media.location': '2dsphere' });
 
+DriverSchema.index({ status: 1, 'intro_media.location': '2dsphere' });
+
+
 module.exports = mongoose.model('Driver', DriverSchema);

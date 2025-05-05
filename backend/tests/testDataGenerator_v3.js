@@ -615,205 +615,260 @@ const updateBillsToCompleted = async () => {
   }
 };
 
-// Update the performance test data function
-// Modified section of testDataGenerator_v3.js to include MongoDB measurement
-
-const createPerformanceTestData = async (sampleSize = 10000) => {
-  console.log(`Creating performance test data with ${sampleSize} samples...`);
+const createCRUPerformanceTest = async (sampleSize = 1000) => {
+  console.log(`Creating CRU performance test with ${sampleSize} samples...`);
   
-  // Get available drivers
+  // Authorization headers
   const adminHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${ADMIN_TOKEN}`
   };
   
-  const customerHeaders = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${TEST_CUSTOMER_TOKEN}`
-  };
+  // Test configurations
+  const configurations = [
+    { name: 'B', headers: { ...adminHeaders, 'X-Disable-Cache': 'true', 'X-Use-MongoDB': 'false' } },
+    { name: 'BM', headers: { ...adminHeaders, 'X-Disable-Cache': 'true', 'X-Use-MongoDB': 'true' } },
+    { name: 'BS', headers: { ...adminHeaders, 'X-Use-MongoDB': 'false' } },
+    { name: 'BMSK', headers: { ...adminHeaders, 'X-Use-MongoDB': 'true' } }
+  ];
   
-  // Get available drivers from database
-  let drivers = [];
-  try {
-    const driverResponse = await axios.get(`${API_URL}/drivers`, { 
-      headers: adminHeaders
-    });
-    drivers = driverResponse.data.data || [];
-    console.log(`Retrieved ${drivers.length} drivers for performance testing`);
-    
-    // Use a subset of drivers if there are too many
-    if (drivers.length > 50) {
-      drivers = drivers.slice(0, 50);
-      console.log(`Using a subset of 50 drivers for performance testing`);
-    }
-    
-    // Make sure we have at least one driver
-    if (drivers.length === 0) {
-      console.log('No drivers found, using test driver as fallback');
-      drivers = [{ driver_id: TEST_DRIVER_ID }];
-    }
-  } catch (error) {
-    console.error('Error retrieving drivers:', error.message);
-    // Fallback to test driver
-    drivers = [{ driver_id: TEST_DRIVER_ID }];
-  }
-  
-  // Create test data for each configuration
-  const testData = {
-    B: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
-    BM: { requestsPerSecond: 0, responseTime: 0, throughput: 0 }, // MongoDB specific
-    BS: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
-    BMSK: { requestsPerSecond: 0, responseTime: 0, throughput: 0 } // Full stack with MongoDB
-  };
-  
-  // Test Base configuration (B) - Simulated relational database
-  console.log("Testing Base configuration (B)...");
-  try {
-    // Disable both MongoDB and caching for baseline test
-    const baseHeaders = { 
-      ...adminHeaders, 
-      'X-Disable-Cache': 'true',
-      'X-Use-MongoDB': 'false' // New header to control database choice
+  // Initialize results object
+  const results = {};
+  configurations.forEach(config => {
+    results[config.name] = {
+      create: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
+      read: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
+      update: { requestsPerSecond: 0, responseTime: 0, throughput: 0 },
+      overall: { requestsPerSecond: 0, responseTime: 0, throughput: 0 }
     };
-    
-    const startB = Date.now();
-    for (let i = 0; i < sampleSize; i++) {
-      await axios.get(`${API_URL}/drivers`, { headers: baseHeaders });
-      if (i % 100 === 0) console.log(`Base test: ${i}/${sampleSize}`);
-    }
-    const endB = Date.now();
-    
-    const durationB = (endB - startB) / 1000; // in seconds
-    testData.B.requestsPerSecond = Math.round(sampleSize / durationB);
-    testData.B.responseTime = Math.round(durationB * 1000 / sampleSize); // in ms
-    testData.B.throughput = testData.B.requestsPerSecond * 0.8; // estimated
-    
-    console.log(`Base (B) test completed: ${testData.B.requestsPerSecond} req/s, ${testData.B.responseTime}ms avg`);
-  } catch (error) {
-    console.error("Error testing Base configuration:", error.message);
-  }
+  });
   
-  // Test Base + MongoDB (B+M)
-  console.log("Testing Base + MongoDB configuration (B+M)...");
-  try {
-    // Enable MongoDB, disable caching
-    const mongoHeaders = { 
-      ...adminHeaders, 
-      'X-Disable-Cache': 'true',
-      'X-Use-MongoDB': 'true' 
-    };
-    
-    const startBM = Date.now();
-    for (let i = 0; i < sampleSize; i++) {
-      await axios.get(`${API_URL}/drivers`, { headers: mongoHeaders });
-      if (i % 100 === 0) console.log(`B+M test: ${i}/${sampleSize}`);
-    }
-    const endBM = Date.now();
-    
-    const durationBM = (endBM - startBM) / 1000; // in seconds
-    testData.BM.requestsPerSecond = Math.round(sampleSize / durationBM);
-    testData.BM.responseTime = Math.round(durationBM * 1000 / sampleSize); // in ms
-    testData.BM.throughput = testData.BM.requestsPerSecond * 0.8; // estimated
-    
-    console.log(`B+M test completed: ${testData.BM.requestsPerSecond} req/s, ${testData.BM.responseTime}ms avg`);
-  } catch (error) {
-    console.error("Error testing B+M configuration:", error.message);
-  }
+  // Created driver IDs to track for update operations
+  let testDriverIds = [];
   
-  // Test Base + SQL Caching (B+S)
-  console.log("Testing Base + SQL Caching configuration (B+S)...");
-  try {
-    // Enable caching, disable MongoDB
-    const cachedHeaders = { 
-      ...adminHeaders,
-      'X-Use-MongoDB': 'false'
-    };
-    delete cachedHeaders['X-Disable-Cache'];
+  // Run tests for each configuration
+  for (const config of configurations) {
+    console.log(`\n=== Testing ${config.name} configuration ===`);
     
-    // First request to warm up cache
-    await axios.get(`${API_URL}/drivers`, { headers: cachedHeaders });
-    
-    const startBS = Date.now();
-    for (let i = 0; i < sampleSize; i++) {
-      await axios.get(`${API_URL}/drivers`, { headers: cachedHeaders });
-      if (i % 100 === 0) console.log(`B+S test: ${i}/${sampleSize}`);
-    }
-    const endBS = Date.now();
-    
-    const durationBS = (endBS - startBS) / 1000; // in seconds
-    testData.BS.requestsPerSecond = Math.round(sampleSize / durationBS);
-    testData.BS.responseTime = Math.round(durationBS * 1000 / sampleSize); // in ms
-    testData.BS.throughput = testData.BS.requestsPerSecond * 0.8; // estimated
-    
-    console.log(`B+S test completed: ${testData.BS.requestsPerSecond} req/s, ${testData.BS.responseTime}ms avg`);
-  } catch (error) {
-    console.error("Error testing B+S configuration:", error.message);
-  }
-  
-  // Test Base + MongoDB + SQL Caching + Kafka (B+M+S+K)
-  console.log("Testing full stack configuration (B+M+S+K)...");
-  try {
-    // Enable MongoDB and caching
-    const fullStackHeaders = { 
-      ...adminHeaders,
-      'X-Use-MongoDB': 'true'
-    };
-    
-    // Warm up cache first
-    await axios.get(`${API_URL}/drivers`, { headers: fullStackHeaders });
-    
-    const startBMSK = Date.now();
-    
-    // Use a mixture of operations that trigger Kafka events with different drivers
-    for (let i = 0; i < sampleSize; i++) {
-      const operation = i % 3;
-      
-      // Select a random driver for this operation
-      const randomDriver = drivers[i % drivers.length];
-      
-      if (operation === 0) {
-        // Read operation with caching and MongoDB
-        await axios.get(`${API_URL}/drivers`, { headers: fullStackHeaders });
-      } else if (operation === 1) {
-        // Status update (triggers Kafka) using different drivers
-        await axios.patch(`${API_URL}/drivers/${randomDriver.driver_id}/status`, {
-          status: i % 2 === 0 ? 'available' : 'offline',
-          latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
-          longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
-        }, { headers: fullStackHeaders });
-      } else {
-        // Customer location update (triggers Kafka)
-        await axios.patch(`${API_URL}/customers/${TEST_CUSTOMER_ID}/location`, {
-          latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
-          longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
-        }, { headers: { ...customerHeaders, 'X-Use-MongoDB': 'true' } });
+    // CREATE Test
+    console.log(`Testing CREATE operations for ${config.name}...`);
+    try {
+      // Generate sample driver data
+      const driverSamples = [];
+      for (let i = 0; i < sampleSize; i++) {
+        const driver_id = generateSSN('driver');
+        driverSamples.push({
+          driver_id,
+          first_name: `TestDriver${i}`,
+          last_name: `CRU${Math.floor(Math.random() * 10000)}`,
+          email: `testdriver${i}_${Date.now()}@crutest.com`,
+          password: 'password123',
+          phone: `555-${String(Math.floor(Math.random() * 10000000)).padStart(7, '0')}`,
+          address: `${Math.floor(Math.random() * 10000)} Test St`,
+          city: 'San Francisco',
+          state: 'CA',
+          zip_code: '94105',
+          car_details: `Toyota Camry ${2015 + Math.floor(Math.random() * 10)}`,
+          status: 'available'
+        });
       }
       
-      if (i % 100 === 0) console.log(`B+M+S+K test: ${i}/${sampleSize}`);
+      // Clear testDriverIds for this configuration
+      testDriverIds = [];
+      
+      // Measure CREATE performance (one-by-one for accurate timing)
+      const createTimes = [];
+      const createSampleSize = Math.min(sampleSize, 50); // Limit to 50 to avoid DB bloat
+      
+      for (let i = 0; i < createSampleSize; i++) {
+        try {
+          const startCreate = Date.now();
+          const response = await axios.post(`${API_URL}/drivers`, driverSamples[i], { headers: config.headers });
+          const endCreate = Date.now();
+          createTimes.push(endCreate - startCreate);
+          
+          // Store the created driver ID for later tests
+          if (response.data && response.data.data && response.data.data.driver_id) {
+            testDriverIds.push(response.data.data.driver_id);
+          }
+          
+          if (i % 10 === 0) console.log(`CREATE test: ${i+1}/${createSampleSize}`);
+          
+          // Small delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error in CREATE test ${i}:`, error.response?.data?.message || error.message);
+        }
+      }
+      
+      // Calculate CREATE metrics if we have any successful operations
+      if (createTimes.length > 0) {
+        const avgCreateTime = createTimes.reduce((sum, time) => sum + time, 0) / createTimes.length;
+        results[config.name].create.responseTime = Math.round(avgCreateTime);
+        results[config.name].create.requestsPerSecond = Math.round(1000 / avgCreateTime);
+        results[config.name].create.throughput = Math.round(results[config.name].create.requestsPerSecond * 0.8);
+        
+        console.log(`${config.name} CREATE test completed: ${results[config.name].create.requestsPerSecond} req/s, ${results[config.name].create.responseTime}ms avg`);
+      } else {
+        console.error(`No successful CREATE operations for ${config.name}`);
+      }
+    } catch (error) {
+      console.error(`Error testing ${config.name} CREATE operations:`, error.message);
     }
     
-    const endBMSK = Date.now();
+    // Pause between tests
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const durationBMSK = (endBMSK - startBMSK) / 1000; // in seconds
-    testData.BMSK.requestsPerSecond = Math.round(sampleSize / durationBMSK);
-    testData.BMSK.responseTime = Math.round(durationBMSK * 1000 / sampleSize); // in ms
-    testData.BMSK.throughput = testData.BMSK.requestsPerSecond * 0.8; // estimated
+    // READ Test
+    console.log(`Testing READ operations for ${config.name}...`);
+    try {
+      // For B+S and B+M+S+K, warm up the cache first
+      if (config.name === 'BS' || config.name === 'BMSK') {
+        await axios.get(`${API_URL}/drivers`, { headers: config.headers });
+      }
+      
+      // Measure READ performance (getting all drivers)
+      const readTimes = [];
+      const readSampleSize = Math.min(sampleSize, 100); // Limit read operations
+      
+      for (let i = 0; i < readSampleSize; i++) {
+        try {
+          const startRead = Date.now();
+          await axios.get(`${API_URL}/drivers`, { headers: config.headers });
+          const endRead = Date.now();
+          readTimes.push(endRead - startRead);
+          
+          if (i % 20 === 0) console.log(`READ test: ${i+1}/${readSampleSize}`);
+          
+          // Small delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (error) {
+          console.error(`Error in READ test ${i}:`, error.response?.data?.message || error.message);
+        }
+      }
+      
+      // Calculate READ metrics
+      if (readTimes.length > 0) {
+        const avgReadTime = readTimes.reduce((sum, time) => sum + time, 0) / readTimes.length;
+        results[config.name].read.responseTime = Math.round(avgReadTime);
+        results[config.name].read.requestsPerSecond = Math.round(1000 / avgReadTime);
+        results[config.name].read.throughput = Math.round(results[config.name].read.requestsPerSecond * 0.8);
+        
+        console.log(`${config.name} READ test completed: ${results[config.name].read.requestsPerSecond} req/s, ${results[config.name].read.responseTime}ms avg`);
+      } else {
+        console.error(`No successful READ operations for ${config.name}`);
+      }
+    } catch (error) {
+      console.error(`Error testing ${config.name} READ operations:`, error.message);
+    }
     
-    console.log(`B+M+S+K test completed: ${testData.BMSK.requestsPerSecond} req/s, ${testData.BMSK.responseTime}ms avg`);
-  } catch (error) {
-    console.error("Error testing B+M+S+K configuration:", error.message);
+    // Pause between tests
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // UPDATE Test - Use the driver IDs created in CREATE test
+    console.log(`Testing UPDATE operations for ${config.name}...`);
+    try {
+      // If we don't have test driver IDs, get some existing driver IDs
+      if (testDriverIds.length === 0) {
+        try {
+          const driversResponse = await axios.get(`${API_URL}/drivers`, { headers: adminHeaders });
+          const drivers = driversResponse.data.data || [];
+          
+          // Take the first few drivers
+          drivers.slice(0, 20).forEach(driver => {
+            testDriverIds.push(driver.driver_id);
+          });
+        } catch (error) {
+          console.error('Failed to get driver IDs for UPDATE test:', error.message);
+        }
+      }
+      
+      if (testDriverIds.length === 0) {
+        console.error(`No driver IDs available for UPDATE test`);
+        continue;
+      }
+      
+      // Measure UPDATE performance
+      const updateTimes = [];
+      const updateSampleSize = Math.min(sampleSize, testDriverIds.length, 30);
+      
+      for (let i = 0; i < updateSampleSize; i++) {
+        try {
+          // Use modulo to cycle through available driver IDs
+          const driverId = testDriverIds[i % testDriverIds.length];
+          
+          const startUpdate = Date.now();
+          await axios.patch(`${API_URL}/drivers/${driverId}/status`, {
+            status: i % 2 === 0 ? 'available' : 'offline',
+            latitude: 37.7749 + (Math.random() * 0.05 - 0.025),
+            longitude: -122.4194 + (Math.random() * 0.05 - 0.025)
+          }, { headers: config.headers });
+          const endUpdate = Date.now();
+          updateTimes.push(endUpdate - startUpdate);
+          
+          if (i % 5 === 0) console.log(`UPDATE test: ${i+1}/${updateSampleSize}`);
+          
+          // Small delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error(`Error in UPDATE test for driver ${i}:`, error.response?.data?.message || error.message);
+        }
+      }
+      
+      // Calculate UPDATE metrics
+      if (updateTimes.length > 0) {
+        const avgUpdateTime = updateTimes.reduce((sum, time) => sum + time, 0) / updateTimes.length;
+        results[config.name].update.responseTime = Math.round(avgUpdateTime);
+        results[config.name].update.requestsPerSecond = Math.round(1000 / avgUpdateTime);
+        results[config.name].update.throughput = Math.round(results[config.name].update.requestsPerSecond * 0.8);
+        
+        console.log(`${config.name} UPDATE test completed: ${results[config.name].update.requestsPerSecond} req/s, ${results[config.name].update.responseTime}ms avg`);
+      } else {
+        console.error(`No successful UPDATE operations for ${config.name}`);
+      }
+    } catch (error) {
+      console.error(`Error testing ${config.name} UPDATE operations:`, error.message);
+    }
+    
+    // Calculate overall metrics
+    const operations = ['create', 'read', 'update'];
+    let validOperations = 0;
+    let totalRps = 0;
+    let totalResponseTime = 0;
+    let totalThroughput = 0;
+    
+    operations.forEach(op => {
+      if (results[config.name][op].requestsPerSecond > 0) {
+        validOperations++;
+        totalRps += results[config.name][op].requestsPerSecond;
+        totalResponseTime += results[config.name][op].responseTime;
+        totalThroughput += results[config.name][op].throughput;
+      }
+    });
+    
+    if (validOperations > 0) {
+      results[config.name].overall.requestsPerSecond = Math.round(totalRps / validOperations);
+      results[config.name].overall.responseTime = Math.round(totalResponseTime / validOperations);
+      results[config.name].overall.throughput = Math.round(totalThroughput / validOperations);
+      
+      console.log(`${config.name} OVERALL METRICS: ${results[config.name].overall.requestsPerSecond} req/s, ${results[config.name].overall.responseTime}ms avg`);
+    } else {
+      console.error(`No valid operations for ${config.name}`);
+    }
   }
   
-  // Save performance test results to a file
+  // Save CRU performance results to a file
   try {
-    fs.writeFileSync('performance_results.json', JSON.stringify(testData, null, 2));
-    console.log("Performance test results saved to performance_results.json");
+    fs.writeFileSync('cru_performance_results.json', JSON.stringify(results, null, 2));
+    console.log("CRU performance results saved to cru_performance_results.json");
   } catch (error) {
-    console.error("Error saving performance results:", error.message);
+    console.error("Error saving CRU performance results:", error.message);
   }
   
-  return testData;
+  return results;
 };
+
+
 
 // Main function
 const main = async () => {
@@ -838,9 +893,9 @@ const main = async () => {
     // Check command line args for smaller test
     const isSmallTest = process.argv.includes('--small');
     
-    const targetDrivers = isSmallTest ? 100 : 10000;
-    const targetCustomers = isSmallTest ? 100 : 10000;
-    const targetRides = isSmallTest ? 20 : 100000;
+    const targetDrivers = isSmallTest ? 100 : 50000;
+    const targetCustomers = isSmallTest ? 100 : 50000;
+    const targetRides = isSmallTest ? 20 : 100;
     
     console.log(`Running ${isSmallTest ? 'small' : 'full'} test data generation`);
     
@@ -855,9 +910,10 @@ const main = async () => {
 
     // Complete bills
     await updateBillsToCompleted();
+
+    //  Generate CRU performance test data
+    await createCRUPerformanceTest(200);
     
-    // Run performance tests with database drivers
-    await createPerformanceTestData(99);
     
     console.log('=== DATA GENERATION COMPLETE ===');
     console.log(`Generated approximately:`);
@@ -869,7 +925,6 @@ const main = async () => {
     console.log(' - Customer: test_customer@test.com / password123');
     console.log(' - Admin: admin@test.com / password123');
     
-    console.log('\nYou can now run JMeter tests for performance analysis');
     
   } catch (error) {
     console.error('Error in data generation process:', error);
