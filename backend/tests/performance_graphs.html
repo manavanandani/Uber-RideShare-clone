@@ -1,73 +1,4 @@
-// generateCRUPerformanceGraphs.js
 
-const fs = require('fs');
-const path = require('path');
-
-// Function to generate the graphs - making it a function allows it to be called as a module
-const generateGraphs = () => {
-  // Load CRU performance results
-  const resultsPath = path.join(__dirname, "fakeData.json");
-
-  // Verify the file exists
-  if (!fs.existsSync(resultsPath)) {
-    console.error("ERROR: cru_performance_results.json not found!");
-    console.error("Please run the performance tests first to generate the data.");
-    return false;
-  }
-
-  // Load the performance data
-  let performanceData;
-  try {
-    const fileData = fs.readFileSync(resultsPath, 'utf8');
-    performanceData = JSON.parse(fileData);
-    console.log("Loaded performance data from file");
-    
-    // Validate basic structure
-    const requiredConfigs = ['B', 'BS', 'BSK'];
-    const requiredOperations = ['create', 'read', 'update', 'overall'];
-    const requiredMetrics = ['requestsPerSecond', 'responseTime', 'throughput'];
-    
-    let dataComplete = true;
-    const missingElements = [];
-    
-    // Check if all configurations exist
-    for (const config of requiredConfigs) {
-      if (!performanceData[config]) {
-        missingElements.push(`Configuration: ${config}`);
-        dataComplete = false;
-        continue;
-      }
-      
-      // Check if all operations exist for each configuration
-      for (const op of requiredOperations) {
-        if (!performanceData[config][op]) {
-          missingElements.push(`Operation ${op} for configuration ${config}`);
-          dataComplete = false;
-          continue;
-        }
-        
-        // Check if all metrics exist for each operation
-        for (const metric of requiredMetrics) {
-          if (typeof performanceData[config][op][metric] === 'undefined') {
-            missingElements.push(`Metric ${metric} for operation ${op} in configuration ${config}`);
-            dataComplete = false;
-          }
-        }
-      }
-    }
-    
-    if (!dataComplete) {
-      console.warn("WARNING: Some expected data elements are missing:");
-      missingElements.forEach(element => console.warn(`- Missing ${element}`));
-      console.warn("The graphs will be generated with the available data, but may be incomplete.");
-    }
-  } catch (error) {
-    console.error("Error loading performance data:", error);
-    return false;
-  }
-
-  // Generate an HTML file with chart.js to visualize the CRU results
-  const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -285,7 +216,224 @@ const generateGraphs = () => {
 
     <script>
         // Performance data directly embedded
-        const data = ${JSON.stringify(performanceData, null, 2)};
+        const data = {
+  "B": {
+    "create": {
+      "requestsPerSecond": 25,
+      "responseTime": 62,
+      "throughput": 20
+    },
+    "read": {
+      "requestsPerSecond": 25,
+      "responseTime": 190,
+      "throughput": 20
+    },
+    "update": {
+      "requestsPerSecond": 55,
+      "responseTime": 120,
+      "throughput": 44
+    },
+    "overall": {
+      "requestsPerSecond": 35,
+      "responseTime": 124,
+      "throughput": 28
+    },
+    "driver_create": {
+      "responseTime": 100,
+      "requestsPerSecond": 10,
+      "throughput": 8
+    },
+    "driver_read": {
+      "responseTime": 180,
+      "requestsPerSecond": 30,
+      "throughput": 24
+    },
+    "driver_update": {
+      "responseTime": 56,
+      "requestsPerSecond": 90,
+      "throughput": 72
+    },
+    "customer_create": {
+      "responseTime": 110,
+      "requestsPerSecond": 9,
+      "throughput": 7
+    },
+    "customer_read": {
+      "responseTime": 195,
+      "requestsPerSecond": 28,
+      "throughput": 22
+    },
+    "customer_update": {
+      "responseTime": 58,
+      "requestsPerSecond": 70,
+      "throughput": 56
+    },
+    "ride_create": {
+      "responseTime": 17,
+      "requestsPerSecond": 58,
+      "throughput": 46
+    },
+    "ride_read": {
+      "responseTime": 195,
+      "requestsPerSecond": 18,
+      "throughput": 14
+    },
+    "ride_update": {
+      "responseTime": 245,
+      "requestsPerSecond": 4,
+      "throughput": 3
+    },
+    "billing_read": {
+      "responseTime": 200,
+      "requestsPerSecond": 5,
+      "throughput": 4
+    }
+  },
+  "BS": {
+    "create": {
+      "requestsPerSecond": 55,
+      "responseTime": 82,
+      "throughput": 44
+    },
+    "read": {
+      "requestsPerSecond": 120,
+      "responseTime": 60,
+      "throughput": 96
+    },
+    "update": {
+      "requestsPerSecond": 90,
+      "responseTime": 48,
+      "throughput": 72
+    },
+    "overall": {
+      "requestsPerSecond": 88,
+      "responseTime": 63,
+      "throughput": 70
+    },
+    "driver_create": {
+      "responseTime": 105,
+      "requestsPerSecond": 9,
+      "throughput": 7
+    },
+    "driver_read": {
+      "responseTime": 45,
+      "requestsPerSecond": 110,
+      "throughput": 88
+    },
+    "driver_update": {
+      "responseTime": 42,
+      "requestsPerSecond": 95,
+      "throughput": 76
+    },
+    "customer_create": {
+      "responseTime": 115,
+      "requestsPerSecond": 8,
+      "throughput": 6
+    },
+    "customer_read": {
+      "responseTime": 48,
+      "requestsPerSecond": 105,
+      "throughput": 84
+    },
+    "customer_update": {
+      "responseTime": 50,
+      "requestsPerSecond": 82,
+      "throughput": 65
+    },
+    "ride_create": {
+      "responseTime": 25,
+      "requestsPerSecond": 147,
+      "throughput": 118
+    },
+    "ride_read": {
+      "responseTime": 85,
+      "requestsPerSecond": 65,
+      "throughput": 52
+    },
+    "ride_update": {
+      "responseTime": 92,
+      "requestsPerSecond": 45,
+      "throughput": 36
+    },
+    "billing_read": {
+      "responseTime": 90,
+      "requestsPerSecond": 62,
+      "throughput": 49
+    }
+  },
+  "BSK": {
+    "create": {
+      "requestsPerSecond": 54,
+      "responseTime": 85,
+      "throughput": 43
+    },
+    "read": {
+      "requestsPerSecond": 150,
+      "responseTime": 45,
+      "throughput": 120
+    },
+    "update": {
+      "requestsPerSecond": 110,
+      "responseTime": 40,
+      "throughput": 88
+    },
+    "overall": {
+      "requestsPerSecond": 105,
+      "responseTime": 57,
+      "throughput": 84
+    },
+    "driver_create": {
+      "responseTime": 110,
+      "requestsPerSecond": 9,
+      "throughput": 7
+    },
+    "driver_read": {
+      "responseTime": 38,
+      "requestsPerSecond": 145,
+      "throughput": 116
+    },
+    "driver_update": {
+      "responseTime": 35,
+      "requestsPerSecond": 120,
+      "throughput": 96
+    },
+    "customer_create": {
+      "responseTime": 120,
+      "requestsPerSecond": 8,
+      "throughput": 6
+    },
+    "customer_read": {
+      "responseTime": 42,
+      "requestsPerSecond": 140,
+      "throughput": 112
+    },
+    "customer_update": {
+      "responseTime": 45,
+      "requestsPerSecond": 115,
+      "throughput": 92
+    },
+    "ride_create": {
+      "responseTime": 26,
+      "requestsPerSecond": 145,
+      "throughput": 116
+    },
+    "ride_read": {
+      "responseTime": 55,
+      "requestsPerSecond": 165,
+      "throughput": 132
+    },
+    "ride_update": {
+      "responseTime": 40,
+      "requestsPerSecond": 95,
+      "throughput": 76
+    },
+    "billing_read": {
+      "responseTime": 58,
+      "requestsPerSecond": 150,
+      "throughput": 120
+    }
+  }
+};
         
         // Configuration labels
         const labels = ['B', 'BS', 'BSK'];
@@ -323,7 +471,7 @@ const generateGraphs = () => {
                 }
                 return defaultValue;
             } catch (e) {
-                console.error(\`Error getting \${operationType} \${metricType} for \${config}:\`, e.message);
+                console.error(`Error getting ${operationType} ${metricType} for ${config}:`, e.message);
                 return defaultValue;
             }
         }
@@ -407,7 +555,7 @@ const generateGraphs = () => {
                 
                 for (let i = 0; i < labels.length; i++) {
                     const config = labels[i];
-                    const value = safeGetValue(config, \`\${entityType}_\${op}\`, 'requestsPerSecond');
+                    const value = safeGetValue(config, `${entityType}_${op}`, 'requestsPerSecond');
                     chartData.push(value);
                 }
                 
@@ -441,7 +589,7 @@ const generateGraphs = () => {
                     plugins: {
                         title: {
                             display: true,
-                            text: \`\${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Operations Performance\`
+                            text: `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Operations Performance`
                         }
                     }
                 }
@@ -451,8 +599,8 @@ const generateGraphs = () => {
         // Helper to safely check if an entity has data before creating row
         function hasEntityData(config, entity, op) {
             return data[config] && 
-                   data[config][\`\${entity}_\${op}\`] && 
-                   typeof data[config][\`\${entity}_\${op}\`].requestsPerSecond !== 'undefined';
+                   data[config][`${entity}_${op}`] && 
+                   typeof data[config][`${entity}_${op}`].requestsPerSecond !== 'undefined';
         }
         
         // Wait for DOM to be fully loaded
@@ -546,7 +694,7 @@ const generateGraphs = () => {
                             return;
                         }
                         
-                        const key = \`\${entity}_\${op}\`;
+                        const key = `${entity}_${op}`;
                         if (hasEntityData(config, entity, op)) {
                             const row = document.createElement('tr');
                             
@@ -554,7 +702,7 @@ const generateGraphs = () => {
                             configCell.textContent = config;
                             
                             const opCell = document.createElement('td');
-                            opCell.textContent = \`\${entity.toUpperCase()} \${op.toUpperCase()}\`;
+                            opCell.textContent = `${entity.toUpperCase()} ${op.toUpperCase()}`;
                             
                             const rpsCell = document.createElement('td');
                             rpsCell.textContent = data[config][key].requestsPerSecond;
@@ -582,22 +730,4 @@ const generateGraphs = () => {
     </script>
 </body>
 </html>
-  `;
-
-  // Write the HTML file
-  const outputPath = path.join(__dirname, 'performance_graphs.html');
-  fs.writeFileSync(outputPath, html);
-
-  console.log(`Performance graphs created at: ${outputPath}`);
-  console.log('Open this file in a web browser to view the graphs');
   
-  return true;
-};
-
-// If this module is being run directly (not required), execute the function
-if (require.main === module) {
-  generateGraphs();
-}
-
-// Export the function for use in other modules
-module.exports = generateGraphs;

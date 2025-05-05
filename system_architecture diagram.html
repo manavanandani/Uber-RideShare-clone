@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber Simulation System Architecture</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .architecture {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .layer {
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .layer-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .components {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        .component {
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            width: 130px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .arrow-container {
+            height: 30px;
+            position: relative;
+            margin-top: 5px;
+        }
+        .arrow {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            height: 100%;
+            width: 2px;
+            background-color: #999;
+        }
+        .arrow:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #999;
+        }
+        .sub-component {
+            font-size: 12px;
+            font-weight: normal;
+            margin-top: 5px;
+        }
+        .kafka-topics {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .kafka-topic {
+            padding: 5px 10px;
+            background-color: #ffe8cc;
+            border-radius: 12px;
+            font-size: 12px;
+            border: 1px solid #ffcc80;
+        }
+        .integration-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .integration-box {
+            flex: 1;
+            min-width: 300px;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        .note {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .layer {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Uber Simulation System Architecture</h1>
+        
+        <div class="architecture">
+            <!-- Client Layer -->
+            <div class="layer" style="background-color: #e8f5e9;">
+                <div class="layer-title">Client Layer</div>
+                <div class="components">
+                    <div class="component" style="background-color: #c8e6c9; border: 1px solid #a5d6a7;">
+                        Customer App
+                    </div>
+                    <div class="component" style="background-color: #c8e6c9; border: 1px solid #a5d6a7;">
+                        Driver App
+                    </div>
+                    <div class="component" style="background-color: #c8e6c9; border: 1px solid #a5d6a7;">
+                        Admin Dashboard
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- API Layer -->
+            <div class="layer" style="background-color: #e3f2fd;">
+                <div class="layer-title">API Layer (Express.js)</div>
+                <div class="components">
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Auth Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Admin Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Driver Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Customer Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Ride Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Billing Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Pricing Routes
+                    </div>
+                    <div class="component" style="background-color: #bbdefb; border: 1px solid #90caf9;">
+                        Stats Routes
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- Controller Layer -->
+            <div class="layer" style="background-color: #fff8e1;">
+                <div class="layer-title">Controller Layer</div>
+                <div class="components">
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Admin Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Auth Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Driver Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Customer Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Ride Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Billing Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Pricing Controller
+                    </div>
+                    <div class="component" style="background-color: #ffecb3; border: 1px solid #ffe082;">
+                        Stats Controller
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- Service Layer -->
+            <div class="layer" style="background-color: #f3e5f5;">
+                <div class="layer-title">Service Layer</div>
+                <div class="components">
+                    <div class="component" style="background-color: #e1bee7; border: 1px solid #ce93d8;">
+                        Message Service
+                    </div>
+                    <div class="component" style="background-color: #e1bee7; border: 1px solid #ce93d8;">
+                        Pricing Service
+                    </div>
+                    <div class="component" style="background-color: #e1bee7; border: 1px solid #ce93d8;">
+                        Stats Service
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- Middleware Layer -->
+            <div class="layer" style="background-color: #ffebee;">
+                <div class="layer-title">Middleware</div>
+                <div class="components">
+                    <div class="component" style="background-color: #ffcdd2; border: 1px solid #ef9a9a;">
+                        Verify Role
+                    </div>
+                    <div class="component" style="background-color: #ffcdd2; border: 1px solid #ef9a9a;">
+                        Cache Middleware
+                    </div>
+                    <div class="component" style="background-color: #ffcdd2; border: 1px solid #ef9a9a;">
+                        Bulk Request
+                    </div>
+                    <div class="component" style="background-color: #ffcdd2; border: 1px solid #ef9a9a;">
+                        DB Selector
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- Data & Integration Layer -->
+            <div class="layer" style="background-color: #e0f7fa;">
+                <div class="layer-title">Data & Integration Layer</div>
+                <div class="integration-container">
+                    <!-- Kafka Messaging System -->
+                    <div class="integration-box">
+                        <div class="component" style="background-color: #b2ebf2; border: 1px solid #80deea; width: 90%; margin: 0 auto;">
+                            Kafka Messaging System
+                        </div>
+                        <div class="kafka-topics">
+                            <div class="kafka-topic">ride_requests</div>
+                            <div class="kafka-topic">ride_responses</div>
+                            <div class="kafka-topic">billing_events</div>
+                            <div class="kafka-topic">driver_events</div>
+                            <div class="kafka-topic">customer_events</div>
+                        </div>
+                    </div>
+                    
+                    <!-- ML Service -->
+                    <div class="integration-box">
+                        <div class="component" style="background-color: #b2dfdb; border: 1px solid #80cbc4; width: 90%; margin: 0 auto;">
+                            FastAPI ML Service (Python)
+                        </div>
+                        <div style="text-align: center; margin-top: 10px; font-size: 14px;">
+                            XGBoost Dynamic Pricing Model
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            
+            <!-- Database Layer -->
+            <div class="layer" style="background-color: #ede7f6;">
+                <div class="layer-title">Database Layer</div>
+                <div class="components">
+                    <div class="component" style="background-color: #d1c4e9; border: 1px solid #b39ddb; width: 200px;">
+                        MongoDB
+                        <div class="sub-component">
+                            Admin, Driver, Customer, Ride, Billing
+                        </div>
+                    </div>
+                    <div class="component" style="background-color: #c5cae9; border: 1px solid #9fa8da; width: 200px;">
+                        Redis Cache
+                        <div class="sub-component">
+                            Query Results, Pricing, Stats
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #c8e6c9;"></div>
+                    <span>Client</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #bbdefb;"></div>
+                    <span>API Routes</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ffecb3;"></div>
+                    <span>Controllers</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e1bee7;"></div>
+                    <span>Services</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ffcdd2;"></div>
+                    <span>Middleware</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #b2ebf2;"></div>
+                    <span>Messaging</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #b2dfdb;"></div>
+                    <span>ML Service</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #d1c4e9;"></div>
+                    <span>MongoDB</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #c5cae9;"></div>
+                    <span>Redis</span>
+                </div>
+            </div>
+            
+            <!-- Note -->
+            <div class="note">
+                <strong>Key Architecture Features:</strong>
+                <ul>
+                    <li><strong>Event-Driven Architecture:</strong> Using Kafka for asynchronous communication between services</li>
+                    <li><strong>Caching Strategy:</strong> Redis caching to improve performance for frequently accessed data</li>
+                    <li><strong>ML Integration:</strong> FastAPI service for dynamic pricing using XGBoost model</li>
+                    <li><strong>Layered Structure:</strong> Clear separation of concerns with specialized components</li>
+                    <li><strong>Performance Optimization:</strong> Message batching, geospatial indexing, and query optimization</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
