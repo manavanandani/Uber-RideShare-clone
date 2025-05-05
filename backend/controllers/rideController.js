@@ -1,7 +1,8 @@
 const Driver = require('../models/Driver');
 const Ride = require('../models/Ride');
 const Customer = require('../models/Customer');
-const { getDynamicPrice } = require('../services/pricingService');
+const Billing = require('../models/Billing');
+const { getDynamicPrice, recordPricingData } = require('../services/pricingService');
 const { 
   publishRideRequest, 
   publishRideAccepted, 
@@ -14,8 +15,7 @@ const { v4: uuidv4 } = require('uuid');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
 
-// Test controller
-// Add to your rideController.js file
+// Test Conteoller 
 
 // Test create ride
 exports.createTestRide = async (req, res) => {
@@ -36,6 +36,17 @@ exports.createTestRide = async (req, res) => {
     // Generate a ride_id in SSN format
     const ride_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
     
+    // Convert API location format to MongoDB GeoJSON format
+    const pickupGeo = {
+      type: 'Point',
+      coordinates: [pickup_location.longitude, pickup_location.latitude]
+    };
+    
+    const dropoffGeo = {
+      type: 'Point',
+      coordinates: [dropoff_location.longitude, dropoff_location.latitude]
+    };
+    
     // Calculate fare using the dynamic pricing algorithm
     const priceData = await getDynamicPrice(
       pickup_location, 
@@ -46,8 +57,8 @@ exports.createTestRide = async (req, res) => {
 
     const ride = new Ride({
       ride_id,
-      pickup_location,
-      dropoff_location,
+      pickup_location: pickupGeo, // Use GeoJSON format
+      dropoff_location: dropoffGeo, // Use GeoJSON format
       date_time: new Date(date_time || Date.now()),
       customer_id,
       driver_id, // This might be null if not provided
@@ -191,7 +202,6 @@ exports.testStartRide = async (req, res) => {
   }
 };
 
-// testCompleteRide function for rideController.js
 exports.testCompleteRide = async (req, res) => {
   const { ride_id } = req.params;
   
@@ -226,17 +236,70 @@ exports.testCompleteRide = async (req, res) => {
       { $push: { ride_history: ride_id } }
     );
     
+    // Create bill automatically - similar to normal completeRide function
+    const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
+    
+    const newBill = new Billing({
+      bill_id,
+      date: new Date(),
+      pickup_time: ride.date_time,
+      dropoff_time: new Date(),
+      distance_covered: ride.distance || 5, // Default if missing
+      total_amount: ride.fare_amount || 15, // Default if missing
+      source_location: typeof ride.pickup_location.coordinates === 'object' ? 
+        `${ride.pickup_location.coordinates[1]},${ride.pickup_location.coordinates[0]}` : 
+        '37.7749,-122.4194',
+      destination_location: typeof ride.dropoff_location.coordinates === 'object' ? 
+        `${ride.dropoff_location.coordinates[1]},${ride.dropoff_location.coordinates[0]}` : 
+        '37.7849,-122.4294',
+      driver_id: ride.driver_id,
+      customer_id: ride.customer_id,
+      payment_status: 'completed', // Set to completed directly
+      payment_method: 'credit_card',
+      ride_id,
+      breakdown: {
+        base_fare: 3.0,
+        distance_fare: (ride.distance || 5) * 1.5,
+        time_fare: (ride.duration || 15) * 0.2,
+        surge_multiplier: ride.surge_factor || 1.0
+      }
+    });
+    
+    await newBill.save();
+    
     // Publish ride completed event
     await publishRideCompleted(ride_id);
+    
+    // Publish billing created event
+    await publishBillingCreated({
+      bill_id,
+      date: newBill.date,
+      total_amount: newBill.total_amount,
+      driver_id: newBill.driver_id,
+      customer_id: newBill.customer_id,
+      ride_id,
+      payment_status: 'completed'
+    });
+    
+    // Publish payment processed event
+    await publishPaymentProcessed(bill_id, 'completed');
     
     // Invalidate caches
     await invalidateCache('*rides*');
     await invalidateCache(`*driver*${ride.driver_id}*`);
     await invalidateCache(`*customer*${ride.customer_id}*`);
+    await invalidateCache(`*billing*${bill_id}*`);
     
     res.status(200).json({
-      message: 'Test ride completed successfully',
-      data: updatedRide
+      message: 'Test ride completed successfully and bill created',
+      data: {
+        ride: updatedRide,
+        bill: {
+          bill_id,
+          total_amount: newBill.total_amount,
+          payment_status: 'completed'
+        }
+      }
     });
     
   } catch (err) {
