@@ -299,6 +299,13 @@ const handleBillingEvent = async (message) => {
         if (bill) {
           // Execute updates in parallel
           await Promise.all([
+
+            // Update billing status
+            Billing.updateOne(
+              { bill_id: data.billingId },
+              { $set: { payment_status: data.status } }
+            ),
+
             // Update ride payment status
             Ride.updateOne(
               { ride_id: bill.ride_id },
