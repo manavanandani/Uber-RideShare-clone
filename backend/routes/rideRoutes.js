@@ -11,10 +11,10 @@ router.get('/driver/:driver_id', verifyRole('driver'), cacheMiddleware(60), ride
 router.get('/driver/:driver_id/active', verifyRole('driver'), rideController.getActiveRideForDriver);
 router.get('/nearby', verifyRole('driver'), rideController.getNearbyRides);
 router.get('/stats/location', verifyRole('admin'), cacheMiddleware(300), rideController.getRideStatsByLocation);
-router.post('/test-create', verifyRole('admin'), rideController.createTestRide);
-router.patch('/test/:ride_id/accept', verifyRole('admin'), rideController.testAcceptRide);
-router.patch('/test/:ride_id/start', verifyRole('admin'), rideController.testStartRide);
-router.patch('/test/:ride_id/complete', verifyRole('admin'), rideController.testCompleteRide);
+//router.post('/test-create', verifyRole('admin'), rideController.createTestRide);
+//router.patch('/test/:ride_id/accept', verifyRole('admin'), rideController.testAcceptRide);
+//router.patch('/test/:ride_id/start', verifyRole('admin'), rideController.testStartRide);
+//router.patch('/test/:ride_id/complete', verifyRole('admin'), rideController.testCompleteRide);
 router.patch('/:ride_id', verifyRole('customer'), rideController.updateRide);
 router.delete('/:ride_id', verifyRole('customer'), rideController.deleteRide);
 router.post('/:ride_id/rate', verifyRole('customer'), rideController.rateRide);

@@ -202,112 +202,6 @@ exports.testStartRide = async (req, res) => {
   }
 };
 
-exports.testCompleteRide = async (req, res) => {
-  const { ride_id } = req.params;
-  
-  try {
-    // Find the ride
-    const ride = await Ride.findOne({ ride_id });
-    
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found' });
-    }
-    
-    // In test mode, be more flexible - allow completing a ride that isn't in_progress
-    if (ride.status === 'completed') {
-      return res.status(400).json({ message: 'Ride is already completed' });
-    }
-    
-    const updatedRide = await Ride.findOneAndUpdate(
-      { ride_id },
-      { $set: { status: 'completed' } },
-      { new: true }
-    );
-    
-    // Update driver status back to available
-    await Driver.findOneAndUpdate(
-      { driver_id: ride.driver_id },
-      { $set: { status: 'available' } }
-    );
-    
-    // Add ride to driver's history
-    await Driver.findOneAndUpdate(
-      { driver_id: ride.driver_id },
-      { $push: { ride_history: ride_id } }
-    );
-    
-    // Create bill automatically - similar to normal completeRide function
-    const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
-    
-    const newBill = new Billing({
-      bill_id,
-      date: new Date(),
-      pickup_time: ride.date_time,
-      dropoff_time: new Date(),
-      distance_covered: ride.distance || 5, // Default if missing
-      total_amount: ride.fare_amount || 15, // Default if missing
-      source_location: typeof ride.pickup_location.coordinates === 'object' ? 
-        `${ride.pickup_location.coordinates[1]},${ride.pickup_location.coordinates[0]}` : 
-        '37.7749,-122.4194',
-      destination_location: typeof ride.dropoff_location.coordinates === 'object' ? 
-        `${ride.dropoff_location.coordinates[1]},${ride.dropoff_location.coordinates[0]}` : 
-        '37.7849,-122.4294',
-      driver_id: ride.driver_id,
-      customer_id: ride.customer_id,
-      payment_status: 'completed', // Set to completed directly
-      payment_method: 'credit_card',
-      ride_id,
-      breakdown: {
-        base_fare: 3.0,
-        distance_fare: (ride.distance || 5) * 1.5,
-        time_fare: (ride.duration || 15) * 0.2,
-        surge_multiplier: ride.surge_factor || 1.0
-      }
-    });
-    
-    await newBill.save();
-    
-    // Publish ride completed event
-    await publishRideCompleted(ride_id);
-    
-    // Publish billing created event
-    await publishBillingCreated({
-      bill_id,
-      date: newBill.date,
-      total_amount: newBill.total_amount,
-      driver_id: newBill.driver_id,
-      customer_id: newBill.customer_id,
-      ride_id,
-      payment_status: 'completed'
-    });
-    
-    // Publish payment processed event
-    await publishPaymentProcessed(bill_id, 'completed');
-    
-    // Invalidate caches
-    await invalidateCache('*rides*');
-    await invalidateCache(`*driver*${ride.driver_id}*`);
-    await invalidateCache(`*customer*${ride.customer_id}*`);
-    await invalidateCache(`*billing*${bill_id}*`);
-    
-    res.status(200).json({
-      message: 'Test ride completed successfully and bill created',
-      data: {
-        ride: updatedRide,
-        bill: {
-          bill_id,
-          total_amount: newBill.total_amount,
-          payment_status: 'completed'
-        }
-      }
-    });
-    
-  } catch (err) {
-    console.error('Error completing test ride:', err);
-    res.status(500).json({ message: 'Failed to complete test ride' });
-  }
-};
-
 // test controller ends here
 
 
@@ -824,6 +718,26 @@ exports.completeRide = async (req, res) => {
       const dropoffCoords = ride.dropoff_location && ride.dropoff_location.coordinates 
         ? ride.dropoff_location.coordinates 
         : [0, 0];
+
+      // check if bill already exists
+      const existingBill = await Billing.findOne({ ride_id });
+      
+      if (existingBill) {
+        console.log(`Bill already exists for ride ${ride_id}, skipping creation`);
+        
+        return res.status(200).json({
+          message: 'Ride completed successfully, bill already exists',
+          data: {
+            ride: updatedRide,
+            bill: {
+              bill_id: existingBill.bill_id,
+              total_amount: existingBill.total_amount,
+              payment_status: existingBill.payment_status
+            }
+          }
+        });
+      }
+
       
       // Create bill object with defensive programming
       const newBill = new Billing({
@@ -837,7 +751,7 @@ exports.completeRide = async (req, res) => {
         destination_location: `${dropoffCoords[1]},${dropoffCoords[0]}`,
         driver_id: ride.driver_id,
         customer_id: ride.customer_id,
-        payment_status: 'pending',
+        payment_status: 'completed',
         payment_method: 'credit_card',
         ride_id,
         breakdown: {
@@ -876,7 +790,7 @@ exports.completeRide = async (req, res) => {
           bill: {
             bill_id,
             total_amount: newBill.total_amount,
-            payment_status: 'completed'
+            payment_status: 'pending'
           }
         }
       });

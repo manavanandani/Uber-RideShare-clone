@@ -205,68 +205,30 @@ const handleRideResponse = async (message) => {
         ]);
         break;
         
-      case 'RIDE_COMPLETED':
-        console.log(`Ride ${rideId} completed`);
-        
-        // For completion, we need the ride data to generate a bill
-        const ride = await Ride.findOne({ ride_id: rideId });
-        
-        if (ride) {
-          // Use Promise.all to execute multiple DB operations in parallel
-          await Promise.all([
-            // Update ride status
-            Ride.updateOne(
-              { ride_id: rideId },
-              { $set: { status: 'completed' } }
-            ),
-            
-            // Make driver available again
-            Driver.updateOne(
-              { driver_id: ride.driver_id },
-              { 
-                $set: { status: 'available' },
-                $push: { ride_history: rideId }
-              }
-            )
-          ]);
-          
-          // Generate bill for this ride
-          const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
-          
-          const newBill = new Billing({
-            bill_id,
-            date: new Date(),
-            pickup_time: ride.date_time,
-            dropoff_time: new Date(),
-            distance_covered: ride.distance,
-            total_amount: ride.fare_amount,
-            source_location: `${ride.pickup_location.latitude},${ride.pickup_location.longitude}`,
-            destination_location: `${ride.dropoff_location.latitude},${ride.dropoff_location.longitude}`,
-            driver_id: ride.driver_id,
-            customer_id: ride.customer_id,
-            payment_status: 'pending',
-            payment_method: 'credit_card',
-            ride_id: ride.ride_id,
-            breakdown: {
-              base_fare: 3.0,
-              distance_fare: ride.distance * 1.5,
-              time_fare: ride.duration * 0.2,
-              surge_multiplier: ride.surge_factor || 1.0
-            }
-          });
-          
-          await newBill.save();
-          console.log(`Bill ${bill_id} generated for ride ${rideId}`);
-          
-          // Invalidate caches in parallel
-          await Promise.all([
-            invalidateCache(`*rides*${rideId}*`),
-            invalidateCache(`*driver*${ride.driver_id}*`),
-            invalidateCache(`*customer*${ride.customer_id}*`),
-            invalidateCache(`*billing*${bill_id}*`)
-          ]);
-        }
-        break;
+case 'RIDE_COMPLETED':
+  console.log(`Ride ${rideId} completed`);
+  
+  // Update ride status
+  await Ride.updateOne(
+    { ride_id: rideId },
+    { $set: { status: 'completed' } }
+  );
+  
+  // Make driver available again
+  if (ride && ride.driver_id) {
+    await Driver.updateOne(
+      { driver_id: ride.driver_id },
+      { 
+        $set: { status: 'available' },
+        $push: { ride_history: rideId }
+      }
+    );
+  }
+  
+  // NOTE: Bill creation is now handled directly by the controller
+  // Remove or comment out any bill creation code here
+  
+  break;
         
       default:
         console.log(`Unknown ride response type: ${type}`);
