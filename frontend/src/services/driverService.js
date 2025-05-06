@@ -75,14 +75,73 @@ getRideHistory: async (driverId) => {
 },
   
   // Get driver's earnings
+// In src/services/driverService.js - update the getEarnings method
 getEarnings: async (driverId, period = 'all') => {
   console.log('Calling getEarnings API for driver:', driverId);
   const response = await api.get(`/billing/driver/${driverId}?period=${period}`);
   console.log('getEarnings API response:', response);
   
-  return response.data && response.data.data 
-    ? { data: response.data.data }  // Extract the 'data' field from the response
-    : response.data;  // Use the response as is if it doesn't have a nested 'data' field
+  // Transform the data into the expected format
+  const billings = response.data && response.data.data ? response.data.data : [];
+  
+  // Process the array into earnings periods
+  const earnings = {
+    today: { totalEarnings: 0, totalRides: 0, rides: [] },
+    week: { totalEarnings: 0, totalRides: 0, rides: [] },
+    month: { totalEarnings: 0, totalRides: 0, rides: [] },
+    year: { totalEarnings: 0, totalRides: 0, rides: [] },
+    all: { totalEarnings: 0, totalRides: 0, rides: [...billings] }
+  };
+  
+  // Calculate totals
+  if (billings.length > 0) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    
+    // Calculate total earnings
+    earnings.all.totalEarnings = billings.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+    earnings.all.totalRides = billings.length;
+    
+    // Filter for each period
+    billings.forEach(bill => {
+      const billDate = new Date(bill.date);
+      const amount = bill.total_amount || 0;
+      
+      // Today
+      if (billDate >= today) {
+        earnings.today.rides.push(bill);
+        earnings.today.totalEarnings += amount;
+        earnings.today.totalRides++;
+      }
+      
+      // This week
+      if (billDate >= weekStart) {
+        earnings.week.rides.push(bill);
+        earnings.week.totalEarnings += amount;
+        earnings.week.totalRides++;
+      }
+      
+      // This month
+      if (billDate >= monthStart) {
+        earnings.month.rides.push(bill);
+        earnings.month.totalEarnings += amount;
+        earnings.month.totalRides++;
+      }
+      
+      // This year
+      if (billDate >= yearStart) {
+        earnings.year.rides.push(bill);
+        earnings.year.totalEarnings += amount;
+        earnings.year.totalRides++;
+      }
+    });
+  }
+  
+  return { data: earnings };
 },
   
   // Rate a customer after ride

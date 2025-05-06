@@ -56,7 +56,7 @@ function Earnings() {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
 
-  // In src/pages/driver/Earnings.jsx
+// In src/pages/driver/Earnings.jsx - update the useEffect hook
 useEffect(() => {
   const fetchEarnings = async () => {
     try {
@@ -72,8 +72,64 @@ useEffect(() => {
       if (response && response.data) {
         if (typeof response.data === 'object' && !Array.isArray(response.data)) {
           earningsData = response.data;
-        } else if (response.data.data && typeof response.data.data === 'object') {
-          earningsData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          // Handle array response by organizing it into periods
+          const billings = response.data;
+          earningsData = {
+            today: { totalEarnings: 0, totalRides: 0, rides: [] },
+            week: { totalEarnings: 0, totalRides: 0, rides: [] },
+            month: { totalEarnings: 0, totalRides: 0, rides: [] },
+            year: { totalEarnings: 0, totalRides: 0, rides: [] },
+            all: { totalEarnings: 0, totalRides: 0, rides: [...billings] }
+          };
+          
+          // Calculate totals
+          if (billings.length > 0) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            
+            // Calculate total earnings
+            earningsData.all.totalEarnings = billings.reduce((sum, bill) => sum + (bill.total_amount || 0), 0);
+            earningsData.all.totalRides = billings.length;
+            
+            // Filter for each period
+            billings.forEach(bill => {
+              const billDate = new Date(bill.date);
+              const amount = bill.total_amount || 0;
+              
+              // Today
+              if (billDate >= today) {
+                earningsData.today.rides.push(bill);
+                earningsData.today.totalEarnings += amount;
+                earningsData.today.totalRides++;
+              }
+              
+              // This week
+              if (billDate >= weekStart) {
+                earningsData.week.rides.push(bill);
+                earningsData.week.totalEarnings += amount;
+                earningsData.week.totalRides++;
+              }
+              
+              // This month
+              if (billDate >= monthStart) {
+                earningsData.month.rides.push(bill);
+                earningsData.month.totalEarnings += amount;
+                earningsData.month.totalRides++;
+              }
+              
+              // This year
+              if (billDate >= yearStart) {
+                earningsData.year.rides.push(bill);
+                earningsData.year.totalEarnings += amount;
+                earningsData.year.totalRides++;
+              }
+            });
+          }
         }
       }
       
@@ -103,7 +159,8 @@ useEffect(() => {
         },
         all: earningsData.all || {
           totalEarnings: 0,
-          totalRides: 0
+          totalRides: 0,
+          rides: []
         }
       };
       
@@ -223,6 +280,7 @@ useEffect(() => {
 }
 
 // Component for individual period content
+// Component for individual period content
 function EarningsPeriodContent({ data, periodLabel }) {
   if (!data) {
     return <Typography>No data available for this period.</Typography>;
@@ -266,23 +324,39 @@ function EarningsPeriodContent({ data, periodLabel }) {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Ride ID</TableCell>
+                <TableCell>Bill ID</TableCell>
                 <TableCell>Date & Time</TableCell>
-                <TableCell>Distance</TableCell>
-                <TableCell>Duration</TableCell>
-                <TableCell align="right">Fare</TableCell>
+                <TableCell>From / To</TableCell>
+                <TableCell align="right">Amount</TableCell>
+                <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data.rides.map((ride) => (
-                <TableRow key={ride.ride_id}>
-                  <TableCell>{ride.ride_id}</TableCell>
-                  <TableCell>{new Date(ride.date_time).toLocaleString()}</TableCell>
-                  <TableCell>{ride.distance ? `${ride.distance.toFixed(2)} km` : 'N/A'}</TableCell>
-                  <TableCell>{ride.duration ? `${Math.round(ride.duration)} mins` : 'N/A'}</TableCell>
-                  <TableCell align="right">${ride.fare_amount?.toFixed(2) || '0.00'}</TableCell>
-                </TableRow>
-              ))}
+              {data.rides.map((billing) => {
+                // Format date properly
+                const dateStr = billing.date || billing.pickup_time || '';
+                const formattedDate = dateStr ? new Date(dateStr).toLocaleString() : 'N/A';
+                
+                // Get source and destination locations
+                const sourceLocation = billing.source_location || 'N/A';
+                const destLocation = billing.destination_location || 'N/A';
+                const locationText = `${sourceLocation} → ${destLocation}`;
+                
+                // Get the amount
+                const amount = billing.total_amount || billing.fare_amount || 0;
+                
+                return (
+                  <TableRow key={billing.bill_id || billing.ride_id || billing._id}>
+                    <TableCell>{billing.bill_id || billing.ride_id || 'N/A'}</TableCell>
+                    <TableCell>{formattedDate}</TableCell>
+                    <TableCell>{locationText}</TableCell>
+                    <TableCell align="right">${amount.toFixed(2)}</TableCell>
+                    <TableCell>
+                      {billing.payment_status || billing.status || 'completed'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

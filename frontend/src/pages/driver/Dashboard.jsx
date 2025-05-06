@@ -216,7 +216,7 @@ function DriverDashboard() {
                   <Typography color="textSecondary" gutterBottom>
                     Today's Earnings
                   </Typography>
-                  <Typography variant="h4">${dashboard.earnings.today?.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today.toFixed(2) || '0.00'}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -319,7 +319,7 @@ function DriverDashboard() {
               <List>
                 <ListItem divider>
                   <ListItemText primary="Today" />
-                  <Typography variant="h6">${dashboard.earnings.today?.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today.toFixed(2) || '0.00'}</Typography>
                 </ListItem>
                 <ListItem divider>
                   <ListItemText primary="This Week" />
