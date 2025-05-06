@@ -51,7 +51,20 @@ import AddDriver from './pages/admin/AddDriver';
 import AddCustomer from './pages/admin/AddCustomer';
 import BillingDetail from './pages/admin/BillingDetail';
 
+
+
 function App() {
+
+  useEffect(() => {
+    window.addEventListener('popstate', () => {
+      window.location.reload();
+    });
+    
+    return () => {
+      window.removeEventListener('popstate', () => {});
+    };
+  }, []);
+
   const dispatch = useDispatch();
   const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
   const [authChecked, setAuthChecked] = useState(false);
