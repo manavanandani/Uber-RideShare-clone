@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
+  Avatar,
   Box,
   Grid,
   Paper,
@@ -55,59 +56,71 @@ function ActiveRide() {
     { label: 'Completed', description: 'Ride completed successfully.' }
   ];
 
-  useEffect(() => {
-    // Get current location
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-        }
-      );
-    }
-    
-    const fetchActiveRide = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Get driver's rides to find active one
-        const response = await driverService.getRideHistory(user.driver_id);
-        
-        // Find the active ride (status accepted or in_progress)
-        const activeRide = response.data.find(ride => 
-          ride.status === 'accepted' || ride.status === 'in_progress'
-        );
-        
-        if (activeRide) {
-          setRide(activeRide);
-          
-          // Set the active step based on ride status
-          if (activeRide.status === 'accepted') {
-            setActiveStep(1); // Pickup customer
-          } else if (activeRide.status === 'in_progress') {
-            setActiveStep(2); // In progress
-          }
-        } else {
-          setError("No active ride found.");
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load active ride');
-        setLoading(false);
+
+useEffect(() => {
+  // Get current location
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+      (position) => {
+        setLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      (error) => {
+        console.error("Error getting location:", error);
       }
-    };
-    
-    if (user?.driver_id) {
-      fetchActiveRide();
+    );
+  }
+  
+  const fetchActiveRide = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching active ride for driver:', user.driver_id);
+      // Get driver's active ride
+      const response = await driverService.getActiveRide(user.driver_id);
+      console.log('Active ride response:', response);
+      
+      if (response.data) {
+        // Format locations for the map component
+        const formattedRide = {
+          ...response.data,
+          pickup_location: {
+            latitude: response.data.pickup_location.coordinates[1],
+            longitude: response.data.pickup_location.coordinates[0]
+          },
+          dropoff_location: {
+            latitude: response.data.dropoff_location.coordinates[1],
+            longitude: response.data.dropoff_location.coordinates[0]
+          }
+        };
+        
+        setRide(formattedRide);
+        
+        // Set the active step based on ride status
+        if (formattedRide.status === 'accepted') {
+          setActiveStep(1); // Pickup customer
+        } else if (formattedRide.status === 'in_progress') {
+          setActiveStep(2); // In progress
+        }
+      } else {
+        setError("No active ride found.");
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading active ride:', err);
+      setError(err.response?.data?.message || 'Failed to load active ride');
+      setLoading(false);
     }
-  }, [user]);
+  };
+  
+  if (user?.driver_id) {
+    fetchActiveRide();
+  }
+}, [user]);
 
   const handleStartRide = async () => {
     if (!ride) return;

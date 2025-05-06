@@ -40,6 +40,17 @@ export const driverService = {
     const response = await api.patch(`/rides/${rideId}/accept`);
     return response.data;
   },
+
+  // Get active ride
+  getActiveRide: async (driverId) => {
+    console.log('Calling getActiveRide API for driver:', driverId);
+    const response = await api.get(`/rides/driver/${driverId}/active`);
+    console.log('getActiveRide API response:', response);
+    
+    return response.data && response.data.data 
+      ? { data: response.data.data }
+      : response.data;
+  },
   
   // Start ride (after picking up passenger)
   startRide: async (rideId) => {
@@ -53,17 +64,26 @@ export const driverService = {
     return response.data;
   },
   
-  // Get driver's ride history
-  getRideHistory: async (driverId) => {
-    const response = await api.get(`/rides/driver/${driverId}`);
-    return response.data;
-  },
+getRideHistory: async (driverId) => {
+  console.log('Calling getRideHistory API for driver:', driverId);
+  const response = await api.get(`/rides/driver/${driverId}`);
+  console.log('getRideHistory API response:', response);
+  
+  return response.data && response.data.data 
+    ? { data: response.data.data }  
+    : response.data;  
+},
   
   // Get driver's earnings
-  getEarnings: async (driverId, period = 'week') => {
-    const response = await api.get(`/billing/driver/${driverId}?period=${period}`);
-    return response.data;
-  },
+getEarnings: async (driverId, period = 'all') => {
+  console.log('Calling getEarnings API for driver:', driverId);
+  const response = await api.get(`/billing/driver/${driverId}?period=${period}`);
+  console.log('getEarnings API response:', response);
+  
+  return response.data && response.data.data 
+    ? { data: response.data.data }  // Extract the 'data' field from the response
+    : response.data;  // Use the response as is if it doesn't have a nested 'data' field
+},
   
   // Rate a customer after ride
   rateCustomer: async (rideId, rating, comment) => {

@@ -162,15 +162,18 @@ function RideDetail() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup:</strong> {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
-                  </Typography>
+  <strong>Pickup:</strong> {ride.pickup_location && ride.pickup_location.coordinates ? 
+    `${ride.pickup_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.pickup_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+    'N/A'}
+</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                // src/pages/driver/RideDetail.jsx (continued)
                   <LocationIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Dropoff:</strong> {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
-                  </Typography>
+  <strong>Dropoff:</strong> {ride.dropoff_location && ride.dropoff_location.coordinates ? 
+    `${ride.dropoff_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.dropoff_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+    'N/A'}
+</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <TimeIcon sx={{ mr: 1 }} />
@@ -187,25 +190,25 @@ function RideDetail() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <MoneyIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Fare:</strong> ${ride.fare_amount?.toFixed(2) || '0.00'}
-                  </Typography>
+  <strong>Fare:</strong> ${(ride.fare_amount || 0).toFixed(2)}
+</Typography>
                 </Box>
               </Grid>
             </Grid>
             
             <Box sx={{ mt: 2, height: 300 }}>
-              <MapWithMarkers 
-                pickup={{
-                  lat: ride.pickup_location.latitude,
-                  lng: ride.pickup_location.longitude
-                }}
-                dropoff={{
-                  lat: ride.dropoff_location.latitude,
-                  lng: ride.dropoff_location.longitude
-                }}
-                showDirections={true}
-                height={300}
-              />
+            <MapWithMarkers 
+  pickup={ride.pickup_location && ride.pickup_location.coordinates ? {
+    lat: ride.pickup_location.coordinates[1] || 0,
+    lng: ride.pickup_location.coordinates[0] || 0
+  } : null}
+  dropoff={ride.dropoff_location && ride.dropoff_location.coordinates ? {
+    lat: ride.dropoff_location.coordinates[1] || 0,
+    lng: ride.dropoff_location.coordinates[0] || 0
+  } : null}
+  showDirections={true}
+  height={300}
+/>
             </Box>
           </Paper>
           
@@ -218,9 +221,9 @@ function RideDetail() {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-                    Distance
-                  </Typography>
+                <Typography variant="h5">
+  {ride.distance ? `${(ride.distance || 0).toFixed(2)} km` : 'N/A'}
+</Typography>
                   <Typography variant="h5">
                     {ride.distance ? `${ride.distance.toFixed(2)} km` : 'N/A'}
                   </Typography>
@@ -228,9 +231,9 @@ function RideDetail() {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-                    Duration
-                  </Typography>
+                <Typography variant="h5">
+  {ride.duration ? `${Math.round(ride.duration || 0)} mins` : 'N/A'}
+</Typography>
                   <Typography variant="h5">
                     {ride.duration ? `${Math.round(ride.duration)} mins` : 'N/A'}
                   </Typography>
@@ -238,9 +241,11 @@ function RideDetail() {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-                    Earnings/Km
-                  </Typography>
+                <Typography variant="h5">
+  {ride.distance && ride.fare_amount
+    ? `$${((ride.fare_amount || 0) / (ride.distance || 1)).toFixed(2)}`
+    : 'N/A'}
+</Typography>
                   <Typography variant="h5">
                     {ride.distance && ride.fare_amount
                       ? `$${(ride.fare_amount / ride.distance).toFixed(2)}`
@@ -309,18 +314,18 @@ function RideDetail() {
                   {ride.customer_info?.first_name || 'Customer'} {ride.customer_info?.last_name || ''}
                 </Typography>
                 {ride.customer_info?.rating && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Rating 
-                      value={ride.customer_info.rating} 
-                      precision={0.5} 
-                      readOnly 
-                      size="small"
-                    />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      {ride.customer_info.rating.toFixed(1)}
-                    </Typography>
-                  </Box>
-                )}
+  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    <Rating 
+      value={ride.customer_info.rating || 0} 
+      precision={0.5} 
+      readOnly 
+      size="small"
+    />
+    <Typography variant="body2" sx={{ ml: 1 }}>
+      {(ride.customer_info.rating || 0).toFixed(1)}
+    </Typography>
+  </Box>
+)}
               </Box>
             </Box>
             

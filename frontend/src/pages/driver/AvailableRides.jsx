@@ -88,7 +88,28 @@ function AvailableRides() {
   };
 
   const handleSelectRide = (ride) => {
+    console.log('Selected ride:', ride);
     setSelectedRide(ride);
+    
+    if (!ride.pickup_location || !ride.dropoff_location) {
+      console.error('Missing location data in ride:', ride);
+      setError('This ride has incomplete location data.');
+      return;
+    }
+
+    const formattedRide = {
+      ...ride,
+      pickup_location: {
+        latitude: ride.pickup_location.coordinates[1],
+        longitude: ride.pickup_location.coordinates[0]
+      },
+      dropoff_location: {
+        latitude: ride.dropoff_location.coordinates[1], 
+        longitude: ride.dropoff_location.coordinates[0]
+      }
+    };
+    
+    setSelectedRide(formattedRide);
   };
 
   const handleAcceptRide = async () => {
@@ -96,10 +117,14 @@ function AvailableRides() {
     
     try {
       setAccepting(true);
+      console.log('Accepting ride:', selectedRide.ride_id);
       await driverService.acceptRide(selectedRide.ride_id);
       setAccepting(false);
+
+      setTimeout(() => {
       navigate('/driver/rides/active');
-    } catch (err) {
+    }, 500);} catch (err) {
+      console.error('Error accepting ride:', err);
       setError(err.response?.data?.message || 'Failed to accept ride');
       setAccepting(false);
     }

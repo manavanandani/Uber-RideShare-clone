@@ -27,11 +27,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log the error for debugging
+    console.error('API Error:', error);
+    
     // Handle token expiration
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+    
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error);
+      // You might want to show a toast or notification here
+    }
+    
     return Promise.reject(error);
   }
 );

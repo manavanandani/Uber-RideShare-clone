@@ -67,15 +67,26 @@ function DriverLayout() {
     setMobileOpen(false);
   };
 
-  const handleToggleStatus = async (event) => {
+const handleToggleStatus = async (event) => {
+  try {
     const newStatus = event.target.checked ? 'available' : 'offline';
-    try {
-      await driverService.updateStatus(user.driver_id, newStatus);
-      setIsOnline(event.target.checked);
-    } catch (error) {
-      console.error('Failed to update status:', error);
-    }
-  };
+    
+    // Update UI immediately
+    setIsOnline(event.target.checked);
+    
+    // Make the API call
+    await driverService.updateStatus(user.driver_id, newStatus, location);
+    
+    // Log success
+    console.log('Status updated to:', newStatus);
+  } catch (error) {
+    console.error('Failed to update status:', error);
+    // Revert the UI state if the API call fails
+    setIsOnline(!event.target.checked);
+    // Show an error message
+    alert('Failed to update status. Please try again.');
+  }
+};
 
   const drawer = (
     <div>

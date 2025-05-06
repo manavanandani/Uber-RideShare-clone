@@ -56,55 +56,70 @@ function Earnings() {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      try {
-        setLoading(true);
-        const response = await driverService.getEarnings(user.driver_id);
-        
-        // Process the earnings data
-        const earningsData = response.data || {};
-        
-        // Ensure all periods have data
-        const processed = {
-          today: earningsData.today || {
-            totalEarnings: 0,
-            totalRides: 0,
-            rides: []
-          },
-          week: earningsData.week || {
-            totalEarnings: 0,
-            totalRides: 0,
-            rides: []
-          },
-          month: earningsData.month || {
-            totalEarnings: 0,
-            totalRides: 0,
-            rides: []
-          },
-          year: earningsData.year || {
-            totalEarnings: 0,
-            totalRides: 0,
-            rides: []
-          },
-          all: earningsData.all || {
-            totalEarnings: 0,
-            totalRides: 0
-          }
-        };
-        
-        setEarnings(processed);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load earnings data');
-        setLoading(false);
+  // In src/pages/driver/Earnings.jsx
+useEffect(() => {
+  const fetchEarnings = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching earnings for driver:', user.driver_id);
+      const response = await driverService.getEarnings(user.driver_id);
+      console.log('Earnings response:', response);
+      
+      // Process the earnings data
+      let earningsData = {};
+      
+      // Handle different response formats
+      if (response && response.data) {
+        if (typeof response.data === 'object' && !Array.isArray(response.data)) {
+          earningsData = response.data;
+        } else if (response.data.data && typeof response.data.data === 'object') {
+          earningsData = response.data.data;
+        }
       }
-    };
-    
-    if (user?.driver_id) {
-      fetchEarnings();
+      
+      console.log('Processed earnings data:', earningsData);
+      
+      // Ensure all periods have data
+      const processed = {
+        today: earningsData.today || {
+          totalEarnings: 0,
+          totalRides: 0,
+          rides: []
+        },
+        week: earningsData.week || {
+          totalEarnings: 0,
+          totalRides: 0,
+          rides: []
+        },
+        month: earningsData.month || {
+          totalEarnings: 0,
+          totalRides: 0,
+          rides: []
+        },
+        year: earningsData.year || {
+          totalEarnings: 0,
+          totalRides: 0,
+          rides: []
+        },
+        all: earningsData.all || {
+          totalEarnings: 0,
+          totalRides: 0
+        }
+      };
+      
+      setEarnings(processed);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching earnings data:', err);
+      setError(err.response?.data?.message || 'Failed to load earnings data');
+      setLoading(false);
     }
-  }, [user]);
+  };
+  
+  if (user?.driver_id) {
+    fetchEarnings();
+  }
+}, [user]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);

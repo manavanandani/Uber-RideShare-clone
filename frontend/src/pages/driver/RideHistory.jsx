@@ -45,11 +45,27 @@ function RideHistory() {
     const fetchRideHistory = async () => {
       try {
         setLoading(true);
+        console.log('Fetching ride history for driver:', user.driver_id);
         const response = await driverService.getRideHistory(user.driver_id);
-        setRides(response.data || []);
-        setFilteredRides(response.data || []);
+        console.log('Ride history response:', response);
+        
+        let rideData = [];
+        
+        // Handle different response formats
+        if (response && response.data) {
+          if (Array.isArray(response.data)) {
+            rideData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            rideData = response.data.data;
+          }
+        }
+        
+        console.log('Processed ride data:', rideData);
+        setRides(rideData);
+        setFilteredRides(rideData);
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching ride history:', err);
         setError(err.response?.data?.message || 'Failed to load ride history');
         setLoading(false);
       }
@@ -253,19 +269,23 @@ function RideHistory() {
                           <TableCell>{ride.ride_id}</TableCell>
                           <TableCell>{new Date(ride.date_time).toLocaleString()}</TableCell>
                           <TableCell>
-                            {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
+                            {ride.pickup_location && ride.pickup_location.coordinates ? 
+                              `${ride.pickup_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.pickup_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                              'N/A'}
                           </TableCell>
                           <TableCell>
-                            {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
+                            {ride.dropoff_location && ride.dropoff_location.coordinates ? 
+                              `${ride.dropoff_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.dropoff_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                              'N/A'}
                           </TableCell>
                           <TableCell>
                             <Chip 
-                              label={ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                              color={getStatusColor(ride.status)}
+                              label={(ride.status || 'unknown').charAt(0).toUpperCase() + (ride.status || 'unknown').slice(1)}
+                              color={getStatusColor(ride.status || 'unknown')}
                               size="small"
                             />
                           </TableCell>
-                          <TableCell>${ride.fare_amount?.toFixed(2) || '0.00'}</TableCell>
+                          <TableCell>${(ride.fare_amount || 0).toFixed(2)}</TableCell>
                           <TableCell>
                             <Button
                               variant="outlined"
@@ -297,5 +317,4 @@ function RideHistory() {
     </Box>
   );
 }
-
 export default RideHistory;
