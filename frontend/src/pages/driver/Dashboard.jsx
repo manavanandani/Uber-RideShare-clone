@@ -34,7 +34,7 @@ function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [location, setLocation] = useState(null);
-  const [isOnline, setIsOnline] = useState(user?.status === 'available');
+  // const [isOnline, setIsOnline] = useState(user?.status === 'available');
 
   useEffect(() => {
     // Get current location
@@ -95,22 +95,6 @@ function DriverDashboard() {
       fetchDashboardData();
     }
   }, [user]);
-
-  const handleToggleStatus = async (event) => {
-    const newStatus = event.target.checked ? 'available' : 'offline';
-    try {
-      if (!location) {
-        setError("Cannot go online without location access.");
-        return;
-      }
-      
-      await driverService.updateStatus(user.driver_id, newStatus, location);
-      setIsOnline(event.target.checked);
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      setError('Failed to update your status');
-    }
-  };
   
   if (loading) {
     return (
@@ -144,27 +128,7 @@ function DriverDashboard() {
       </Typography>
       
       <Grid container spacing={3}>
-        {/* Driver Status Toggle */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h6">Driver Status</Typography>
-              <Typography variant="body1" color={isOnline ? 'success.main' : 'text.secondary'}>
-                {isOnline ? 'You are online and available for rides' : 'You are currently offline'}
-              </Typography>
-            </Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isOnline}
-                  onChange={handleToggleStatus}
-                  color="primary"
-                />
-              }
-              label={isOnline ? "Online" : "Offline"}
-            />
-          </Paper>
-        </Grid>
+        
         
         {/* Active Ride Alert (if any) */}
         {dashboard.stats.activeRide && (
@@ -216,7 +180,7 @@ function DriverDashboard() {
                   <Typography color="textSecondary" gutterBottom>
                     Today's Earnings
                   </Typography>
-                  <Typography variant="h4">${dashboard.earnings.today.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -319,19 +283,19 @@ function DriverDashboard() {
               <List>
                 <ListItem divider>
                   <ListItemText primary="Today" />
-                  <Typography variant="h4">${dashboard.earnings.today.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
                 </ListItem>
                 <ListItem divider>
                   <ListItemText primary="This Week" />
-                  <Typography variant="h6">${dashboard.earnings.week?.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
                 </ListItem>
                 <ListItem divider>
                   <ListItemText primary="This Month" />
-                  <Typography variant="h6">${dashboard.earnings.month?.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
                 </ListItem>
                 <ListItem>
                   <ListItemText primary="Total Earnings" />
-                  <Typography variant="h6">${dashboard.earnings.total?.toFixed(2) || '0.00'}</Typography>
+                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
                 </ListItem>
               </List>
               
@@ -407,5 +371,4 @@ function DriverDashboard() {
     </Box>
   );
 }
-
 export default DriverDashboard;
