@@ -37,6 +37,7 @@ export const driverService = {
   
   // Accept a ride
   acceptRide: async (rideId) => {
+    console.log('Calling acceptRide API for ride:', rideId);
     const response = await api.patch(`/rides/${rideId}/accept`);
     return response.data;
   },

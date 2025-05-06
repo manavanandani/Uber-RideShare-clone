@@ -558,26 +558,52 @@ exports.acceptRide = async (req, res) => {
   const { ride_id } = req.params;
   
   try {
-    const ride = await Ride.findOne({ 
+    console.log(`Driver ${req.user.driver_id} attempting to accept ride ${ride_id}`);
+    
+    // First, check if ride exists without driver restriction
+    const rideCheck = await Ride.findOne({ ride_id });
+    
+    if (!rideCheck) {
+      return res.status(404).json({ message: 'Ride not found' });
+    }
+    
+    // Add debugging to see what's happening
+    console.log(`Ride status: ${rideCheck.status}, Current driver: ${rideCheck.driver_id}, Requesting driver: ${req.user.driver_id}`);
+    
+    // For available rides, there are two scenarios:
+    // 1. The ride has no driver_id assigned yet
+    // 2. The ride has this driver's ID pre-assigned
+
+    const query = { 
       ride_id,
-      driver_id: req.user.driver_id
-    });
+      status: 'requested',
+      $or: [
+        { driver_id: null }, // Either no driver assigned
+        { driver_id: req.user.driver_id }, // Or this driver already assigned
+      ]
+    };
     
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found or not assigned to you' });
-    }
-    
-    if (ride.status !== 'requested') {
-      return res.status(400).json({ message: `Ride is already ${ride.status}` });
-    }
-    
-    const updatedRide = await Ride.findOneAndUpdate(
-      { ride_id },
-      { $set: { status: 'accepted' } },
+    const ride = await Ride.findOneAndUpdate(
+      query,
+      { 
+        $set: { 
+          status: 'accepted',
+          driver_id: req.user.driver_id // Ensure driver ID is set
+        } 
+      },
       { new: true }
     );
     
-    // Update driver status
+    if (!ride) {
+      // More detailed error message
+      return res.status(400).json({ 
+        message: 'Cannot accept this ride. It may be already accepted by another driver or is not in a requestable state.',
+        ride_id: ride_id,
+        your_id: req.user.driver_id
+      });
+    }
+    
+    // Update driver status to busy
     await Driver.findOneAndUpdate(
       { driver_id: req.user.driver_id },
       { $set: { status: 'busy' } }
@@ -592,12 +618,12 @@ exports.acceptRide = async (req, res) => {
     
     res.status(200).json({
       message: 'Ride accepted successfully',
-      data: updatedRide
+      data: ride
     });
     
   } catch (err) {
     console.error('Error accepting ride:', err);
-    res.status(500).json({ message: 'Failed to accept ride' });
+    res.status(500).json({ message: 'Failed to accept ride', error: err.message });
   }
 };
 
