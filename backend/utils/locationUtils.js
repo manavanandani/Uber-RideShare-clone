@@ -28,8 +28,22 @@ const mongoLocationToLatLng = (mongoLocation) => {
       coordinates: [latLng.longitude, latLng.latitude]
     };
   };
+
+  /**
+ * Safely extracts lat/lng from MongoDB GeoJSON Point
+ * @param {Object} location - MongoDB GeoJSON location object
+ * @returns {String} comma-separated "latitude,longitude" string
+ */
+const mongoLocationToString = (location) => {
+  if (!location || !location.coordinates || location.coordinates.length < 2) {
+    return '0.0,0.0'; // Default fallback
+  }
+  // MongoDB stores as [longitude, latitude]
+  return `${location.coordinates[1]},${location.coordinates[0]}`;
+};
   
   module.exports = {
     mongoLocationToLatLng,
-    latLngToMongoLocation
+    latLngToMongoLocation,
+    mongoLocationToString
   };

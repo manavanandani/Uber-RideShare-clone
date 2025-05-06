@@ -308,57 +308,6 @@ exports.testCompleteRide = async (req, res) => {
   }
 };
 
-// Test complete ride
-exports.testCompleteRide = async (req, res) => {
-  const { ride_id } = req.params;
-  
-  try {
-    const ride = await Ride.findOne({ ride_id });
-    
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found' });
-    }
-    
-    if (ride.status !== 'in_progress') {
-      return res.status(400).json({ message: `Ride is ${ride.status}, not in progress` });
-    }
-    
-    const updatedRide = await Ride.findOneAndUpdate(
-      { ride_id },
-      { $set: { status: 'completed' } },
-      { new: true }
-    );
-    
-    // Update driver status back to available
-    await Driver.findOneAndUpdate(
-      { driver_id: ride.driver_id },
-      { $set: { status: 'available' } }
-    );
-    
-    // Add ride to driver's history
-    await Driver.findOneAndUpdate(
-      { driver_id: ride.driver_id },
-      { $push: { ride_history: ride_id } }
-    );
-    
-    // Publish event
-    await publishRideCompleted(ride_id);
-    
-    // Invalidate caches
-    await invalidateCache('*rides*');
-    await invalidateCache(`*driver*${ride.driver_id}*`);
-    await invalidateCache(`*customer*${ride.customer_id}*`);
-    
-    res.status(200).json({
-      message: 'Test ride completed successfully',
-      data: updatedRide
-    });
-  } catch (err) {
-    console.error('Error completing test ride:', err);
-    res.status(500).json({ message: 'Failed to complete test ride' });
-  }
-};
-
 // test controller ends here
 
 
@@ -862,8 +811,8 @@ exports.completeRide = async (req, res) => {
       dropoff_time: new Date(),
       distance_covered: ride.distance,
       total_amount: ride.fare_amount,
-      source_location: `${ride.pickup_location.latitude},${ride.pickup_location.longitude}`,
-      destination_location: `${ride.dropoff_location.latitude},${ride.dropoff_location.longitude}`,
+      source_location: `${ride.pickup_location.coordinates[1]},${ride.pickup_location.coordinates[0]}`,
+      destination_location: `${ride.dropoff_location.coordinates[1]},${ride.dropoff_location.coordinates[0]}`,
       driver_id: ride.driver_id,
       customer_id: ride.customer_id,
       payment_status: 'completed', // Set to completed directly

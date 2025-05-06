@@ -151,7 +151,7 @@ exports.getAllCustomerBills = async (req, res) => {
     const { customer_id } = req.params;
     
     // Check if user is authorized
-    if (req.user.role !== 'admin' && req.user.customer_id !== customer_id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'customer' && req.user.customer_id !== customer_id) {
       return res.status(403).json({ message: 'Unauthorized to view these bills' });
     }
     
@@ -174,7 +174,7 @@ exports.getAllDriverBills = async (req, res) => {
     const { driver_id } = req.params;
     
     // Check if user is authorized
-    if (req.user.role !== 'admin' && req.user.driver_id !== driver_id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'driver' && req.user.driver_id !== driver_id) {
       return res.status(403).json({ message: 'Unauthorized to view these bills' });
     }
     
