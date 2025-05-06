@@ -1,4 +1,4 @@
-// Enhanced kafka.js with message batching and optimized consumers
+// Modified kafka.js with simplified shutdown handling
 
 const { Kafka } = require('kafkajs');
 const dotenv = require('dotenv');
@@ -551,53 +551,11 @@ const initKafka = async () => {
   }
 };
 
-// Flush all batched messages before shutdown
-const gracefulShutdown = async () => {
-  try {
-    console.log('Flushing batched Kafka messages before shutdown...');
-    
-    // Flush all batched messages
-    for (const topic in batchedMessages) {
-      const batch = batchedMessages[topic];
-      if (batch.messages.length > 0) {
-        try {
-          await producer.send({
-            topic,
-            messages: [...batch.messages],
-          });
-          console.log(`Flushed ${batch.messages.length} messages to ${topic}`);
-        } catch (error) {
-          console.error(`Error flushing messages to ${topic}:`, error);
-        }
-        batch.messages = [];
-      }
-      
-      // Clear timeout
-      if (batch.timeoutId) {
-        clearTimeout(batch.timeoutId);
-      }
-    }
-    
-    // Disconnect producer and consumer
-    await producer.disconnect();
-    await consumer.disconnect();
-    console.log('Kafka connections closed');
-  } catch (error) {
-    console.error('Error during Kafka graceful shutdown:', error);
-    process.exit(1);
-  }
-};
-
-// Set up shutdown handlers
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
 // Export the functions
 module.exports = {
   kafka,
   producer,
   consumer,
   initKafka,
-  sendMessage,
-  gracefulShutdown
+  sendMessage
 };
