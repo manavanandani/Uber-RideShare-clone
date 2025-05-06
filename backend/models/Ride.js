@@ -40,7 +40,7 @@ const RideSchema = new mongoose.Schema({
   },
   driver_id: {
     type: String,
-    required: true,
+    //required: true,
     match: [/^\d{3}-\d{2}-\d{4}$/, 'Invalid SSN format for driver_id']
   },
   fare_amount: {
