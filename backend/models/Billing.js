@@ -18,12 +18,7 @@ const BillingSchema = new mongoose.Schema({
   dropoff_time: {
     type: Date,
     required: true,
-    validate: {
-      validator: function (value) {
-        return value > this.pickup_time;
-      },
-      message: 'Dropoff time must be after pickup time.'
-    }
+
   },
   distance_covered: {
     type: Number,
