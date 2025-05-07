@@ -62,12 +62,17 @@ function RidesManagement() {
   const fetchRides = async () => {
     try {
       setLoading(true);
-      // Since there's no API endpoint to get all rides, we'll use a workaround
-      // In a real app, there would be an admin endpoint to get all rides
-      const response = await api.get('/stats/graph-data?type=areas');
       
-      // This is a mock response based on your backend structure
-      // You'll need to adapt this to your actual API response
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (statusFilter !== 'all') queryParams.append('status', statusFilter);
+      if (customerIdSearch) queryParams.append('customerId', customerIdSearch);
+      if (driverIdSearch) queryParams.append('driverId', driverIdSearch);
+      if (dateFilter) queryParams.append('startDate', dateFilter);
+      
+      // Use the proper endpoint
+      const response = await api.get(`/rides/admin/all?${queryParams.toString()}`);
+      
       setRides(response.data.data || []);
       setLoading(false);
     } catch (err) {

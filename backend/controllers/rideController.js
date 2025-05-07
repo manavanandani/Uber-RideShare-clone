@@ -15,7 +15,48 @@ const { v4: uuidv4 } = require('uuid');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
 
-// Test Conteoller 
+
+
+exports.getAllRides = async (req, res) => {
+  try {
+    const { limit = 100, page = 1, status, customerId, driverId, startDate, endDate } = req.query;
+    
+    const query = {};
+    if (status && status !== 'all') query.status = status;
+    if (customerId) query.customer_id = customerId;
+    if (driverId) query.driver_id = driverId;
+    
+    if (startDate || endDate) {
+      query.date_time = {};
+      if (startDate) query.date_time.$gte = new Date(startDate);
+      if (endDate) query.date_time.$lte = new Date(endDate);
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const rides = await Ride.find(query)
+      .sort({ date_time: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Ride.countDocuments(query);
+    
+    res.status(200).json({
+      message: 'Rides retrieved successfully',
+      data: rides,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (err) {
+    console.error('Error retrieving rides:', err);
+    res.status(500).json({ message: 'Failed to retrieve rides' });
+  }
+};
+
 
 // Test create ride
 exports.createTestRide = async (req, res) => {
