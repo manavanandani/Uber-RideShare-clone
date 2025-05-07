@@ -27,4 +27,7 @@ router.post('/:driver_id/media', verifyRole(['admin', 'driver']), upload.single(
 // Get driver reviews
 router.get('/:driver_id/reviews', verifyRole(['admin', 'driver', 'customer']), cacheMiddleware(120), driverController.getDriverReviews);
 
+router.patch('/:driver_id/address', verifyRole(['admin', 'driver']), driverController.updateDriverAddress);
+
+
 module.exports = router;

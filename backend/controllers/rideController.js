@@ -793,7 +793,13 @@ exports.completeRide = async (req, res) => {
     // Update driver status back to available
     await Driver.findOneAndUpdate(
       { driver_id: ride.driver_id },
-      { $set: { status: 'available' } }
+      { 
+        $set: { 
+          status: 'available',
+          'intro_media.location': ride.dropoff_location // Set driver location to dropoff
+        },
+        $push: { ride_history: ride_id }
+      }
     );
     
     // Add ride to driver's history

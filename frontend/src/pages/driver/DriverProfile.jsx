@@ -1,4 +1,3 @@
-// src/pages/driver/DriverProfile.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
@@ -27,7 +26,8 @@ import {
   PhotoCamera as CameraIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  LocationOn as LocationIcon
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 
@@ -46,8 +46,17 @@ function DriverProfile() {
     car_details: ''
   });
   
+  // New state for address update form
+  const [addressForm, setAddressForm] = useState({
+    address: '',
+    city: '',
+    state: '',
+    zip_code: ''
+  });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -76,6 +85,14 @@ function DriverProfile() {
           car_details: response.data.car_details || ''
         });
         
+        // Also initialize the address form
+        setAddressForm({
+          address: response.data.address || '',
+          city: response.data.city || '',
+          state: response.data.state || '',
+          zip_code: response.data.zip_code || ''
+        });
+        
         setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load profile');
@@ -95,25 +112,28 @@ function DriverProfile() {
       [name]: value
     }));
   };
+  
+  // Handler for address form changes
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       setSaving(true);
-      
-      // Update profile
       await driverService.updateProfile(user.driver_id, formData);
       
+      // Update local state
+      setProfile(prev => ({ ...prev, ...formData }));
       setSuccess('Profile updated successfully');
       setSaving(false);
       setIsEditing(false);
-      
-      // Update local profile state
-      setProfile(prev => ({
-        ...prev,
-        ...formData
-      }));
       
       // Clear success message after 3 seconds
       setTimeout(() => {
@@ -123,6 +143,53 @@ function DriverProfile() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
       setSaving(false);
+    }
+  };
+  
+  // New function to handle address update
+  const handleUpdateAddress = async () => {
+    try {
+      setUpdatingLocation(true);
+      setError(null);
+      
+      // Validate form fields
+      if (!addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
+        setError('All address fields are required');
+        setUpdatingLocation(false);
+        return;
+      }
+      
+      // Call the service to update address
+      await driverService.updateAddress(user.driver_id, addressForm);
+      
+      // Update the profile state with new address data
+      setProfile(prev => ({
+        ...prev,
+        address: addressForm.address,
+        city: addressForm.city,
+        state: addressForm.state,
+        zip_code: addressForm.zip_code
+      }));
+      
+      // Also update the main form data
+      setFormData(prev => ({
+        ...prev,
+        address: addressForm.address,
+        city: addressForm.city,
+        state: addressForm.state,
+        zip_code: addressForm.zip_code
+      }));
+      
+      setSuccess('Location updated successfully');
+      setUpdatingLocation(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update location');
+      setUpdatingLocation(false);
     }
   };
 
@@ -201,7 +268,6 @@ function DriverProfile() {
       
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>
-          {/* Profile Summary Card */}
           <Card sx={{ mb: 3 }}>
             <Box sx={{ position: 'relative' }}>
               <CardMedia
@@ -268,6 +334,14 @@ function DriverProfile() {
               </Typography>
               <Typography variant="body2" color="textSecondary" paragraph>
                 Status: {profile?.status?.charAt(0).toUpperCase() + profile?.status?.slice(1) || 'Offline'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" paragraph>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <LocationIcon fontSize="small" sx={{ mr: 0.5 }} />
+                  Current Location: {profile?.intro_media?.location?.coordinates ? 
+                    `${profile.intro_media.location.coordinates[1].toFixed(4)}, ${profile.intro_media.location.coordinates[0].toFixed(4)}` : 
+                    'Not set'}
+                </Box>
               </Typography>
             </CardContent>
           </Card>
@@ -473,6 +547,71 @@ function DriverProfile() {
                 </Grid>
               </Grid>
             </Box>
+          </Paper>
+          
+          {/* New section for updating location */}
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Update Location
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Typography variant="body2" color="textSecondary" paragraph>
+              Enter your current address to update your location. This will be used to match you with nearby ride requests.
+            </Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Street Address"
+                  name="address"
+                  value={addressForm.address}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={5}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  name="city"
+                  value={addressForm.city}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  fullWidth
+                  label="State"
+                  name="state"
+                  value={addressForm.state}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="ZIP Code"
+                  name="zip_code"
+                  value={addressForm.zip_code}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  onClick={handleUpdateAddress}
+                  disabled={updatingLocation}
+                  startIcon={<LocationIcon />}
+                >
+                  {updatingLocation ? <CircularProgress size={24} /> : 'Update Location'}
+                </Button>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
       </Grid>
