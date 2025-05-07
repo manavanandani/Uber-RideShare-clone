@@ -1,4 +1,3 @@
-// src/pages/admin/Analytics.jsx
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -13,9 +12,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Card,
-  CardContent,
-  CardHeader
 } from '@mui/material';
 import {
   LineChart,
@@ -63,7 +59,6 @@ function Analytics() {
   const [ridesByAreaData, setRidesByAreaData] = useState([]);
   const [ridesByDriverData, setRidesByDriverData] = useState([]);
   const [ridesByCustomerData, setRidesByCustomerData] = useState([]);
-  const [performanceData, setPerformanceData] = useState([]);
   const [dateRange, setDateRange] = useState('month');
 
   // Color palette for charts
@@ -90,14 +85,10 @@ function Analytics() {
       // Get rides by customer
       const customerResponse = await api.get('/stats/graph-data?type=customers');
       
-      // Get performance comparison data
-      const performanceResponse = await api.get('/stats/performance-comparison');
-      
       setRevenueData(revenueResponse.data.data || []);
       setRidesByAreaData(areaResponse.data.data || []);
       setRidesByDriverData(driverResponse.data.data || []);
       setRidesByCustomerData(customerResponse.data.data || []);
-      setPerformanceData(performanceResponse.data.data || { configurations: [], metrics: [] });
       
       setLoading(false);
     } catch (err) {
@@ -172,7 +163,6 @@ function Analytics() {
       <Tabs value={value} onChange={handleTabChange} centered sx={{ mb: 3 }}>
         <Tab label="Revenue" />
         <Tab label="Ride Distribution" />
-        <Tab label="Performance" />
         <Tab label="Users" />
       </Tabs>
       
@@ -317,60 +307,6 @@ function Analytics() {
       </TabPanel>
       
       <TabPanel value={value} index={2}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                System Performance Comparison
-              </Typography>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                Comparison of different system configurations for 100 concurrent users
-              </Typography>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={performanceData.configurations}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="requestsPerSecond" fill="#8884d8" name="Requests/Second" />
-                  <Bar yAxisId="right" dataKey="responseTimeMs" fill="#82ca9d" name="Response Time (ms)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Response Time by Operation (ms)
-              </Typography>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={performanceData.metrics}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="base" fill="#8884d8" name="Base" />
-                  <Bar dataKey="withCache" fill="#82ca9d" name="With Cache" />
-                  <Bar dataKey="withKafka" fill="#ffc658" name="With Cache + Kafka" />
-                  <Bar dataKey="withDistributed" fill="#ff8042" name="Full Distributed" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
-        </Grid>
-      </TabPanel>
-      
-      <TabPanel value={value} index={3}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 2 }}>
