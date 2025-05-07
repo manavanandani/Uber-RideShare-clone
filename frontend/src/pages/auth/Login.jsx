@@ -40,9 +40,10 @@ function Login() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
+      console.log('User authenticated, redirecting to dashboard');
       redirectToDashboard();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navigate]);
 
   const redirectToDashboard = () => {
     if (user.role === 'customer') {
