@@ -118,11 +118,11 @@ function AdminLayout() {
           </ListItemIcon>
           <ListItemText primary="Analytics" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/settings')}>
+        <ListItem button onClick={() => handleNavigation('/admin/profile')}>
           <ListItemIcon>
             <AdminIcon />
           </ListItemIcon>
-          <ListItemText primary="Settings" />
+          <ListItemText primary="Profile" />
         </ListItem>
       </List>
       <Divider />

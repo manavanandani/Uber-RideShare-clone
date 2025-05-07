@@ -1,4 +1,3 @@
-// src/pages/admin/RideDetailView.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -42,8 +41,7 @@ function RideDetailView() {
   const fetchRideDetails = async () => {
     try {
       setLoading(true);
-      // Assuming we have an endpoint to get a specific ride
-      // In a real app, you'd have an admin-specific endpoint
+      // Get ride details
       const response = await api.get(`/rides/${rideId}`);
       setRide(response.data.data);
       setLoading(false);
@@ -167,7 +165,7 @@ function RideDetailView() {
                   Driver ID
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {ride.driver_id}
+                  {ride.driver_id || 'Not assigned yet'}
                 </Typography>
               </Grid>
               
@@ -212,8 +210,10 @@ function RideDetailView() {
                   Pickup Location
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
-                </Typography>
+    {ride.pickup_location.coordinates 
+      ? `${ride.pickup_location.coordinates[1].toFixed(4)}, ${ride.pickup_location.coordinates[0].toFixed(4)}`
+      : `${ride.pickup_location.latitude?.toFixed(4) || 0}, ${ride.pickup_location.longitude?.toFixed(4) || 0}`}
+  </Typography>
               </Grid>
               
               <Grid item xs={6}>
@@ -221,9 +221,22 @@ function RideDetailView() {
                   Dropoff Location
                 </Typography>
                 <Typography variant="body1" gutterBottom>
-                  {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
-                </Typography>
+    {ride.dropoff_location.coordinates 
+      ? `${ride.dropoff_location.coordinates[1].toFixed(4)}, ${ride.dropoff_location.coordinates[0].toFixed(4)}`
+      : `${ride.dropoff_location.latitude?.toFixed(4) || 0}, ${ride.dropoff_location.longitude?.toFixed(4) || 0}`}
+  </Typography>
               </Grid>
+              
+              {ride.surge_factor && ride.surge_factor > 1 && (
+                <Grid item xs={6}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    Surge Factor
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {ride.surge_factor.toFixed(2)}x
+                  </Typography>
+                </Grid>
+              )}
             </Grid>
             
             <Button
@@ -299,13 +312,15 @@ function RideDetailView() {
                 View Customer
               </Button>
               
-              <Button
-                variant="outlined"
-                component="a"
-                href={`/admin/drivers/${ride.driver_id}`}
-              >
-                View Driver
-              </Button>
+              {ride.driver_id && (
+                <Button
+                  variant="outlined"
+                  component="a"
+                  href={`/admin/drivers/${ride.driver_id}`}
+                >
+                  View Driver
+                </Button>
+              )}
             </Box>
           </Paper>
         </Grid>
@@ -339,18 +354,26 @@ function RideDetailView() {
         <DialogTitle>Ride Route</DialogTitle>
         <DialogContent>
           <Box sx={{ height: 400 }}>
-            <MapWithMarkers
-              pickup={{
-                lat: ride.pickup_location.latitude,
-                lng: ride.pickup_location.longitude
-              }}
-              dropoff={{
-                lat: ride.dropoff_location.latitude,
-                lng: ride.dropoff_location.longitude
-              }}
-              showDirections={true}
-              height={400}
-            />
+          <MapWithMarkers
+  pickup={{
+    lat: ride.pickup_location.coordinates 
+      ? ride.pickup_location.coordinates[1] 
+      : ride.pickup_location.latitude,
+    lng: ride.pickup_location.coordinates 
+      ? ride.pickup_location.coordinates[0] 
+      : ride.pickup_location.longitude
+  }}
+  dropoff={{
+    lat: ride.dropoff_location.coordinates 
+      ? ride.dropoff_location.coordinates[1] 
+      : ride.dropoff_location.latitude,
+    lng: ride.dropoff_location.coordinates 
+      ? ride.dropoff_location.coordinates[0] 
+      : ride.dropoff_location.longitude
+  }}
+  showDirections={true}
+  height={400}
+/>
           </Box>
         </DialogContent>
         <DialogActions>

@@ -50,6 +50,8 @@ import Analytics from './pages/admin/Analytics';
 import AddDriver from './pages/admin/AddDriver';
 import AddCustomer from './pages/admin/AddCustomer';
 import BillingDetail from './pages/admin/BillingDetail';
+import AdminProfile from './pages/admin/AdminProfile';
+import RideDetailView from './pages/admin/RideDetailView';
 
 
 
@@ -229,6 +231,12 @@ function App() {
             
             {/* Analytics */}
             <Route path="analytics" element={<Analytics />} />
+
+            {/* Admin profile */}
+            <Route path="profile" element={<AdminProfile />} />
+
+            {/* Ride detail view */}
+            <Route path="ride/:rideId" element={<RideDetailView />} />
           </Route>
           
           {/* Fallback route */}

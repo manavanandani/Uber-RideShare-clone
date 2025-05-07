@@ -58,6 +58,36 @@ exports.getAllRides = async (req, res) => {
 };
 
 
+exports.getRideById = async (req, res) => {
+  try {
+    const { ride_id } = req.params;
+    
+    const ride = await Ride.findOne({ ride_id });
+    
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found' });
+    }
+    
+    // Check if user is authorized to view this ride
+    const isAdmin = req.user.role === 'admin';
+    const isDriver = req.user.role === 'driver' && req.user.driver_id === ride.driver_id;
+    const isCustomer = req.user.role === 'customer' && req.user.customer_id === ride.customer_id;
+    
+    if (!isAdmin && !isDriver && !isCustomer) {
+      return res.status(403).json({ message: 'Unauthorized to view this ride' });
+    }
+    
+    res.status(200).json({
+      message: 'Ride retrieved successfully',
+      data: ride
+    });
+    
+  } catch (err) {
+    console.error('Error retrieving ride:', err);
+    res.status(500).json({ message: 'Failed to retrieve ride' });
+  }
+};
+
 // Test create ride
 exports.createTestRide = async (req, res) => {
   try {

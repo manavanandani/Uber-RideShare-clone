@@ -1,6 +1,7 @@
-// src/pages/admin/Dashboard.jsx
+// frontend/src/pages/admin/Dashboard.jsx
+// Modify the component to remove System Health section
+
 import { useState, useEffect } from 'react';
-//import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -23,7 +24,6 @@ import {
 import api from '../../services/api';
 
 function AdminDashboard() {
-  //const { user } = useSelector(state => state.auth);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,11 +32,10 @@ function AdminDashboard() {
     const fetchSystemStats = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/stats/health');
+        // Removed getHealth API call
         const statsResponse = await api.get('/admin/stats/summary');
         
         setStats({
-          health: response.data.data,
           counts: statsResponse.data.data.counts,
           revenue: statsResponse.data.data.revenue,
           rideStatusDistribution: statsResponse.data.data.rideStatusDistribution
@@ -140,92 +139,7 @@ function AdminDashboard() {
           </Card>
         </Grid>
 
-        {/* System Health */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              System Health
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>Database</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Status:</Typography>
-                      <Typography 
-                        variant="body2" 
-                        color={stats?.health?.services?.database?.status === 'healthy' ? 'success.main' : 'error.main'}
-                      >
-                        {stats?.health?.services?.database?.status || 'Unknown'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Response Time:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.database?.responseTime || 0} ms</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Connections:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.database?.connections || 0}</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>Redis Cache</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Status:</Typography>
-                      <Typography 
-                        variant="body2" 
-                        color={stats?.health?.services?.redis?.status === 'healthy' ? 'success.main' : 'error.main'}
-                      >
-                        {stats?.health?.services?.redis?.status || 'Unknown'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Response Time:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.redis?.responseTime || 0} ms</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Memory Used:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.redis?.usedMemory || '0MB'}</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>Kafka</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Status:</Typography>
-                      <Typography 
-                        variant="body2" 
-                        color={stats?.health?.services?.kafka?.status === 'healthy' ? 'success.main' : 'error.main'}
-                      >
-                        {stats?.health?.services?.kafka?.status || 'Unknown'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Message Rate:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.kafka?.messageRate || 0}/min</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Consumer Lag:</Typography>
-                      <Typography variant="body2">{stats?.health?.services?.kafka?.consumerLag || 0}</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
+        {/* System Health Section Removed */}
         
         {/* Quick Actions */}
         <Grid item xs={12}>
