@@ -103,7 +103,6 @@ const publishMessageWithBatching = async (topic, message) => {
   return true;
 };
 
-// Maintain compatibility with existing code while using the optimized version internally
 const sendMessage = async (topic, message) => {
   try {
     return await publishMessageWithBatching(topic, message);
@@ -128,7 +127,7 @@ const sendMessage = async (topic, message) => {
 
 // -------------------- HANDLER OPTIMIZATIONS --------------------
 
-// Handler for ride_requests topic - optimized for performance
+// Handler for ride_requests topic
 const handleRideRequest = async (message) => {
   try {
     const { ride_id, driver_id, customer_id } = message.data;
@@ -140,7 +139,6 @@ const handleRideRequest = async (message) => {
     
     console.log(`Processing ride request: ${ride_id} for driver ${driver_id}`);
     
-    // Use updateOne instead of findOneAndUpdate for better performance when we don't need the document back
     await Driver.updateOne(
       { driver_id },
       { $set: { status: 'busy' } }
@@ -161,7 +159,7 @@ const handleRideRequest = async (message) => {
   }
 };
 
-// Handler for ride_responses topic - optimized for performance
+// Handler for ride_responses topic
 const handleRideResponse = async (message) => {
   try {
     const { type, data } = message;
@@ -187,7 +185,6 @@ const handleRideResponse = async (message) => {
       case 'RIDE_REJECTED':
         console.log(`Driver ${driverId} rejected ride ${rideId}: ${data.reason}`);
         
-        // Use a Promise.all to execute updates in parallel
         await Promise.all([
           // Update ride status
           Ride.updateOne(
@@ -235,7 +232,7 @@ case 'RIDE_COMPLETED':
   }
 };
 
-// Handler for billing_events topic - optimized
+// Handler for billing_events topic
 const handleBillingEvent = async (message) => {
   try {
     const { type, data } = message;
@@ -243,7 +240,6 @@ const handleBillingEvent = async (message) => {
     switch (type) {
       case 'BILLING_CREATED':
         console.log(`Billing created: ${data.bill_id} for ride ${data.ride_id}`);
-        // Notify customer about new bill (could be implemented)
         break;
         
       case 'PAYMENT_PROCESSED':
@@ -321,8 +317,7 @@ const handleDriverEvent = async (message) => {
       
       console.log(`Notifying ${nearbyCustomers.length} nearby customers about available driver`);
       
-      // In a real system, you might send push notifications to these customers
-      // For now, we'll just invalidate their caches to ensure fresh data
+ 
       if (nearbyCustomers.length > 0) {
         // Batch invalidate customer caches
         await invalidateCache(`*customer*`);

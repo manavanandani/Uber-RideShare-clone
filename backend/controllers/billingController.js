@@ -39,7 +39,7 @@ exports.createBill = async (req, res) => {
       bill_id,
       date: new Date(),
       pickup_time: ride.date_time,
-      dropoff_time: new Date(), // Assuming current time is when the ride was completed
+      dropoff_time: new Date(), 
       distance_covered: ride.distance,
       total_amount: ride.fare_amount,
       source_location: `${ride.pickup_location.latitude},${ride.pickup_location.longitude}`,
@@ -150,7 +150,6 @@ exports.getAllCustomerBills = async (req, res) => {
   try {
     const { customer_id } = req.params;
     
-    // Check if user is authorized
     if (req.user.role !== 'admin' && req.user.role !== 'customer' && req.user.customer_id !== customer_id) {
       return res.status(403).json({ message: 'Unauthorized to view these bills' });
     }
@@ -173,7 +172,6 @@ exports.getAllDriverBills = async (req, res) => {
   try {
     const { driver_id } = req.params;
     
-    // Check if user is authorized
     if (req.user.role !== 'admin' && req.user.role !== 'driver' && req.user.driver_id !== driver_id) {
       return res.status(403).json({ message: 'Unauthorized to view these bills' });
     }
@@ -191,10 +189,9 @@ exports.getAllDriverBills = async (req, res) => {
   }
 };
 
-// Search bills (admin only)
+// Search bills (admin only, testing purposes)
 exports.searchBills = async (req, res) => {
   try {
-    // Only admin can search for all bills in production
     if (req.user.role !== 'admin' && !req.headers['x-test-mode']) {
       return res.status(403).json({ message: 'Unauthorized to search bills' });
     }
@@ -225,7 +222,7 @@ exports.searchBills = async (req, res) => {
       if (start_date) query.date.$gte = new Date(start_date);
       if (end_date) {
         const endDateObj = new Date(end_date);
-        endDateObj.setDate(endDateObj.getDate() + 1); // Include the end date
+        endDateObj.setDate(endDateObj.getDate() + 1);
         query.date.$lt = endDateObj;
       }
     }
@@ -284,7 +281,6 @@ exports.processPayment = async (req, res) => {
       { new: true }
     );
     
-    // Publish payment processed event
     await publishPaymentProcessed(bill_id, 'completed');
     
     // Invalidate related cache entries

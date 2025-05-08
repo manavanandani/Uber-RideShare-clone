@@ -79,7 +79,6 @@ try {
   redisClient = createMockRedisClient();
 }
 
-// Update your Redis cache middleware for better performance
 const cacheMiddleware = (duration) => {
   return async (req, res, next) => {
     try {

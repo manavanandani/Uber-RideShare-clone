@@ -1,9 +1,6 @@
-// generateCRUPerformanceGraphs.js
-
 const fs = require('fs');
 const path = require('path');
 
-// Function to generate the graphs - making it a function allows it to be called as a module
 const generateGraphs = () => {
   // Load CRU performance results
   const resultsPath = path.join(__dirname, "fakeData.json");
@@ -284,13 +281,10 @@ const generateGraphs = () => {
     </p>
 
     <script>
-        // Performance data directly embedded
         const data = ${JSON.stringify(performanceData, null, 2)};
         
-        // Configuration labels
         const labels = ['B', 'BS', 'BSK'];
         
-        // Chart colors
         const colors = {
             create: 'rgba(255, 99, 132, 0.7)',
             read: 'rgba(54, 162, 235, 0.7)',
@@ -302,7 +296,6 @@ const generateGraphs = () => {
             billing: 'rgba(201, 203, 207, 0.7)'
         };
         
-        // Debug function to show data
         function toggleDebug() {
             const debugDiv = document.getElementById('debug-info');
             if (debugDiv.style.display === 'none' || !debugDiv.style.display) {
@@ -313,7 +306,6 @@ const generateGraphs = () => {
             }
         }
         
-        // Helper function to safely get data, avoiding errors
         function safeGetValue(config, operationType, metricType, defaultValue = 0) {
             try {
                 if (data[config] && 
@@ -328,7 +320,6 @@ const generateGraphs = () => {
             }
         }
         
-        // Helper function to create charts
         function createChart(canvasId, label, operationType, metricType) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) {
@@ -338,8 +329,6 @@ const generateGraphs = () => {
             
             const ctx = canvas.getContext('2d');
             
-            // Log what we're attempting to create
-            console.log('Creating chart:', canvasId, 'for', operationType, metricType);
             
             const chartData = [];
             const backgroundColors = [];
@@ -378,7 +367,6 @@ const generateGraphs = () => {
             });
         }
         
-        // Helper to create entity operation charts (showing create, read, update in one chart)
         function createEntityOperationsChart(canvasId, entityType) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) {
@@ -393,12 +381,10 @@ const generateGraphs = () => {
             const opColors = [colors.create, colors.read, colors.update];
             
             operations.forEach((op, index) => {
-                // Skip ride_read since it's not implemented
                 if (entityType === 'ride' && op === 'read') {
                     return;
                 }
                 
-                // Skip billing create/update since they're not implemented
                 if (entityType === 'billing' && op !== 'read') {
                     return;
                 }
@@ -448,26 +434,21 @@ const generateGraphs = () => {
             });
         }
         
-        // Helper to safely check if an entity has data before creating row
         function hasEntityData(config, entity, op) {
             return data[config] && 
                    data[config][\`\${entity}_\${op}\`] && 
                    typeof data[config][\`\${entity}_\${op}\`].requestsPerSecond !== 'undefined';
         }
         
-        // Wait for DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, creating charts');
             
-            // Display data structure in debug div
             const debugDiv = document.getElementById('debug-info');
             debugDiv.innerHTML = '<h3>Available Data:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
             
-            // Create overall charts
             createChart('overall-rps-chart', 'Overall Requests per Second', 'overall', 'requestsPerSecond');
             createChart('overall-response-chart', 'Overall Response Time (ms)', 'overall', 'responseTime');
             
-            // Create CRU specific charts
             createChart('create-rps-chart', 'CREATE Requests per Second', 'create', 'requestsPerSecond');
             createChart('create-response-chart', 'CREATE Response Time (ms)', 'create', 'responseTime');
             
@@ -477,22 +458,19 @@ const generateGraphs = () => {
             createChart('update-rps-chart', 'UPDATE Requests per Second', 'update', 'requestsPerSecond');
             createChart('update-response-chart', 'UPDATE Response Time (ms)', 'update', 'responseTime');
             
-            // Create entity-specific operations charts
             createEntityOperationsChart('driver-operations-chart', 'driver');
             createEntityOperationsChart('customer-operations-chart', 'customer');
             createEntityOperationsChart('ride-operations-chart', 'ride');
             createEntityOperationsChart('billing-operations-chart', 'billing');
             
-            // Populate metrics table
             const tableBody = document.getElementById('metrics-table-body');
             if (!tableBody) {
                 console.error('Table body element not found');
                 return;
             }
             
-            tableBody.innerHTML = ''; // Clear existing content
+            tableBody.innerHTML = ''; 
             
-            // First add the overall operation metrics
             const operations = ['create', 'read', 'update', 'overall'];
             
             labels.forEach(config => {
@@ -529,19 +507,16 @@ const generateGraphs = () => {
                 });
             });
             
-            // Then add entity-specific metrics if they exist
             const entities = ['driver', 'customer', 'ride', 'billing'];
             const entityOps = ['create', 'read', 'update'];
             
             labels.forEach(config => {
                 entities.forEach(entity => {
                     entityOps.forEach(op => {
-                        // Skip ride_read since it's not implemented
                         if (entity === 'ride' && op === 'read') {
                             return;
                         }
                         
-                        // Skip billing create/update since they're not implemented
                         if (entity === 'billing' && op !== 'read') {
                             return;
                         }

@@ -1,4 +1,3 @@
-// performanceTest.js - Improved Uber Simulation Performance Testing Script
 // Tests the system across three configurations:
 // - B: Base implementation 
 // - BS: Base + SQL Caching with Redis
@@ -752,8 +751,6 @@ const testRideUpdate = async (configName, sampleSize, headers) => {
       
       const rideId = createResponse.data.data.ride_id;
       
-      // Wait a bit
-            // Wait a bit
             await new Promise(resolve => setTimeout(resolve, 300));
       
             // 3. Now measure the full update cycle

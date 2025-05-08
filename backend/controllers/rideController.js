@@ -88,193 +88,6 @@ exports.getRideById = async (req, res) => {
   }
 };
 
-// Test create ride
-exports.createTestRide = async (req, res) => {
-  try {
-    const {
-      pickup_location,
-      dropoff_location,
-      date_time,
-      passenger_count,
-      driver_id,
-      customer_id
-    } = req.body;
-
-    if (!customer_id) {
-      return res.status(400).json({ message: 'customer_id is required for test rides' });
-    }
-
-    // Generate a ride_id in SSN format
-    const ride_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
-    
-    // Convert API location format to MongoDB GeoJSON format
-    const pickupGeo = {
-      type: 'Point',
-      coordinates: [pickup_location.longitude, pickup_location.latitude]
-    };
-    
-    const dropoffGeo = {
-      type: 'Point',
-      coordinates: [dropoff_location.longitude, dropoff_location.latitude]
-    };
-    
-    // Calculate fare using the dynamic pricing algorithm
-    const priceData = await getDynamicPrice(
-      pickup_location, 
-      dropoff_location,
-      new Date(date_time || Date.now()),
-      passenger_count || 1
-    );
-
-    const ride = new Ride({
-      ride_id,
-      pickup_location: pickupGeo, // Use GeoJSON format
-      dropoff_location: dropoffGeo, // Use GeoJSON format
-      date_time: new Date(date_time || Date.now()),
-      customer_id,
-      driver_id, // This might be null if not provided
-      fare_amount: priceData.fare,
-      passenger_count: passenger_count || 1,
-      distance: priceData.distance,
-      duration: priceData.duration,
-      status: 'requested'
-    });
-
-    const savedRide = await ride.save();
-
-    // Update customer's ride history
-    await Customer.findOneAndUpdate(
-      { customer_id },
-      { $push: { ride_history: ride_id } }
-    );
-
-    // Publish the ride request to Kafka
-    await publishRideRequest({
-      ride_id: savedRide.ride_id,
-      pickup_location: savedRide.pickup_location,
-      dropoff_location: savedRide.dropoff_location,
-      date_time: savedRide.date_time,
-      customer_id: savedRide.customer_id,
-      driver_id: savedRide.driver_id,
-      passenger_count: savedRide.passenger_count,
-      fare_amount: savedRide.fare_amount
-    });
-
-    // Invalidate related caches
-    await invalidateCache('*rides*');
-    await invalidateCache(`*customer*${customer_id}*`);
-    if (driver_id) {
-      await invalidateCache(`*driver*${driver_id}*`);
-    }
-
-    res.status(201).json({
-      message: 'Test ride created successfully',
-      data: savedRide
-    });
-  } catch (err) {
-    console.error('Error creating test ride:', err);
-    res.status(500).json({ message: 'Failed to create test ride' });
-  }
-};
-
-// testAcceptRide function for rideController.js
-exports.testAcceptRide = async (req, res) => {
-  const { ride_id } = req.params;
-  const { driver_id } = req.body;
-  
-  try {
-    if (!driver_id) {
-      return res.status(400).json({ message: 'driver_id is required' });
-    }
-    
-    // First, check if ride exists
-    const ride = await Ride.findOne({ ride_id });
-    
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found' });
-    }
-    
-    // Be more flexible with state transitions in test mode
-    // Don't require 'requested' state - accept any non-completed state
-    if (ride.status === 'completed') {
-      return res.status(400).json({ message: 'Cannot update a completed ride' });
-    }
-    
-    const updatedRide = await Ride.findOneAndUpdate(
-      { ride_id },
-      { $set: { status: 'accepted', driver_id: driver_id } },
-      { new: true }
-    );
-    
-    // Update driver status
-    await Driver.findOneAndUpdate(
-      { driver_id },
-      { $set: { status: 'busy' } }
-    );
-    
-    // Publish Kafka event
-    await publishRideAccepted(ride_id, driver_id);
-    
-    // Invalidate caches
-    await invalidateCache('*rides*');
-    await invalidateCache(`*driver*${driver_id}*`);
-    
-    res.status(200).json({
-      message: 'Test ride accepted successfully',
-      data: updatedRide
-    });
-    
-  } catch (err) {
-    console.error('Error accepting test ride:', err);
-    res.status(500).json({ message: 'Failed to accept test ride' });
-  }
-};
-
-// testStartRide function for rideController.js
-exports.testStartRide = async (req, res) => {
-  const { ride_id } = req.params;
-  
-  try {
-    // Find the ride
-    const ride = await Ride.findOne({ ride_id });
-    
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found' });
-    }
-    
-    // Be more flexible for testing - allow starting a ride in any non-completed state
-    if (ride.status === 'completed') {
-      return res.status(400).json({ message: 'Cannot start a completed ride' });
-    }
-    
-    const updatedRide = await Ride.findOneAndUpdate(
-      { ride_id },
-      { $set: { status: 'in_progress' } },
-      { new: true }
-    );
-    
-    // Invalidate caches
-    await invalidateCache('*rides*');
-    if (ride.driver_id) {
-      await invalidateCache(`*driver*${ride.driver_id}*`);
-    }
-    if (ride.customer_id) {
-      await invalidateCache(`*customer*${ride.customer_id}*`);
-    }
-    
-    res.status(200).json({
-      message: 'Test ride started successfully',
-      data: updatedRide
-    });
-    
-  } catch (err) {
-    console.error('Error starting test ride:', err);
-    res.status(500).json({ message: 'Failed to start test ride' });
-  }
-};
-
-// test controller ends here
-
 
 exports.createRide = async (req, res) => {
   try {
@@ -334,8 +147,8 @@ exports.createRide = async (req, res) => {
     // Create ride with GeoJSON format locations
     const ride = new Ride({
       ride_id,
-      pickup_location: pickupGeo, // Use GeoJSON format
-      dropoff_location: dropoffGeo, // Use GeoJSON format
+      pickup_location: pickupGeo,
+      dropoff_location: dropoffGeo,
       date_time: new Date(date_time || Date.now()),
       customer_id,
       driver_id, // This might be null if no drivers are available
@@ -404,23 +217,20 @@ exports.updateRide = async (req, res) => {
     // Ensure the user can only update own rides
     const ride = await Ride.findOne({ 
       ride_id,
-      customer_id: req.user.customer_id // Ensure the customer owns this ride
+      customer_id: req.user.customer_id
     });
 
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found or not authorized' });
     }
 
-    // Only allow updates to certain fields based on the ride status
     const allowedUpdates = {};
     if (ride.status === 'requested') {
-      // Allow changes to pickup, dropoff, passengers, etc. before a ride is accepted
       if (updates.pickup_location) allowedUpdates.pickup_location = updates.pickup_location;
       if (updates.dropoff_location) allowedUpdates.dropoff_location = updates.dropoff_location;
       if (updates.passenger_count) allowedUpdates.passenger_count = updates.passenger_count;
       if (updates.date_time) allowedUpdates.date_time = new Date(updates.date_time);
       
-      // Recalculate fare if location or passenger count changed
       if (updates.pickup_location || updates.dropoff_location || updates.passenger_count) {
         const priceData = await getDynamicPrice(
           updates.pickup_location || ride.pickup_location,
@@ -434,7 +244,6 @@ exports.updateRide = async (req, res) => {
         allowedUpdates.duration = priceData.duration;
       }
     } else if (ride.status === 'completed' && updates.rating) {
-      // Allow customer to rate the driver after ride is completed
       allowedUpdates['rating.customer_to_driver'] = updates.rating;
     }
 
@@ -504,7 +313,6 @@ exports.getRidesByCustomer = async (req, res) => {
   const { customer_id } = req.params;
 
   try {
-    // For test script, we need to be more permissive with admin access
     const isAdminRequest = req.user.role === 'admin';
     
     // Only allow customers to access their own rides (but allow admin access)
@@ -601,7 +409,7 @@ exports.getNearbyRides = async (req, res) => {
           $maxDistance: 10000 // 10km in meters
         }
       }
-    }).sort({ date_time: 1 }); // Sort by time, most immediate first
+    }).sort({ date_time: 1 }); 
 
     // Get customer info for each ride
     const ridesWithCustomerInfo = await Promise.all(rides.map(async (ride) => {
@@ -631,7 +439,6 @@ exports.acceptRide = async (req, res) => {
   try {
     console.log(`Driver ${req.user.driver_id} attempting to accept ride ${ride_id}`);
     
-    // First, check if ride exists without driver restriction
     const rideCheck = await Ride.findOne({ ride_id });
     
     if (!rideCheck) {
@@ -649,8 +456,8 @@ exports.acceptRide = async (req, res) => {
       ride_id,
       status: 'requested',
       $or: [
-        { driver_id: null }, // Either no driver assigned
-        { driver_id: req.user.driver_id }, // Or this driver already assigned
+        { driver_id: null }, 
+        { driver_id: req.user.driver_id }, 
       ]
     };
     
@@ -659,14 +466,13 @@ exports.acceptRide = async (req, res) => {
       { 
         $set: { 
           status: 'accepted',
-          driver_id: req.user.driver_id // Ensure driver ID is set
+          driver_id: req.user.driver_id 
         } 
       },
       { new: true }
     );
     
     if (!ride) {
-      // More detailed error message
       return res.status(400).json({ 
         message: 'Cannot accept this ride. It may be already accepted by another driver or is not in a requestable state.',
         ride_id: ride_id,
@@ -760,7 +566,6 @@ exports.completeRide = async (req, res) => {
   const { ride_id } = req.params;
   
   try {
-    // First, get the ride regardless of driver to diagnose the issue
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
@@ -790,13 +595,13 @@ exports.completeRide = async (req, res) => {
       { new: true }
     );
     
-    // Update driver status back to available
+    // Update driver status back to available and update location
     await Driver.findOneAndUpdate(
       { driver_id: ride.driver_id },
       { 
         $set: { 
           status: 'available',
-          'intro_media.location': ride.dropoff_location // Set driver location to dropoff
+          'intro_media.location': ride.dropoff_location
         },
         $push: { ride_history: ride_id }
       }
@@ -813,7 +618,6 @@ exports.completeRide = async (req, res) => {
       // Generate a bill ID
       const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
       
-      // Make sure we have coordinates properly formatted
       const pickupCoords = ride.pickup_location && ride.pickup_location.coordinates 
         ? ride.pickup_location.coordinates 
         : [0, 0];
@@ -842,15 +646,14 @@ exports.completeRide = async (req, res) => {
       }
 
       
-      // Create bill object with defensive programming
       const newBill = new Billing({
         bill_id,
         date: new Date(),
-        pickup_time: ride.date_time || new Date(Date.now() - 3600000), // 1 hour ago if missing
+        pickup_time: ride.date_time || new Date(Date.now() - 3600000),
         dropoff_time: new Date(),
-        distance_covered: ride.distance || 5, // Default if missing
-        total_amount: ride.fare_amount || 15, // Default if missing
-        source_location: `${pickupCoords[1]},${pickupCoords[0]}`, // [lng, lat] to [lat, lng]
+        distance_covered: ride.distance || 5, 
+        total_amount: ride.fare_amount || 15, 
+        source_location: `${pickupCoords[1]},${pickupCoords[0]}`,
         destination_location: `${dropoffCoords[1]},${dropoffCoords[0]}`,
         driver_id: ride.driver_id,
         customer_id: ride.customer_id,

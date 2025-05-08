@@ -2,6 +2,7 @@ const Driver = require('../models/Driver');
 const { publishDriverStatusChange } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+const { geocodeAddress } = require('../utils/locationUtils');
 
 
 // Get all drivers
@@ -405,9 +406,6 @@ exports.getDriverReviews = async (req, res) => {
 };
 
 
-const { geocodeAddress } = require('../utils/locationUtils');
-
-// Add this function or modify updateDriver
 exports.updateDriverAddress = async (req, res) => {
   const { driver_id } = req.params;
   const { address, city, state, zip_code } = req.body;

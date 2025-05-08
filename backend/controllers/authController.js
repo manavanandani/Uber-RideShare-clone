@@ -157,7 +157,6 @@ exports.customerLogin = async (req, res) => {
       zip_code: customer.zip_code,
       rating: customer.rating,
       role: "customer"
-      // omit password & card info unless needed
     };
 
     res.status(200).json({

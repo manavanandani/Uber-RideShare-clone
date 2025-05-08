@@ -1,10 +1,8 @@
-// middleware/verifyRole.js
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const Driver = require('../models/Driver');
 const Customer = require('../models/Customer');
 
-// In backend/middleware/verifyRole.js - ensure the error handling is correct
 const verifyRole = (roles) => {
   // Convert single role to array
   if (!Array.isArray(roles)) {
