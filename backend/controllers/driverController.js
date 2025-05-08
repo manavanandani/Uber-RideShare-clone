@@ -1,4 +1,3 @@
-// controllers/driverController.js
 const Driver = require('../models/Driver');
 const { publishDriverStatusChange } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');

@@ -567,7 +567,7 @@ exports.acceptRide = async (req, res) => {
       return res.status(404).json({ message: 'Ride not found' });
     }
     
-    // Add debugging to see what's happening
+    //  debugging to see what's happening
     console.log(`Ride status: ${rideCheck.status}, Current driver: ${rideCheck.driver_id}, Requesting driver: ${req.user.driver_id}`);
     
     // For available rides, there are two scenarios:

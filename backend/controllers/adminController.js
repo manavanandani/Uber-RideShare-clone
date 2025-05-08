@@ -1,4 +1,3 @@
-// controllers/adminController.js
 const Admin = require('../models/Admin');
 const Driver = require('../models/Driver');
 const Customer = require('../models/Customer');
@@ -46,7 +45,6 @@ exports.getAdminById = async (req, res) => {
   }
 };
 
-// In backend/controllers/adminController.js - modify the createAdmin function
 exports.createAdmin = async (req, res) => {
   try {
     // Check if admin with the same ID, email, or phone exists

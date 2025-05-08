@@ -1,4 +1,3 @@
-// app.js
 const express = require('express');
 const cors = require('cors');
 const databaseSelectorMiddleware = require('./middleware/databaseSelectorMiddleware');
@@ -10,7 +9,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const rideRoutes = require('./routes/rideRoutes');
 const pricingRoutes = require('./routes/pricingRoutes');
 const statsRoutes = require('./routes/statsRoutes');
-const authRoutes = require('./routes/authRoutes'); // Add this
+const authRoutes = require('./routes/authRoutes');
 
 const { initKafka } = require('./config/kafka');
 

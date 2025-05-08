@@ -19,7 +19,6 @@ async function createKafkaTopics() {
     await admin.connect();
     console.log('Kafka admin connected');
     
-    // Get existing topics first
     const existingTopics = await admin.listTopics();
     
     // Define topics to create
@@ -35,7 +34,6 @@ async function createKafkaTopics() {
     const topicsToCreate = topics.filter(t => !existingTopics.includes(t.topic));
     
     if (topicsToCreate.length > 0) {
-      // Create only new topics
       await admin.createTopics({
         topics: topicsToCreate,
         waitForLeaders: true
@@ -53,7 +51,6 @@ async function createKafkaTopics() {
 }
 
 
-// Call this function when your app starts
 createKafkaTopics().catch(console.error);
 
 

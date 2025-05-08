@@ -1,5 +1,3 @@
-// Modified kafka.js with simplified shutdown handling
-
 const { Kafka } = require('kafkajs');
 const dotenv = require('dotenv');
 const Ride = require('../models/Ride');
@@ -226,7 +224,6 @@ case 'RIDE_COMPLETED':
   }
   
   // NOTE: Bill creation is now handled directly by the controller
-  // Remove or comment out any bill creation code here
   
   break;
         

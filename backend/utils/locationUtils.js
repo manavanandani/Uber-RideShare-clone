@@ -1,4 +1,3 @@
-// Create a new file: backend/utils/locationUtils.js
 /**
  * Converts a MongoDB Point GeoJSON format to a simple lat/lng object
  * @param {Object} mongoLocation - MongoDB location object with type and coordinates

@@ -1,4 +1,3 @@
-// controllers/authController.js
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const Driver = require('../models/Driver');
@@ -45,7 +44,6 @@ exports.adminLogin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // controllers/authController.js (continued)
     
     // Generate token
     const token = generateToken(admin.admin_id, 'admin');

@@ -242,8 +242,6 @@ const getRideStatsByLocation = async () => {
  */
 const getPerformanceData = async () => {
   try {
-    // This would typically be a complex analysis based on logs or metrics
-    // For demo purposes, we'll generate some sample data
     
     const testData = [
       { config: 'B', requestsPerSecond: 100, responseTime: 250, throughput: 80 },

@@ -1,4 +1,3 @@
-// controllers/customerController.js
 const Customer = require('../models/Customer');
 const { publishCustomerEvent } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
@@ -109,7 +108,6 @@ exports.createCustomer = async (req, res) => {
     
     // Publish customer creation event
     await publishCustomerEvent(
-      // controllers/customerController.js (continued)
       customer.customer_id,
       'CUSTOMER_CREATED',
       { name: `${customer.first_name} ${customer.last_name}` }
@@ -351,7 +349,7 @@ exports.updateCustomerLocation = async (req, res) => {
         $set: { 
           last_location: {
             type: 'Point',
-            coordinates: [lng, lat] // MongoDB uses [longitude, latitude]
+            coordinates: [lng, lat]
           }
         }
       },

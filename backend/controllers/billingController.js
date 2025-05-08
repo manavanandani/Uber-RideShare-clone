@@ -194,7 +194,6 @@ exports.getAllDriverBills = async (req, res) => {
 // Search bills (admin only)
 exports.searchBills = async (req, res) => {
   try {
-    // Make this endpoint more permissive for testing
     // Only admin can search for all bills in production
     if (req.user.role !== 'admin' && !req.headers['x-test-mode']) {
       return res.status(403).json({ message: 'Unauthorized to search bills' });

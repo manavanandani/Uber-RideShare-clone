@@ -1,4 +1,3 @@
-// controllers/statsController.js
 const {
   getRevenueByDay,
   getRidesByArea,

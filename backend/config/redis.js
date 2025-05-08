@@ -1,5 +1,3 @@
-// In config/redis.js, add these modifications:
-
 const Redis = require('ioredis');
 const dotenv = require('dotenv');
 
