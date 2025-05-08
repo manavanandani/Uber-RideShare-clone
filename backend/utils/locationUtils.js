@@ -40,9 +40,38 @@ const mongoLocationToString = (location) => {
   // MongoDB stores as [longitude, latitude]
   return `${location.coordinates[1]},${location.coordinates[0]}`;
 };
+
+/**
+ * Convert address to coordinates using a geocoding service
+ * @param {String} address - Full address to geocode
+ * @returns {Promise<Object>} - Promise resolving to {latitude, longitude} or null
+ */
+const geocodeAddress = async (address) => {
+  try {
+    // Use Node-geocoder or similar library
+    const geocoder = require('node-geocoder')({
+      provider: 'openstreetmap' // Free service, no API key needed
+    });
+    
+    const results = await geocoder.geocode(address);
+    
+    if (results && results.length > 0) {
+      return {
+        latitude: results[0].latitude,
+        longitude: results[0].longitude
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+};
+
   
   module.exports = {
     mongoLocationToLatLng,
     latLngToMongoLocation,
-    mongoLocationToString
+    mongoLocationToString,
+    geocodeAddress
   };

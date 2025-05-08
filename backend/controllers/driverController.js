@@ -404,4 +404,75 @@ exports.getDriverReviews = async (req, res) => {
   }
 };
 
+
+const { geocodeAddress } = require('../utils/locationUtils');
+
+// Add this function or modify updateDriver
+exports.updateDriverAddress = async (req, res) => {
+  const { driver_id } = req.params;
+  const { address, city, state, zip_code } = req.body;
+  
+  try {
+    // Construct full address
+    const fullAddress = `${address}, ${city}, ${state} ${zip_code}`;
+    
+    // Geocode the address
+    const coordinates = await geocodeAddress(fullAddress);
+    
+    if (!coordinates) {
+      return res.status(400).json({ 
+        message: 'Could not geocode the provided address' 
+      });
+    }
+    
+    // Update driver's address and location
+    const driver = await Driver.findOneAndUpdate(
+      { driver_id },
+      { 
+        $set: { 
+          address,
+          city,
+          state,
+          zip_code,
+          'intro_media.location': {
+            type: 'Point',
+            coordinates: [coordinates.longitude, coordinates.latitude]
+          }
+        } 
+      },
+      { new: true }
+    );
+    
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+    
+    // Invalidate any relevant caches
+    await invalidateCache(`drivers:${driver_id}`);
+    await invalidateCache('drivers:all');
+    
+    // Publish driver update event with new location
+    await publishDriverStatusChange(
+      driver.driver_id,
+      driver.status,
+      coordinates
+    );
+    
+    res.status(200).json({
+      message: 'Driver address and location updated successfully',
+      data: {
+        driver_id,
+        address: fullAddress,
+        location: coordinates
+      }
+    });
+  } catch (error) {
+    console.error('Error updating driver address:', error);
+    res.status(500).json({
+      message: 'Failed to update driver address',
+      error: error.message
+    });
+  }
+};
+
 module.exports = exports;

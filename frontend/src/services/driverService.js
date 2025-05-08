@@ -64,6 +64,12 @@ export const driverService = {
     const response = await api.patch(`/rides/${rideId}/complete`);
     return response.data;
   },
+
+  // Address update
+  updateAddress: async (driverId, addressData) => {
+    const response = await api.patch(`/drivers/${driverId}/address`, addressData);
+    return response.data;
+  },
   
 getRideHistory: async (driverId) => {
   console.log('Calling getRideHistory API for driver:', driverId);
@@ -76,7 +82,6 @@ getRideHistory: async (driverId) => {
 },
   
   // Get driver's earnings
-// In src/services/driverService.js - update the getEarnings method
 getEarnings: async (driverId, period = 'all') => {
   console.log('Calling getEarnings API for driver:', driverId);
   const response = await api.get(`/billing/driver/${driverId}?period=${period}`);

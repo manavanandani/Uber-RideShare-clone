@@ -46,6 +46,12 @@ function CustomerLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
+    
+    // For Vite projects
+    if (import.meta.env.DEV && window.__REDUX_DEVTOOLS_EXTENSION__) {
+      window.__REDUX_DEVTOOLS_EXTENSION__.disconnect();
+    }
+    
     navigate('/login');
   };
 
