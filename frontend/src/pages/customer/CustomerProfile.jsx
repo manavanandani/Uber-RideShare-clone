@@ -52,7 +52,7 @@ function CustomerProfile() {
         
         setProfile(response.data);
         
-        // Set form data from profile
+        // Set form data from profile, ensuring all fields have at least empty string values
         setFormData({
           first_name: response.data.first_name || '',
           last_name: response.data.last_name || '',
@@ -63,9 +63,10 @@ function CustomerProfile() {
           state: response.data.state || '',
           zip_code: response.data.zip_code || '',
           credit_card: {
-            number: '************' + (response.data.credit_card?.number?.slice(-4) || ''),
+            number: response.data.credit_card?.number ? 
+              '************' + (response.data.credit_card.number.slice(-4) || '') : '',
             expiry: response.data.credit_card?.expiry || '',
-            cvv: '***',
+            cvv: response.data.credit_card?.cvv ? '***' : '',
             name_on_card: response.data.credit_card?.name_on_card || ''
           }
         });
@@ -108,20 +109,31 @@ function CustomerProfile() {
     try {
       setSaving(true);
       
-      // Prepare data for submission, removing masked credit card info
-      const submitData = {
-        ...formData
-      };
+      // Create a deep copy of the form data
+      const submitData = JSON.parse(JSON.stringify(formData));
       
-      // Don't update credit card number if it's masked
-      if (submitData.credit_card.number.includes('*')) {
-        delete submitData.credit_card.number;
+      // Handle credit card information
+      if (submitData.credit_card) {
+        // If the credit card number is masked (contains asterisks), we need to handle it
+        if (submitData.credit_card.number && submitData.credit_card.number.includes('*')) {
+          // Two options:
+          // 1. Remove it completely to keep the existing number in the database
+          delete submitData.credit_card.number;
+          
+          // 2. OR, if you want to indicate to the backend that the user didn't change it:
+          // submitData.credit_card.number = 'UNCHANGED';
+        }
+        
+        // Similarly for CVV
+        if (submitData.credit_card.cvv === '***') {
+          delete submitData.credit_card.cvv;
+          // Or: submitData.credit_card.cvv = 'UNCHANGED';
+        }
+        
+        // If the user has entered new values (no asterisks), they will be sent as-is
       }
       
-      // Don't update CVV if it's masked
-      if (submitData.credit_card.cvv === '***') {
-        delete submitData.credit_card.cvv;
-      }
+      console.log('Submitting data:', JSON.stringify(submitData, null, 2));
       
       // Update profile
       await customerService.updateProfile(user.customer_id, submitData);
@@ -135,6 +147,7 @@ function CustomerProfile() {
       }, 3000);
       
     } catch (err) {
+      console.error('Update error details:', err);
       setError(err.response?.data?.message || 'Failed to update profile');
       setSaving(false);
     }
