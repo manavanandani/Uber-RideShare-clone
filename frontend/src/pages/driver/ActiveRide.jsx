@@ -149,6 +149,8 @@ useEffect(() => {
       // Update local state
       setRide(prev => ({ ...prev, status: 'completed' }));
       setActiveStep(3);
+      await driverService.getProfile(user.driver_id);
+
       setUpdating(false);
       
       // Show rating dialog
