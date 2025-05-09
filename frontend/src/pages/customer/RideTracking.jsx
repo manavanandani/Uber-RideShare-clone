@@ -54,13 +54,26 @@ function RideTracking() {
         const response = await api.get(`/rides/customer/${user.customer_id}`);
         
         // Find the specific ride
-        const rideData = response.data.data.find(r => r.ride_id === rideId);
+        let rideData = response.data.data.find(r => r.ride_id === rideId);
         
         if (!rideData) {
           setError('Ride not found');
           setLoading(false);
           return;
         }
+        
+        // Transform location data
+        rideData = {
+          ...rideData,
+          pickup_location: rideData.pickup_location && {
+            latitude: rideData.pickup_location.coordinates ? rideData.pickup_location.coordinates[1] : 0,
+            longitude: rideData.pickup_location.coordinates ? rideData.pickup_location.coordinates[0] : 0
+          },
+          dropoff_location: rideData.dropoff_location && {
+            latitude: rideData.dropoff_location.coordinates ? rideData.dropoff_location.coordinates[1] : 0,
+            longitude: rideData.dropoff_location.coordinates ? rideData.dropoff_location.coordinates[0] : 0
+          }
+        };
         
         setRide(rideData);
         setLoading(false);
@@ -91,7 +104,17 @@ function RideTracking() {
           const response = await api.get(`/rides/customer/${user.customer_id}/active`);
           
           if (response.data && response.data.data) {
-            const updatedRide = response.data.data;
+            const updatedRide = {
+              ...response.data.data,
+              pickup_location: response.data.data.pickup_location && {
+                latitude: response.data.data.pickup_location.coordinates ? response.data.data.pickup_location.coordinates[1] : 0,
+                longitude: response.data.data.pickup_location.coordinates ? response.data.data.pickup_location.coordinates[0] : 0
+              },
+              dropoff_location: response.data.data.dropoff_location && {
+                latitude: response.data.data.dropoff_location.coordinates ? response.data.data.dropoff_location.coordinates[1] : 0,
+                longitude: response.data.data.dropoff_location.coordinates ? response.data.data.dropoff_location.coordinates[0] : 0
+              }
+            };
             
             // Only update if the ride ID matches and there's an actual change
             if (updatedRide.ride_id === rideId && 

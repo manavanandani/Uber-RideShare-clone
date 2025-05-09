@@ -431,12 +431,17 @@ function BookRide() {
       const response = await customerService.bookRide(bookingData);
       
       // Navigate to ride tracking page
-      const createdRide = response.data.data;
+      // Fix: Check the structure of the response and access the ride_id correctly
+      const createdRide = response.data; // Changed from response.data.data
       setBooking(false);
+      
+      // Add logging to debug the response structure
+      console.log('Booking response:', response);
       
       // Navigate to ride tracking page with the new ride ID
       navigate(`/customer/ride/${createdRide.ride_id}`);
     } catch (err) {
+      console.error('Booking error:', err); // Add detailed error logging
       setError(err.response?.data?.message || 'Failed to book ride');
       setBooking(false);
     }
