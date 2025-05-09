@@ -35,6 +35,34 @@ function AvailableRides() {
   const [error, setError] = useState(null);
   const [location, setLocation] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [driverStatus, setDriverStatus] = useState(user?.status || 'offline');
+
+// Add this useEffect to poll the driver's status
+useEffect(() => {
+  // Set initial status from user object
+  setDriverStatus(user?.status || 'offline');
+  
+  const checkDriverStatus = async () => {
+    try {
+      const response = await driverService.getProfile(user.driver_id);
+      if (response.data && response.data.status) {
+        setDriverStatus(response.data.status);
+      }
+    } catch (err) {
+      console.error('Error fetching driver status:', err);
+    }
+  };
+  
+  // Check initially
+  checkDriverStatus();
+  
+  // Set up polling every 10 seconds
+  const statusInterval = setInterval(checkDriverStatus, 10000);
+  
+  // Clean up
+  return () => clearInterval(statusInterval);
+}, [user]);
+
 
   useEffect(() => {
     // Get current location
@@ -182,6 +210,17 @@ const refreshLocationAndRides = async () => {
 
 const handleAcceptRide = async () => {
   if (!selectedRide) return;
+
+  if (driverStatus === 'offline') {
+    setError("You are currently offline. Please go online to accept rides.");
+    return;
+  }
+  
+  // Check if user is offline
+  if (user.status === 'offline') {
+    setError("You are currently offline. Please go online to accept rides.");
+    return;
+  }
   
   // Check if ride is too far before trying to accept
   if (selectedRide.distance_to_pickup > 16) {
@@ -212,7 +251,7 @@ const handleAcceptRide = async () => {
     console.error('Error accepting ride:', err);
     let errorMessage = err.response?.data?.message || 'Failed to accept ride';
     
-    // Check for already having an active ride
+    // Check for specific error cases
     if (err.response?.data?.active_ride_id) {
       errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
       
@@ -221,10 +260,10 @@ const handleAcceptRide = async () => {
         navigate('/driver/rides/active');
         return;
       }
-    }
-    
-    // Check for distance error message
-    if (err.response?.data?.distance) {
+    } else if (err.response?.status === 403 || 
+              (err.response?.data?.message && err.response.data.message.includes('offline'))) {
+      errorMessage = "You must be online to accept rides. Please go online first.";
+    } else if (err.response?.data?.distance) {
       errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
     }
     
@@ -245,6 +284,12 @@ const handleAcceptRide = async () => {
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </Box>
+
+      {driverStatus === 'offline' && (
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        You are currently offline. Go online in the sidebar to accept rides.
+      </Alert>
+    )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -387,11 +432,12 @@ const handleAcceptRide = async () => {
                       color="primary"
                       size="large"
                       onClick={handleAcceptRide}
-                      disabled={accepting}
+                      disabled={accepting || user.status === 'offline' || selectedRide.distance_to_pickup > 16}
                       startIcon={<CarIcon />}
                     >
-                      {accepting ? <CircularProgress size={24} /> : 'Accept Ride'}
-                    </Button>
+{accepting ? <CircularProgress size={24} /> : 
+    (user.status === 'offline' ? 'Go Online to Accept' : 'Accept Ride')}                    
+    </Button>
                   </Box>
                 </>
               ) : (

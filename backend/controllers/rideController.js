@@ -452,6 +452,16 @@ exports.acceptRide = async (req, res) => {
   
   try {
     console.log(`Driver ${req.user.driver_id} attempting to accept ride ${ride_id}`);
+    
+    const driver = await Driver.findOne({ driver_id: req.user.driver_id });
+
+    if (!driver || driver.status !== 'available') {
+      return res.status(403).json({ 
+        message: 'Cannot accept rides while offline. Please go online first.',
+        driver_status: driver ? driver.status : 'unknown'
+      });
+    }
+
 
     // Check if driver already has an active ride
     const activeRides = await Ride.find({
@@ -474,8 +484,7 @@ exports.acceptRide = async (req, res) => {
     }
     
     // Get driver's current location
-    const driver = await Driver.findOne({ driver_id: req.user.driver_id });
-    if (!driver || !driver.intro_media || !driver.intro_media.location || !driver.intro_media.location.coordinates) {
+    if (!driver.intro_media || !driver.intro_media.location || !driver.intro_media.location.coordinates) {
       return res.status(400).json({ message: 'Driver location not available' });
     }
     
@@ -555,7 +564,6 @@ exports.acceptRide = async (req, res) => {
     res.status(500).json({ message: 'Failed to accept ride', error: err.message });
   }
 };
-
 exports.getActiveRideForCustomer = async (req, res) => {
   const { customer_id } = req.params;
   
