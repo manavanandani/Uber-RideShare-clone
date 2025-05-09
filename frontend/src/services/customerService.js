@@ -10,7 +10,7 @@ export const customerService = {
   
   // Update customer profile
   updateProfile: async (customerId, data) => {
-    const response = await api.put(`/customers/${customerId}`, data);
+    const response = await api.patch(`/customers/${customerId}`, data);
     return response.data;
   },
   

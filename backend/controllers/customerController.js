@@ -162,39 +162,71 @@ exports.updateCustomer = async (req, res) => {
       }
     }
     
-    // Validate credit card details if provided
-    if (req.body.credit_card) {
-      if (req.body.credit_card.number) {
+    // Get the current customer data before updating
+    const currentCustomer = await Customer.findOne({ customer_id });
+    if (!currentCustomer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    
+    // Create a copy of the request body for modifications
+    const updateData = { ...req.body };
+    
+    // Handle credit card updates
+    if (updateData.credit_card) {
+      // If credit_card object exists in the request but is empty or missing fields,
+      // merge with existing credit card data
+      if (!currentCustomer.credit_card) {
+        currentCustomer.credit_card = {};
+      }
+      
+      // Only validate and update credit card number if provided
+      if (updateData.credit_card.number) {
         const ccNumberRegex = /^\d{13,19}$/;
-        if (!ccNumberRegex.test(req.body.credit_card.number)) {
+        if (!ccNumberRegex.test(updateData.credit_card.number)) {
           return res.status(400).json({
             message: 'Invalid credit card number'
           });
         }
+      } else {
+        // If not provided, keep the existing number
+        updateData.credit_card.number = currentCustomer.credit_card.number;
       }
       
-      if (req.body.credit_card.expiry) {
+      // Only validate and update expiry if provided
+      if (updateData.credit_card.expiry) {
         const ccExpiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-        if (!ccExpiryRegex.test(req.body.credit_card.expiry)) {
+        if (!ccExpiryRegex.test(updateData.credit_card.expiry)) {
           return res.status(400).json({
             message: 'Invalid credit card expiry date. Use MM/YY format'
           });
         }
+      } else {
+        // If not provided, keep the existing expiry
+        updateData.credit_card.expiry = currentCustomer.credit_card.expiry;
       }
       
-      if (req.body.credit_card.cvv) {
+      // Only validate and update CVV if provided
+      if (updateData.credit_card.cvv) {
         const cvvRegex = /^\d{3,4}$/;
-        if (!cvvRegex.test(req.body.credit_card.cvv)) {
+        if (!cvvRegex.test(updateData.credit_card.cvv)) {
           return res.status(400).json({
             message: 'Invalid CVV'
           });
         }
+      } else {
+        // If not provided, keep the existing CVV
+        updateData.credit_card.cvv = currentCustomer.credit_card.cvv;
+      }
+      
+      // Handle name_on_card
+      if (!updateData.credit_card.name_on_card) {
+        updateData.credit_card.name_on_card = currentCustomer.credit_card.name_on_card;
       }
     }
     
     const customer = await Customer.findOneAndUpdate(
       { customer_id },
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     
