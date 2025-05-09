@@ -16,6 +16,7 @@ export const driverService = {
   
   // Update driver status (available, busy, offline)
   updateStatus: async (driverId, status, coordinates = null) => {
+    console.log(`Sending status update request: ${driverId}, ${status}`, coordinates);
     const data = { status };
     
     // Add coordinates if available
@@ -23,6 +24,9 @@ export const driverService = {
       data.latitude = coordinates.latitude;
       data.longitude = coordinates.longitude;
     }
+
+      console.log('Request data:', data);
+
     
     const response = await api.patch(`/drivers/${driverId}/status`, data);
     return response.data;

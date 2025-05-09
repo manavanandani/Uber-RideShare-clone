@@ -192,10 +192,14 @@ const handleAcceptRide = async () => {
   try {
     setAccepting(true);
     console.log('Accepting ride:', selectedRide.ride_id);
-    await driverService.acceptRide(selectedRide.ride_id);
-
+    
+    // Call the API to accept the ride
+    const response = await driverService.acceptRide(selectedRide.ride_id);
+    console.log('Ride accepted response:', response);
+    
+    // Get the updated driver profile to reflect new status
     await driverService.getProfile(user.driver_id);
-
+    
     setAccepting(false);
 
     // Show success message
@@ -207,6 +211,17 @@ const handleAcceptRide = async () => {
   } catch (err) {
     console.error('Error accepting ride:', err);
     let errorMessage = err.response?.data?.message || 'Failed to accept ride';
+    
+    // Check for already having an active ride
+    if (err.response?.data?.active_ride_id) {
+      errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
+      
+      // Option to navigate to the active ride
+      if (confirm(`${errorMessage}\n\nDo you want to navigate to your active ride?`)) {
+        navigate('/driver/rides/active');
+        return;
+      }
+    }
     
     // Check for distance error message
     if (err.response?.data?.distance) {
