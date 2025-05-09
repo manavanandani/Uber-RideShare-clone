@@ -37,6 +37,19 @@ export const customerService = {
     const response = await api.get(`/rides/nearby-drivers?latitude=${latitude}&longitude=${longitude}`);
     return response.data;
   },
+
+  getActiveRide: async (customerId) => {
+  try {
+    const response = await api.get(`/rides/customer/${customerId}/active`);
+    return response.data;
+  } catch (err) {
+    // If no active ride is found, the API returns 404
+    if (err.response?.status === 404) {
+      return { data: null };
+    }
+    throw err;
+  }
+},
   
   // Rate a ride
   rateRide: async (rideId, rating, comment) => {
