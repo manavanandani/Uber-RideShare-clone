@@ -26,6 +26,7 @@ import {
   Card,
   CardContent
 } from '@mui/material';
+import {Star as StarIcon} from '@mui/icons-material';
 import {
   DirectionsCar as CarIcon,
   Check as CheckIcon,
@@ -175,30 +176,43 @@ function ActiveRide() {
   };
 
   const handleCompleteRide = async () => {
-    if (!ride) return;
+  if (!ride) return;
+  
+  try {
+    setUpdating(true);
+    console.log('Attempting to complete ride:', ride.ride_id);
     
-    try {
-      setUpdating(true);
-      const response = await driverService.completeRide(ride.ride_id);
-      console.log('Ride completed response:', response);
-      
-      // Update local state
-      setRide(prev => ({ ...prev, status: 'completed' }));
-      setActiveStep(3);
-      
-      // Update driver status back to available
-      await driverService.getProfile(user.driver_id);
+    const response = await driverService.completeRide(ride.ride_id);
+    console.log('Ride completed response:', response);
+    
+    // Update local state
+    setRide(prev => ({ ...prev, status: 'completed' }));
+    setActiveStep(3);
+    
+    // Update driver status back to available
+    await driverService.getProfile(user.driver_id);
 
-      setUpdating(false);
-      
-      // Show rating dialog
-      setShowRatingDialog(true);
-    } catch (err) {
-      console.error('Error completing ride:', err);
-      setError(err.response?.data?.message || 'Failed to complete ride');
-      setUpdating(false);
+    setUpdating(false);
+    
+    // Show rating dialog
+    setShowRatingDialog(true);
+  } catch (err) {
+    console.error('Error completing ride:', err);
+    // More detailed error handling
+    if (err.response) {
+      console.error('Response data:', err.response.data);
+      console.error('Response status:', err.response.status);
+      setError(err.response.data?.message || `Error ${err.response.status}: Failed to complete ride`);
+    } else if (err.request) {
+      console.error('No response received:', err.request);
+      setError('No response received from server. Please check your connection.');
+    } else {
+      console.error('Error message:', err.message);
+      setError(`Error: ${err.message}`);
     }
-  };
+    setUpdating(false);
+  }
+};
 
   const handleRateCustomer = async () => {
     try {

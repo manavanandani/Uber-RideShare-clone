@@ -79,9 +79,16 @@ export const driverService = {
   
   // Complete ride
   completeRide: async (rideId) => {
+  try {
+    console.log(`Calling completeRide API for ride: ${rideId}`);
     const response = await api.patch(`/rides/${rideId}/complete`);
+    console.log('completeRide API response:', response);
     return response.data;
-  },
+  } catch (error) {
+    console.error('Error in completeRide service call:', error);
+    throw error; // Re-throw to be handled by the component
+  }
+},
 
   // Address update
   updateAddress: async (driverId, addressData) => {
