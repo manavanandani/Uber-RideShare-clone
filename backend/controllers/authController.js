@@ -298,19 +298,19 @@ exports.registerDriver = async (req, res) => {
     // Create driver with pending status
     const driver = new Driver({
       ...req.body,
-      account_status: 'pending_review',
+      account_status: 'approved',
       status: 'offline'
     });
     
     await driver.save();
     
     res.status(201).json({
-      message: 'Driver registration successful. Your account is pending approval.',
+      message: 'Driver registration successful. You can login now.',
       data: {
         driver_id: driver.driver_id,
         name: `${driver.first_name} ${driver.last_name}`,
         email: driver.email,
-        status: 'pending_review'
+        status: 'approved',
       }
     });
   } catch (error) {

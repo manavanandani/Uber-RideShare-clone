@@ -269,7 +269,7 @@ function DriverApplication() {
               
               <Grid item xs={12}>
                 <Alert severity="info">
-                  Your application will need to be approved by an administrator before you can start accepting rides.
+                  Driver registration successful. You can now log in with your email and password.
                 </Alert>
               </Grid>
             </Grid>
