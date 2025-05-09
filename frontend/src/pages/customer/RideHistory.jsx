@@ -35,10 +35,26 @@ function RideHistory() {
     const fetchRideHistory = async () => {
       try {
         setLoading(true);
+        console.log('Fetching ride history for customer:', user.customer_id);
         const response = await customerService.getRideHistory(user.customer_id);
-        setRides(response.data.data || []);
+        console.log('Ride history response:', response);
+        
+        let rideData = [];
+        
+        // Handle different response formats
+        if (response && response.data) {
+          if (Array.isArray(response.data)) {
+            rideData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            rideData = response.data.data;
+          }
+        }
+        
+        console.log('Processed ride data:', rideData);
+        setRides(rideData);
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching ride history:', err);
         setError(err.response?.data?.message || 'Failed to load ride history');
         setLoading(false);
       }
@@ -46,6 +62,8 @@ function RideHistory() {
     
     if (user?.customer_id) {
       fetchRideHistory();
+    } else {
+      console.warn('No customer_id found in user object:', user);
     }
   }, [user]);
 
@@ -111,12 +129,6 @@ function RideHistory() {
                 <TableCell>Fare</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
-              {rides.status === 'cancelled' && (
-  <Typography variant="caption" color="error">
-    Cancelled: {rides.cancellation_time ? new Date(rides.cancellation_time).toLocaleString() : 'N/A'}
-    {rides.cancellation_reason && ` (${rides.cancellation_reason.replace('_', ' ')})`}
-  </Typography>
-)}
             </TableHead>
             <TableBody>
               {rides.length === 0 ? (
@@ -129,23 +141,37 @@ function RideHistory() {
                 rides
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((ride) => (
-                    <TableRow key={ride.ride_id}>
-                      <TableCell>{ride.ride_id}</TableCell>
-                      <TableCell>{new Date(ride.date_time).toLocaleString()}</TableCell>
+                    <TableRow key={ride.ride_id || `ride-${Math.random()}`}>
+                      <TableCell>{ride.ride_id || 'N/A'}</TableCell>
+                      <TableCell>{ride.date_time ? new Date(ride.date_time).toLocaleString() : 'N/A'}</TableCell>
                       <TableCell>
-                        {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
+                        {ride.pickup_location && ride.pickup_location.coordinates ? 
+                          `${ride.pickup_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.pickup_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                          (ride.pickup_location && ride.pickup_location.latitude ? 
+                            `${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}` : 
+                            'N/A')}
                       </TableCell>
                       <TableCell>
-                        {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
+                        {ride.dropoff_location && ride.dropoff_location.coordinates ? 
+                          `${ride.dropoff_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.dropoff_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                          (ride.dropoff_location && ride.dropoff_location.latitude ? 
+                            `${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}` : 
+                            'N/A')}
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                          color={getStatusColor(ride.status)}
+                          label={(ride.status || 'unknown').charAt(0).toUpperCase() + (ride.status || 'unknown').slice(1)}
+                          color={getStatusColor(ride.status || 'unknown')}
                           size="small"
                         />
+                        {ride.status === 'cancelled' && ride.cancellation_time && (
+                          <Typography variant="caption" display="block" color="error">
+                            {new Date(ride.cancellation_time).toLocaleString()}
+                            {ride.cancellation_reason && ` (${ride.cancellation_reason.replace('_', ' ')})`}
+                          </Typography>
+                        )}
                       </TableCell>
-                      <TableCell>${ride.fare_amount.toFixed(2)}</TableCell>
+                      <TableCell>${(ride.fare_amount || 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <Button
                           variant="outlined"
