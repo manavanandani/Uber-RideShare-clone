@@ -193,6 +193,9 @@ const handleAcceptRide = async () => {
     setAccepting(true);
     console.log('Accepting ride:', selectedRide.ride_id);
     await driverService.acceptRide(selectedRide.ride_id);
+
+    await driverService.getProfile(user.driver_id);
+
     setAccepting(false);
 
     // Show success message
