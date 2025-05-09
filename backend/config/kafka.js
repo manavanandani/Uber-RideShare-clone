@@ -130,23 +130,18 @@ const sendMessage = async (topic, message) => {
 // Handler for ride_requests topic
 const handleRideRequest = async (message) => {
   try {
-    const { ride_id, driver_id, customer_id } = message.data;
+    const { ride_id, customer_id } = message.data;
     
-    if (!driver_id || !customer_id) {
+    if (!customer_id) {
       console.warn(`Incomplete ride request data for ${ride_id}`);
       return;
     }
     
-    console.log(`Processing ride request: ${ride_id} for driver ${driver_id}`);
+    console.log(`Processing ride request: ${ride_id}`);
     
-    await Driver.updateOne(
-      { driver_id },
-      { $set: { status: 'busy' } }
-    );
     
     // Batch invalidate related caches
     const cacheKeys = [
-      `*driver*${driver_id}*`,
       `*customer*${customer_id}*`
     ];
     
