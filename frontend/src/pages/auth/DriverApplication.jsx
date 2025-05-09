@@ -269,7 +269,7 @@ function DriverApplication() {
               
               <Grid item xs={12}>
                 <Alert severity="info">
-                  Driver registration successful. You can now log in with your email and password.
+                  When completed, submit application.
                 </Alert>
               </Grid>
             </Grid>
