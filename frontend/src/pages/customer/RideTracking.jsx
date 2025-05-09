@@ -489,61 +489,63 @@ function RideTracking() {
                 Driver Information
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
-              {ride.driver_id ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ 
-                    width: 40, 
-                    height: 40, 
-                    borderRadius: '50%', 
-                    bgcolor: 'primary.main', 
-                    color: 'white', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    mr: 2
-                  }}>
-                    {ride.driver_info?.first_name?.[0] || 'D'}
-                  </Box>
-                  <Box>
-                    <Typography variant="body1">
-                      {ride.driver_info?.first_name || 'Driver'} {ride.driver_info?.last_name || ''}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Rating 
-                        value={ride.driver_info?.rating || 4.5} 
-                        precision={0.5} 
-                        readOnly 
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        {ride.driver_info?.rating?.toFixed(1) || '4.5'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 2 }}>
-                  {ride.status === 'cancelled' ? (
-                    <Typography color="error">
-                      This ride was cancelled.
-                    </Typography>
-                  ) : (
-                    <Typography color="info.main">
-                      Waiting for a driver to accept your ride...
-                    </Typography>
-                  )}
-                </Box>
-              )}
-              
-              {ride.driver_id && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <CarIcon sx={{ mr: 1 }} />
-                  <Typography variant="body2">
-                    {ride.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
-                  </Typography>
-                </Box>
-              )}
+
+               {ride.driver_id && ride.driver_info ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ 
+          width: 40, 
+          height: 40, 
+          borderRadius: '50%', 
+          bgcolor: 'primary.main', 
+          color: 'white', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          mr: 2
+        }}>
+          {ride.driver_info.first_name?.[0] || 'D'}
+        </Box>
+        <Box>
+          <Typography variant="body1">
+            {ride.driver_info.first_name || ''} {ride.driver_info.last_name || ''}
+          </Typography>
+          {ride.driver_info.rating && (
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Rating 
+                value={ride.driver_info.rating} 
+                precision={0.5} 
+                readOnly 
+                size="small"
+              />
+              <Typography variant="body2" sx={{ ml: 1 }}>
+                {ride.driver_info.rating.toFixed(1)}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+    ) : (
+      <Box sx={{ textAlign: 'center', py: 2 }}>
+        {ride.status === 'cancelled' ? (
+          <Typography color="error">
+            This ride was cancelled.
+          </Typography>
+        ) : (
+          <Typography color="info.main">
+            Waiting for a driver to accept your ride...
+          </Typography>
+        )}
+      </Box>
+    )}
+    
+    {ride.driver_id && ride.driver_info && (
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CarIcon sx={{ mr: 1 }} />
+        <Typography variant="body2">
+          {ride.driver_info.car_details || 'Vehicle information not available'}
+        </Typography>
+      </Box>
+    )}
               
               <Box sx={{ mt: 2 }}>
                 {ride.status === 'completed' && !ride.rating?.customer_to_driver && (

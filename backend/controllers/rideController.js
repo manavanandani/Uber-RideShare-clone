@@ -62,6 +62,7 @@ exports.getRideById = async (req, res) => {
   try {
     const { ride_id } = req.params;
     
+    // Find the ride and populate driver and customer info in one query
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
@@ -77,9 +78,32 @@ exports.getRideById = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to view this ride' });
     }
     
+    // Fetch driver and customer information if they exist
+    let driver_info = null;
+    let customer_info = null;
+    
+    if (ride.driver_id) {
+      driver_info = await Driver.findOne({ driver_id: ride.driver_id })
+        .select('driver_id first_name last_name phone car_details rating')
+        .lean();
+    }
+    
+    if (ride.customer_id) {
+      customer_info = await Customer.findOne({ customer_id: ride.customer_id })
+        .select('customer_id first_name last_name phone rating')
+        .lean();
+    }
+    
+    // Create response with ride data and user information
+    const rideResponse = {
+      ...ride.toObject(),
+      driver_info,
+      customer_info
+    };
+    
     res.status(200).json({
       message: 'Ride retrieved successfully',
-      data: ride
+      data: rideResponse
     });
     
   } catch (err) {
@@ -564,6 +588,7 @@ exports.acceptRide = async (req, res) => {
     res.status(500).json({ message: 'Failed to accept ride', error: err.message });
   }
 };
+
 exports.getActiveRideForCustomer = async (req, res) => {
   const { customer_id } = req.params;
   
@@ -573,7 +598,7 @@ exports.getActiveRideForCustomer = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access' });
     }
     
-    // Find the active ride (either accepted or in_progress)
+    // Find the active ride
     const activeRide = await Ride.findOne({
       customer_id,
       status: { $in: ['requested', 'accepted', 'in_progress'] }
@@ -583,9 +608,23 @@ exports.getActiveRideForCustomer = async (req, res) => {
       return res.status(404).json({ message: 'No active ride found' });
     }
     
+    // Add driver information if a driver has been assigned
+    let driver_info = null;
+    if (activeRide.driver_id) {
+      driver_info = await Driver.findOne({ driver_id: activeRide.driver_id })
+        .select('driver_id first_name last_name phone car_details rating')
+        .lean();
+    }
+    
+    // Create response with ride and driver data
+    const rideResponse = {
+      ...activeRide.toObject(),
+      driver_info
+    };
+    
     res.status(200).json({
       message: 'Active ride retrieved successfully',
-      data: activeRide
+      data: rideResponse
     });
   } catch (err) {
     console.error('Error retrieving active ride:', err);
@@ -602,7 +641,7 @@ exports.getActiveRideForDriver = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access' });
     }
     
-    // Find the active ride (either accepted or in_progress)
+    // Find the active ride
     const activeRide = await Ride.findOne({
       driver_id,
       status: { $in: ['accepted', 'in_progress'] }
@@ -612,9 +651,20 @@ exports.getActiveRideForDriver = async (req, res) => {
       return res.status(404).json({ message: 'No active ride found' });
     }
     
+    // Get customer information
+    const customer_info = await Customer.findOne({ customer_id: activeRide.customer_id })
+      .select('customer_id first_name last_name phone rating')
+      .lean();
+    
+    // Create response with ride and customer data
+    const rideResponse = {
+      ...activeRide.toObject(),
+      customer_info
+    };
+    
     res.status(200).json({
       message: 'Active ride retrieved successfully',
-      data: activeRide
+      data: rideResponse
     });
   } catch (err) {
     console.error('Error retrieving active ride:', err);

@@ -22,7 +22,9 @@ import {
   DialogActions,
   Rating,
   TextField,
-  Chip
+  Chip,
+  Card,
+  CardContent
 } from '@mui/material';
 import {
   DirectionsCar as CarIcon,
@@ -30,7 +32,9 @@ import {
   SportsScore as FinishIcon,
   Cancel as CancelIcon,
   Phone as PhoneIcon,
-  Message as MessageIcon
+  Message as MessageIcon,
+  LocationOn as LocationIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
@@ -62,21 +66,37 @@ function ActiveRide() {
   ];
 
   useEffect(() => {
-    // Get current location
+    // Get current location and set up location tracking
     if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
+      const watchId = navigator.geolocation.watchPosition(
         (position) => {
-          setLocation({
+          const currentLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
-          });
+          };
+          setLocation(currentLocation);
+          
+          // If we have an active ride and driver is available, update driver location
+          if (ride && ride.status !== 'completed' && user && user.driver_id) {
+            // Consider updating driver location in backend
+            driverService.updateStatus(user.driver_id, 'busy', currentLocation)
+              .catch(err => console.error('Error updating driver location:', err));
+          }
         },
         (error) => {
           console.error("Error getting location:", error);
-        }
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
       );
+      
+      // Cleanup watchPosition on component unmount
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
     }
-    
+  }, [ride, user]);
+  
+  useEffect(() => {
     const fetchActiveRide = async () => {
       try {
         setLoading(true);
@@ -88,17 +108,20 @@ function ActiveRide() {
         console.log('Active ride response:', response);
         
         if (response.data) {
-          // Format locations for the map component
+          // Log customer info to debug
+          console.log('Customer info in response:', response.data.customer_info);
+          
+          // Format locations for the map component with careful null handling
           const formattedRide = {
             ...response.data,
-            pickup_location: {
+            pickup_location: response.data.pickup_location && response.data.pickup_location.coordinates ? {
               latitude: response.data.pickup_location.coordinates[1],
               longitude: response.data.pickup_location.coordinates[0]
-            },
-            dropoff_location: {
+            } : null,
+            dropoff_location: response.data.dropoff_location && response.data.dropoff_location.coordinates ? {
               latitude: response.data.dropoff_location.coordinates[1],
               longitude: response.data.dropoff_location.coordinates[0]
-            }
+            } : null
           };
           
           setRide(formattedRide);
@@ -108,6 +131,8 @@ function ActiveRide() {
             setActiveStep(1); // Pickup customer
           } else if (formattedRide.status === 'in_progress') {
             setActiveStep(2); // In progress
+          } else if (formattedRide.status === 'completed') {
+            setActiveStep(3); // Completed
           }
         } else {
           setError("No active ride found.");
@@ -123,6 +148,12 @@ function ActiveRide() {
     
     if (user?.driver_id) {
       fetchActiveRide();
+      
+      // Poll for updates every 10 seconds
+      const intervalId = setInterval(fetchActiveRide, 10000);
+      
+      // Clear interval on component unmount
+      return () => clearInterval(intervalId);
     }
   }, [user]);
 
@@ -148,11 +179,14 @@ function ActiveRide() {
     
     try {
       setUpdating(true);
-      await driverService.completeRide(ride.ride_id);
+      const response = await driverService.completeRide(ride.ride_id);
+      console.log('Ride completed response:', response);
       
       // Update local state
       setRide(prev => ({ ...prev, status: 'completed' }));
       setActiveStep(3);
+      
+      // Update driver status back to available
       await driverService.getProfile(user.driver_id);
 
       setUpdating(false);
@@ -160,6 +194,7 @@ function ActiveRide() {
       // Show rating dialog
       setShowRatingDialog(true);
     } catch (err) {
+      console.error('Error completing ride:', err);
       setError(err.response?.data?.message || 'Failed to complete ride');
       setUpdating(false);
     }
@@ -177,7 +212,6 @@ function ActiveRide() {
     }
   };
 
-  // Add the cancel ride handler
   const handleCancelRide = async () => {
     if (!ride) return;
     
@@ -335,6 +369,85 @@ function ActiveRide() {
               </Box>
             )}
           </Paper>
+          
+          {/* Customer Information Card */}
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Customer Information
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {ride.customer_info ? (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                    {ride.customer_info.first_name?.[0] || 'C'}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1">
+                      {ride.customer_info.first_name || ''} {ride.customer_info.last_name || ''}
+                    </Typography>
+                    {ride.customer_info.rating !== undefined && (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Rating 
+                          value={ride.customer_info.rating || 0} 
+                          precision={0.5} 
+                          readOnly 
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ ml: 1 }}>
+                          {(ride.customer_info.rating || 0).toFixed(1)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                
+                {ride.customer_info.phone && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, mt: 2 }}>
+                    <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Typography variant="body2">
+                      {ride.customer_info.phone}
+                    </Typography>
+                  </Box>
+                )}
+                
+                {ride.status === 'completed' && !ride.rating?.driver_to_customer && (
+                  <Button 
+                    variant="outlined" 
+                    fullWidth
+                    startIcon={<StarIcon />}
+                    onClick={() => setShowRatingDialog(true)}
+                    sx={{ mt: 2 }}
+                  >
+                    Rate Customer
+                  </Button>
+                )}
+                
+                {ride.rating?.driver_to_customer && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Your Rating
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Rating 
+                        value={ride.rating.driver_to_customer} 
+                        readOnly 
+                        precision={0.5}
+                      />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        {ride.rating.driver_to_customer.toFixed(1)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                Customer information is unavailable.
+              </Typography>
+            )}
+          </Paper>
         </Grid>
         
         <Grid item xs={12} md={8}>
@@ -348,13 +461,17 @@ function ActiveRide() {
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2">Pickup Location</Typography>
                 <Typography variant="body2" gutterBottom>
-                  {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}`}
+                  {ride.pickup_location ? 
+                    `${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)}` : 
+                    'Location data unavailable'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2">Drop-off Location</Typography>
                 <Typography variant="body2" gutterBottom>
-                  {`${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
+                  {ride.dropoff_location ? 
+                    `${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}` : 
+                    'Location data unavailable'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -382,33 +499,6 @@ function ActiveRide() {
                 </Typography>
               </Grid>
             </Grid>
-            
-            <Box sx={{ mt: 2, mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Customer Information
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ mr: 2 }}>{ride.customer_info?.first_name?.[0] || 'C'}</Avatar>
-                <Box>
-                  <Typography>
-                    {ride.customer_info?.first_name || 'Customer'} {ride.customer_info?.last_name || ''}
-                  </Typography>
-                  {ride.customer_info?.rating && (
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Rating 
-                        value={ride.customer_info.rating} 
-                        precision={0.5} 
-                        readOnly 
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        {ride.customer_info.rating.toFixed(1)}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-            </Box>
           </Paper>
           
           <Paper sx={{ p: 3 }}>
@@ -418,27 +508,44 @@ function ActiveRide() {
             <Divider sx={{ mb: 2 }} />
             
             <Box sx={{ height: 300 }}>
-              <MapWithMarkers
-                pickup={{
-                  lat: ride.pickup_location.latitude,
-                  lng: ride.pickup_location.longitude
-                }}
-                dropoff={{
-                  lat: ride.dropoff_location.latitude,
-                  lng: ride.dropoff_location.longitude
-                }}
-                showDirections={true}
-                markers={location ? [
-                  {
-                    position: {
-                      lat: location.latitude,
-                      lng: location.longitude
-                    },
-                    title: 'Your Location'
-                  }
-                ] : []}
-                height={300}
-              />
+              {ride.pickup_location && ride.dropoff_location ? (
+                <MapWithMarkers
+                  pickup={{
+                    lat: ride.pickup_location.latitude,
+                    lng: ride.pickup_location.longitude
+                  }}
+                  dropoff={{
+                    lat: ride.dropoff_location.latitude,
+                    lng: ride.dropoff_location.longitude
+                  }}
+                  showDirections={true}
+                  markers={location ? [
+                    {
+                      position: {
+                        lat: location.latitude,
+                        lng: location.longitude
+                      },
+                      title: 'Your Location'
+                    }
+                  ] : []}
+                  height={300}
+                />
+              ) : (
+                <Box 
+                  sx={{ 
+                    height: 300, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    bgcolor: 'grey.100',
+                    borderRadius: 1
+                  }}
+                >
+                  <Typography align="center" color="text.secondary">
+                    Map data unavailable
+                  </Typography>
+                </Box>
+              )}
             </Box>
             
             {location && (
