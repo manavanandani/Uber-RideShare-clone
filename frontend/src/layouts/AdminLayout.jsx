@@ -1,4 +1,5 @@
-// this is our admin Layout component
+// this is our admin Layout
+
 // src/layouts/AdminLayout.jsx
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
