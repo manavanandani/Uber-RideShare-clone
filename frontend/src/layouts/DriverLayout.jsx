@@ -43,74 +43,41 @@ function DriverLayout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [isOnline, setIsOnline] = useState(user?.status === 'available');
-  const [driverStatus, setDriverStatus] = useState(user?.status || 'offline');
-  
+  const [isOnline, setIsOnline] = useState(false);
+  const [driverStatus, setDriverStatus] = useState('offline');
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-  setIsOnline(driverStatus === 'available');
-}, [driverStatus]);
-
-  // Add this effect for auto-refreshing the driver status
-  useEffect(() => {
-    // Only set up polling if we have a logged-in driver
+  // Add a function to load the driver's current status
+  const loadDriverStatus = async () => {
     if (!user?.driver_id) return;
     
-    console.log("Setting up status polling for driver:", user.driver_id);
-    
-    // Function to fetch current driver status
-    const fetchDriverStatus = async () => {
-      try {
-        const response = await driverService.getProfile(user.driver_id);
-        if (response.data && response.data.status) {
-          // Update isOnline state based on current status
-          const currentStatus = response.data.status;
-          console.log("Current driver status from server:", currentStatus);
-          
-          setIsOnline(currentStatus === 'available');
-        }
-      } catch (error) {
-        console.error("Failed to fetch driver status:", error);
+    try {
+      const response = await driverService.getProfile(user.driver_id);
+      if (response.data && response.data.status) {
+        const newStatus = response.data.status;
+        
+        // Update both state values
+        setDriverStatus(newStatus);
+        setIsOnline(newStatus === 'available');
+        
+        console.log(`Updated driver status from server: ${newStatus}`);
       }
-    };
-    
-    // Initial fetch
-    fetchDriverStatus();
-    
-    // Set up polling interval (every 10 seconds)
-    const statusInterval = setInterval(fetchDriverStatus, 10000);
-    
-    // Cleanup on unmount
-    return () => {
-      console.log("Clearing status polling interval");
-      clearInterval(statusInterval);
-    };
-  }, [user]);
-
-// Add this effect to fetch the current status when the component mounts
-useEffect(() => {
-  const fetchDriverStatus = async () => {
-    if (user?.driver_id) {
-      try {
-        const response = await driverService.getProfile(user.driver_id);
-        if (response.data && response.data.status) {
-          setDriverStatus(response.data.status);
-          // Also update the isOnline state based on status
-          setIsOnline(response.data.status === 'available');
-        }
-      } catch (error) {
-        console.error('Failed to fetch driver status:', error);
-      }
+    } catch (error) {
+      console.error('Error fetching driver status:', error);
     }
   };
-  
-  fetchDriverStatus();
-  
-  // Poll for status updates every 30 seconds
-  const statusInterval = setInterval(fetchDriverStatus, 30000);
-  
-  return () => clearInterval(statusInterval);
-}, [user]);
+
+  // Set up polling with a shorter interval (5 seconds)
+  useEffect(() => {
+    // Load status initially
+    loadDriverStatus();
+    
+    // Set up polling
+    const statusInterval = setInterval(loadDriverStatus, 5000);
+    
+    // Cleanup on unmount
+    return () => clearInterval(statusInterval);
+  }, [user?.driver_id]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -134,86 +101,79 @@ useEffect(() => {
     setMobileOpen(false);
   };
 
-const handleToggleStatus = async (event) => {
-  // Store the desired state from the checkbox
-  const wantsToBeOnline = event.target.checked;
-  const newStatus = wantsToBeOnline ? 'available' : 'offline';
-  
-  try {
-    // Get the latest status first
-    const response = await driverService.getProfile(user.driver_id);
-    const currentStatus = response.data?.status;
+  // Simplified toggle handler that focuses only on the status change
+  const handleToggleStatus = async (event) => {
+    if (isUpdating) return; // Prevent double-clicks
     
-    // If driver is busy, don't allow toggling
-    if (currentStatus === 'busy') {
-      alert('Cannot change status while on an active ride');
-      // Important: Reset the checkbox to unchecked since we're preventing the change
-      setIsOnline(false);
+    const wantsToBeOnline = event.target.checked;
+    const newStatus = wantsToBeOnline ? 'available' : 'offline';
+    
+    // If already in the desired state, do nothing
+    if ((newStatus === 'available' && isOnline) || 
+        (newStatus === 'offline' && !isOnline)) {
       return;
     }
     
-    console.log(`Attempting to change status from ${currentStatus} to ${newStatus}`);
+    // If busy, can't change status
+    if (driverStatus === 'busy') {
+      alert('Cannot change status while on an active ride');
+      // Reset the switch to match the current state
+      event.target.checked = isOnline;
+      return;
+    }
     
-    // Update UI immediately for responsive feedback
-    setIsOnline(wantsToBeOnline);
-    setDriverStatus(newStatus);
+    setIsUpdating(true);
+    console.log(`Attempting to change status to: ${newStatus}`);
     
-    // Get current location for the status update
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const currentLocation = {
+    try {
+      // Get location
+      let currentLocation = null;
+      if (navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 5000,
+              maximumAge: 0
+            });
+          });
+          
+          currentLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           };
-          
-          try {
-            // Make the API call with location
-            await driverService.updateStatus(user.driver_id, newStatus, currentLocation);
-            console.log(`Status successfully updated to: ${newStatus}`);
-          } catch (error) {
-            console.error('Failed to update status with location:', error);
-            // Revert UI on failure
-            setIsOnline(!wantsToBeOnline);
-            setDriverStatus(currentStatus);
-            alert('Failed to update status. Please try again.');
-          }
-        },
-        async (error) => {
-          console.error('Error getting location:', error);
-          try {
-            // Try to update without location
-            await driverService.updateStatus(user.driver_id, newStatus);
-            console.log(`Status updated to: ${newStatus} (without location)`);
-          } catch (apiError) {
-            console.error('Failed to update status without location:', apiError);
-            // Revert UI on failure
-            setIsOnline(!wantsToBeOnline);
-            setDriverStatus(currentStatus);
-            alert('Failed to update status. Please try again.');
-          }
+        } catch (locError) {
+          console.warn('Could not get location:', locError);
+          // Continue without location
         }
-      );
-    } else {
-      try {
-        // If geolocation is not available, update without location
-        await driverService.updateStatus(user.driver_id, newStatus);
-        console.log(`Status updated to: ${newStatus} (without location)`);
-      } catch (apiError) {
-        console.error('Failed to update status without geolocation:', apiError);
-        // Revert UI on failure
-        setIsOnline(!wantsToBeOnline);
-        setDriverStatus(currentStatus);
-        alert('Failed to update status. Please try again.');
       }
+      
+      // Update UI state first for responsiveness
+      setIsOnline(wantsToBeOnline);
+      setDriverStatus(newStatus);
+      
+      // Make API call
+      await driverService.updateStatus(
+        user.driver_id, 
+        newStatus, 
+        currentLocation
+      );
+      
+      console.log(`Status successfully changed to: ${newStatus}`);
+      
+      // Refresh status from server to confirm
+      setTimeout(loadDriverStatus, 1000);
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      
+      // Revert UI state on error
+      setIsOnline(!wantsToBeOnline);
+      setDriverStatus(wantsToBeOnline ? 'offline' : 'available');
+      
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setIsUpdating(false);
     }
-  } catch (error) {
-    console.error('Failed to get driver profile:', error);
-    // Revert UI on failure
-    setIsOnline(!wantsToBeOnline);
-    alert('Failed to update status. Please try again.');
-  }
-};
+  };
 
   const drawer = (
     <div>
@@ -238,11 +198,11 @@ const handleToggleStatus = async (event) => {
               checked={isOnline}
               onChange={handleToggleStatus}
               color="primary"
-              disabled={driverStatus === 'busy'}
+              disabled={driverStatus === 'busy' || isUpdating}
             />
           }
-  label={driverStatus === 'busy' ? "On a Ride" : (isOnline ? "Online" : "Offline")}
-          />
+          label={driverStatus === 'busy' ? "On a Ride" : (isOnline ? "Online" : "Offline")}
+        />
       </Box>
       <Divider />
       <List>
@@ -319,14 +279,14 @@ const handleToggleStatus = async (event) => {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
               <Typography variant="body2" sx={{ mr: 1 }}>
-              {user?.status === 'busy' ? 'On a Ride' : (isOnline ? 'Online' : 'Offline')}
+                {driverStatus === 'busy' ? 'On a Ride' : (isOnline ? 'Online' : 'Offline')}
               </Typography>
               <Box
                 sx={{
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  bgcolor: user?.status === 'busy' ? 'warning.main' : (isOnline ? 'success.main' : 'text.disabled'),
+                  bgcolor: driverStatus === 'busy' ? 'warning.main' : (isOnline ? 'success.main' : 'text.disabled'),
                 }}
               />
             </Box>
