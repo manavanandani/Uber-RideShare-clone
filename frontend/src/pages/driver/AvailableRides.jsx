@@ -58,6 +58,48 @@ function AvailableRides() {
     }
   }, [user]);
 
+
+useEffect(() => {
+  // Function to update location and available rides
+  const updateLocationAndRides = async () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const currentLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          
+          // Only update if location has changed significantly (more than 0.5 km)
+          if (location) {
+            const { calculateDistance } = await import('../../utils/locationUtils');
+            const distance = calculateDistance(location, currentLocation);
+            if (distance < 0.5) {
+              return; // Skip update if haven't moved much
+            }
+          }
+          
+          setLocation(currentLocation);
+          
+          // Silently update driver location in database
+          await driverService.updateStatus(user.driver_id, 'available', currentLocation);
+          
+          // Update available rides
+          await fetchAvailableRides(currentLocation);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  };
+  
+  // Update location every minute
+  const locationInterval = setInterval(updateLocationAndRides, 60000);
+  
+  return () => clearInterval(locationInterval);
+}, [location, user]);
+
   const fetchAvailableRides = async (loc) => {
     try {
       setLoading(true);
@@ -76,16 +118,42 @@ function AvailableRides() {
     }
   };
 
-  const handleRefresh = async () => {
-    if (!location) {
-      setError("Cannot refresh without location access.");
-      return;
+const refreshLocationAndRides = async () => {
+  setRefreshing(true);
+  try {
+    // Get current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const newLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          setLocation(newLocation);
+          
+          // Update driver location in database
+          await driverService.updateStatus(user.driver_id, 'available', newLocation);
+          
+          // Fetch available rides with new location
+          await fetchAvailableRides(newLocation);
+          setRefreshing(false);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setError("Could not update your location. Please enable location services.");
+          setRefreshing(false);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+      setRefreshing(false);
     }
-    
-    setRefreshing(true);
-    await fetchAvailableRides(location);
+  } catch (err) {
+    console.error('Error refreshing location:', err);
+    setError('Failed to refresh your location and available rides');
     setRefreshing(false);
-  };
+  }
+};
 
   const handleSelectRide = (ride) => {
     console.log('Selected ride:', ride);
@@ -112,23 +180,40 @@ function AvailableRides() {
     setSelectedRide(formattedRide);
   };
 
-  const handleAcceptRide = async () => {
-    if (!selectedRide) return;
-    
-    try {
-      setAccepting(true);
-      console.log('Accepting ride:', selectedRide.ride_id);
-      await driverService.acceptRide(selectedRide.ride_id);
-      setAccepting(false);
+const handleAcceptRide = async () => {
+  if (!selectedRide) return;
+  
+  // Check if ride is too far before trying to accept
+  if (selectedRide.distance_to_pickup > 16) {
+    setError("This ride is too far away to accept (more than 10 miles from your current location)");
+    return;
+  }
+  
+  try {
+    setAccepting(true);
+    console.log('Accepting ride:', selectedRide.ride_id);
+    await driverService.acceptRide(selectedRide.ride_id);
+    setAccepting(false);
 
-      setTimeout(() => {
+    // Show success message
+    alert('Ride accepted successfully! Navigating to active ride...');
+    
+    setTimeout(() => {
       navigate('/driver/rides/active');
-    }, 500);} catch (err) {
-      console.error('Error accepting ride:', err);
-      setError(err.response?.data?.message || 'Failed to accept ride');
-      setAccepting(false);
+    }, 500);
+  } catch (err) {
+    console.error('Error accepting ride:', err);
+    let errorMessage = err.response?.data?.message || 'Failed to accept ride';
+    
+    // Check for distance error message
+    if (err.response?.data?.distance) {
+      errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
     }
-  };
+    
+    setError(errorMessage);
+    setAccepting(false);
+  }
+};
 
   return (
     <Box>
@@ -136,7 +221,7 @@ function AvailableRides() {
         <Typography variant="h4">Available Rides</Typography>
         <Button 
           startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
+          onClick={refreshLocationAndRides}
           disabled={refreshing || loading}
         >
           {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -186,8 +271,11 @@ function AvailableRides() {
                               {new Date(ride.date_time).toLocaleString()}
                             </Typography>
                             <br />
-                            {`Distance: ${ride.distance?.toFixed(2) || '0.0'} km`}
-                            <br />
+                            {ride.distance_to_pickup > 16 && (
+        <Typography component="span" variant="body2" color="error.main">
+          Too far to accept!
+        </Typography>
+      )}                            <br />
                             {`Passengers: ${ride.passenger_count || 1}`}
                           </>
                         }

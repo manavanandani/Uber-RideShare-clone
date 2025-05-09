@@ -385,7 +385,6 @@ exports.getRideStatsByLocation = async (req, res) => {
   }
 };
 
-// Add to rideController.js
 exports.getNearbyRides = async (req, res) => {
   const { latitude, longitude } = req.query;
 
@@ -395,9 +394,10 @@ exports.getNearbyRides = async (req, res) => {
 
   const driverLat = parseFloat(latitude);
   const driverLng = parseFloat(longitude);
+  const { calculateDistance } = require('../services/pricingService');
 
   try {
-    // Find requested rides within 10km of the driver
+    // Find requested rides within 16km (10 miles) of the driver
     const rides = await Ride.find({
       status: 'requested',
       'pickup_location': {
@@ -406,25 +406,39 @@ exports.getNearbyRides = async (req, res) => {
             type: 'Point',
             coordinates: [driverLng, driverLat]
           },
-          $maxDistance: 10000 // 10km in meters
+          $maxDistance: 16000 // 16km in meters (approx 10 miles)
         }
       }
-    }).sort({ date_time: 1 }); 
+    }).sort({ date_time: 1 });
 
-    // Get customer info for each ride
-    const ridesWithCustomerInfo = await Promise.all(rides.map(async (ride) => {
+    // Get customer info for each ride and add calculated distance
+    const ridesWithDetails = await Promise.all(rides.map(async (ride) => {
       const customer = await Customer.findOne({ customer_id: ride.customer_id })
         .select('first_name last_name rating');
       
+      // Calculate exact distance to pickup
+      const pickupLocation = {
+        longitude: ride.pickup_location.coordinates[0],
+        latitude: ride.pickup_location.coordinates[1]
+      };
+      
+      const driverLocation = {
+        longitude: driverLng,
+        latitude: driverLat
+      };
+      
+      const distance = calculateDistance(driverLocation, pickupLocation);
+      
       return {
         ...ride.toObject(),
-        customer_info: customer
+        customer_info: customer,
+        distance_to_pickup: distance // in km
       };
     }));
 
     res.status(200).json({
       message: 'Nearby ride requests',
-      data: ridesWithCustomerInfo
+      data: ridesWithDetails
     });
 
   } catch (err) {
@@ -439,19 +453,43 @@ exports.acceptRide = async (req, res) => {
   try {
     console.log(`Driver ${req.user.driver_id} attempting to accept ride ${ride_id}`);
     
-    const rideCheck = await Ride.findOne({ ride_id });
+    const ride = await Ride.findOne({ ride_id });
     
-    if (!rideCheck) {
+    if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
     }
     
-    //  debugging to see what's happening
-    console.log(`Ride status: ${rideCheck.status}, Current driver: ${rideCheck.driver_id}, Requesting driver: ${req.user.driver_id}`);
+    // Get driver's current location
+    const driver = await Driver.findOne({ driver_id: req.user.driver_id });
+    if (!driver || !driver.intro_media || !driver.intro_media.location || !driver.intro_media.location.coordinates) {
+      return res.status(400).json({ message: 'Driver location not available' });
+    }
     
-    // For available rides, there are two scenarios:
-    // 1. The ride has no driver_id assigned yet
-    // 2. The ride has this driver's ID pre-assigned
-
+    // Check if driver is within range (10 miles ≈ 16 km)
+    const driverLocation = {
+      longitude: driver.intro_media.location.coordinates[0],
+      latitude: driver.intro_media.location.coordinates[1]
+    };
+    
+    const pickupLocation = {
+      longitude: ride.pickup_location.coordinates[0],
+      latitude: ride.pickup_location.coordinates[1]
+    };
+    
+    const { calculateDistance } = require('../services/pricingService');
+    const distance = calculateDistance(driverLocation, pickupLocation);
+    
+    if (distance > 16) { // 10 miles in km
+      return res.status(400).json({ 
+        message: 'You are too far from the pickup location',
+        distance: Math.round(distance * 10) / 10,
+        unit: 'km'
+      });
+    }
+    
+    //  debugging to see what's happening
+    console.log(`Ride status: ${ride.status}, Current driver: ${ride.driver_id}, Requesting driver: ${req.user.driver_id}`);
+    
     const query = { 
       ride_id,
       status: 'requested',
@@ -461,7 +499,7 @@ exports.acceptRide = async (req, res) => {
       ]
     };
     
-    const ride = await Ride.findOneAndUpdate(
+    const updatedRide = await Ride.findOneAndUpdate(
       query,
       { 
         $set: { 
@@ -472,7 +510,7 @@ exports.acceptRide = async (req, res) => {
       { new: true }
     );
     
-    if (!ride) {
+    if (!updatedRide) {
       return res.status(400).json({ 
         message: 'Cannot accept this ride. It may be already accepted by another driver or is not in a requestable state.',
         ride_id: ride_id,
@@ -495,7 +533,7 @@ exports.acceptRide = async (req, res) => {
     
     res.status(200).json({
       message: 'Ride accepted successfully',
-      data: ride
+      data: updatedRide
     });
     
   } catch (err) {
