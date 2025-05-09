@@ -58,6 +58,9 @@ function BookRide() {
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [geocoding, setGeocoding] = useState(false);
+
+  const [hasActiveRide, setHasActiveRide] = useState(false);
+  const [activeRideId, setActiveRideId] = useState(null);
   
   // Set customer_id from user when component mounts or user changes
   useEffect(() => {
@@ -68,6 +71,29 @@ function BookRide() {
       }));
     }
   }, [user]);
+
+  useEffect(() => {
+  const checkActiveRide = async () => {
+    try {
+      if (user?.customer_id) {
+        // Check if customer has an active ride
+        const response = await customerService.getActiveRide(user.customer_id);
+        
+        if (response.data) {
+          // User has an active ride
+          if (window.confirm('You already have an active ride. Do you want to view it instead of booking a new one?')) {
+            navigate(`/customer/ride/${response.data.ride_id}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error checking active ride:', err);
+      // Just continue with booking form if error occurs
+    }
+  };
+  
+  checkActiveRide();
+}, [user, navigate]);
   
   // Get user's current location
   useEffect(() => {
@@ -412,41 +438,47 @@ function BookRide() {
   };
   
   const handleBookRide = async () => {
-    try {
-      setBooking(true);
-      setError(null);
-      
-      // Verify user is authenticated
-      if (!user || !user.customer_id) {
-        setError('You must be logged in to book a ride');
-        setBooking(false);
-        return;
-      }
-      
-      // Book ride without specifying a driver (system will assign one)
-      const bookingData = {
-        ...rideData,
-        customer_id: user.customer_id // Ensure customer_id is included
-      };
-      
-      const response = await customerService.bookRide(bookingData);
-      
-      // Navigate to ride tracking page
-      // Fix: Check the structure of the response and access the ride_id correctly
-      const createdRide = response.data; // Changed from response.data.data
+  try {
+    setBooking(true);
+    setError(null);
+    
+    // Verify user is authenticated
+    if (!user || !user.customer_id) {
+      setError('You must be logged in to book a ride');
       setBooking(false);
-      
-      // Add logging to debug the response structure
-      console.log('Booking response:', response);
-      
-      // Navigate to ride tracking page with the new ride ID
-      navigate(`/customer/ride/${createdRide.ride_id}`);
-    } catch (err) {
-      console.error('Booking error:', err); // Add detailed error logging
-      setError(err.response?.data?.message || 'Failed to book ride');
-      setBooking(false);
+      return;
     }
-  };
+    
+    // Book ride without specifying a driver (system will assign one)
+    const bookingData = {
+      ...rideData,
+      customer_id: user.customer_id // Ensure customer_id is included
+    };
+    
+    const response = await customerService.bookRide(bookingData);
+    
+    // Navigate to ride tracking page
+    const createdRide = response.data;
+    setBooking(false);
+    
+    navigate(`/customer/ride/${createdRide.ride_id}`);
+  } catch (err) {
+    console.error('Booking error:', err);
+    
+    // Handle active ride error specifically
+    if (err.response?.data?.active_ride_id) {
+      const activeRideId = err.response.data.active_ride_id;
+      
+      // Ask user if they want to navigate to their active ride
+      if (window.confirm('You already have an active ride. Do you want to view your active ride?')) {
+        navigate(`/customer/ride/${activeRideId}`);
+      }
+    } else {
+      setError(err.response?.data?.message || 'Failed to book ride');
+    }
+    setBooking(false);
+  }
+};
   
   const resetLocationMarker = (type) => {
     if (type === 'pickup') {
@@ -670,6 +702,24 @@ function BookRide() {
           {error}
         </Alert>
       )}
+
+      {hasActiveRide && (
+  <Alert 
+    severity="warning" 
+    sx={{ mb: 3 }}
+    action={
+      <Button 
+        color="inherit" 
+        size="small"
+        onClick={() => navigate(`/customer/ride/${activeRideId}`)}
+      >
+        View Active Ride
+      </Button>
+    }
+  >
+    You already have an active ride. It's recommended to complete or cancel that ride before booking a new one.
+  </Alert>
+)}
       
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ mb: 2 }}>

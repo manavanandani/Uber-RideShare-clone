@@ -122,6 +122,21 @@ exports.createRide = async (req, res) => {
       passenger_count
     } = req.body;
 
+    const customer_id = req.user.customer_id; // Extracted from JWT
+
+    // Check if customer already has an active ride
+    const activeRide = await Ride.findOne({
+      customer_id,
+      status: { $in: ['requested', 'accepted', 'in_progress'] }
+    });
+
+    if (activeRide) {
+      return res.status(400).json({ 
+        message: 'You already have an active ride. Please cancel it before booking a new one.',
+        active_ride_id: activeRide.ride_id
+      });
+    }
+
     // Convert API location format to MongoDB GeoJSON format
     const pickupGeo = {
       type: 'Point',
@@ -136,7 +151,7 @@ exports.createRide = async (req, res) => {
     // Generate a ride_id in SSN format
     const ride_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
     
-    const customer_id = req.user.customer_id; // Extracted from JWT
+    //const customer_id = req.user.customer_id; // Extracted from JWT
 
     // Find nearby available drivers using proper GeoJSON query
     const nearbyDrivers = await Driver.find({

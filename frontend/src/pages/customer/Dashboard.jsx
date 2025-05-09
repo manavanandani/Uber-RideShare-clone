@@ -123,6 +123,33 @@ function CustomerDashboard() {
             </CardContent>
           </Card>
         </Grid>
+
+        {dashboard.rides.find(ride => 
+  ['requested', 'accepted', 'in_progress'].includes(ride.status)
+) && (
+  <Grid item xs={12}>
+    <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h6">Active Ride</Typography>
+          <Typography variant="body1">
+            You have an ongoing ride. Check its status or manage it.
+          </Typography>
+        </Box>
+        <Button 
+          component={Link} 
+          to={`/customer/ride/${dashboard.rides.find(ride => 
+            ['requested', 'accepted', 'in_progress'].includes(ride.status)
+          ).ride_id}`}
+          variant="contained" 
+          color="inherit"
+        >
+          View Active Ride
+        </Button>
+      </Box>
+    </Paper>
+  </Grid>
+)}
         
         <Grid item xs={12} md={3}>
           <Card>
