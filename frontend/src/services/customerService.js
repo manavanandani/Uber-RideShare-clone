@@ -42,5 +42,10 @@ export const customerService = {
   rateRide: async (rideId, rating, comment) => {
     const response = await api.post(`/rides/${rideId}/rate`, { rating, comment });
     return response.data;
-  }
+  },
+
+  cancelRide: async (rideId, reason = '') => {
+  const response = await api.patch(`/rides/${rideId}/cancel-customer`, { reason });
+  return response.data;
+}
 };

@@ -778,6 +778,134 @@ exports.completeRide = async (req, res) => {
   }
 };
 
+
+// Customer cancels ride
+exports.cancelRideByCustomer = async (req, res) => {
+  const { ride_id } = req.params;
+  const { reason } = req.body;
+  
+  try {
+    // Verify this is the customer's ride
+    const ride = await Ride.findOne({ 
+      ride_id, 
+      customer_id: req.user.customer_id 
+    });
+    
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found or not authorized' });
+    }
+    
+    // Can only cancel rides that are in requested or accepted status
+    if (ride.status !== 'requested' && ride.status !== 'accepted') {
+      return res.status(400).json({ 
+        message: `Cannot cancel a ride that is ${ride.status}` 
+      });
+    }
+    
+    // Update ride status
+    const updatedRide = await Ride.findOneAndUpdate(
+      { ride_id },
+      { 
+        $set: { 
+          status: 'cancelled',
+          cancellation_reason: 'customer_cancelled',
+          cancellation_time: new Date()
+        } 
+      },
+      { new: true }
+    );
+    
+    // If a driver was assigned, make them available again
+    if (ride.driver_id) {
+      await Driver.findOneAndUpdate(
+        { driver_id: ride.driver_id },
+        { $set: { status: 'available' } }
+      );
+      
+      // Publish ride cancellation event
+      await publishRideRejected(ride_id, ride.driver_id, 'cancelled_by_customer');
+    }
+    
+    // Invalidate related caches
+    await invalidateCache('*rides*');
+    await invalidateCache(`*customer*${ride.customer_id}*`);
+    if (ride.driver_id) {
+      await invalidateCache(`*driver*${ride.driver_id}*`);
+    }
+    
+    res.status(200).json({
+      message: 'Ride cancelled successfully',
+      data: updatedRide
+    });
+    
+  } catch (err) {
+    console.error('Error cancelling ride:', err);
+    res.status(500).json({ message: 'Failed to cancel ride' });
+  }
+};
+
+// Driver cancels ride
+exports.cancelRideByDriver = async (req, res) => {
+  const { ride_id } = req.params;
+  const { reason } = req.body;
+  
+  try {
+    // Verify this is the driver's ride
+    const ride = await Ride.findOne({ 
+      ride_id, 
+      driver_id: req.user.driver_id 
+    });
+    
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found or not authorized' });
+    }
+    
+    // Can only cancel rides that are in accepted status, not in_progress
+    if (ride.status !== 'accepted') {
+      return res.status(400).json({ 
+        message: `Cannot cancel a ride that is ${ride.status}` 
+      });
+    }
+    
+    // Update ride status
+    const updatedRide = await Ride.findOneAndUpdate(
+      { ride_id },
+      { 
+        $set: { 
+          status: 'cancelled',
+          cancellation_reason: 'driver_cancelled',
+          cancellation_time: new Date(),
+          driver_id: null  // Remove driver assignment so another can accept
+        } 
+      },
+      { new: true }
+    );
+    
+    // Make driver available again
+    await Driver.findOneAndUpdate(
+      { driver_id: req.user.driver_id },
+      { $set: { status: 'available' } }
+    );
+    
+    // Publish ride cancellation event
+    await publishRideRejected(ride_id, req.user.driver_id, 'cancelled_by_driver');
+    
+    // Invalidate related caches
+    await invalidateCache('*rides*');
+    await invalidateCache(`*customer*${ride.customer_id}*`);
+    await invalidateCache(`*driver*${req.user.driver_id}*`);
+    
+    res.status(200).json({
+      message: 'Ride cancelled successfully',
+      data: updatedRide
+    });
+    
+  } catch (err) {
+    console.error('Error cancelling ride:', err);
+    res.status(500).json({ message: 'Failed to cancel ride' });
+  }
+};
+
 exports.startRide = async (req, res) => {
     const { ride_id } = req.params;
     

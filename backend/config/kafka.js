@@ -159,6 +159,30 @@ const handleRideRequest = async (message) => {
   }
 };
 
+const handleRideCancellation = async (message) => {
+  try {
+    const { ride_id, cancellation_reason, by_user_type } = message;
+    
+    console.log(`Handling ride cancellation for ride ${ride_id}`);
+    
+    // Depending on your application logic, you might need to:
+    // 1. Update the driver's availability
+    // 2. Notify customers through a notification system
+    // 3. Update ride statistics
+    
+    // Example: Update driver stats on cancellations
+    if (by_user_type === 'driver' && message.driver_id) {
+      await Driver.findOneAndUpdate(
+        { driver_id: message.driver_id },
+        { $inc: { cancellation_count: 1 } }
+      );
+    }
+    
+  } catch (error) {
+    console.error('Error handling ride cancellation:', error);
+  }
+};
+
 // Handler for ride_responses topic
 const handleRideResponse = async (message) => {
   try {
@@ -202,6 +226,9 @@ const handleRideResponse = async (message) => {
         
 case 'RIDE_COMPLETED':
   console.log(`Ride ${rideId} completed`);
+
+  case 'RIDE_CANCELLED':
+    console.log(`Ride ${rideId} cancelled`);
   
   // Update ride status
   await Ride.updateOne(
@@ -480,6 +507,9 @@ const initKafka = async () => {
                 break;
               case 'customer_events':
                 await handleCustomerEvent(messageValue);
+                break;
+              case 'ride_cancellations':
+                await handleRideCancellation(messageValue);
                 break;
               default:
                 console.log(`No handler for topic ${batch.topic}`);

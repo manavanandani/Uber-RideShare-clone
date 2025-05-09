@@ -72,7 +72,16 @@ const RideSchema = new mongoose.Schema({
   rating: {
     customer_to_driver: { type: Number, min: 1, max: 5 },
     driver_to_customer: { type: Number, min: 1, max: 5 }
-  }
+  },
+  cancellation_reason: {
+    type: String,
+    enum: ['driver_cancelled', 'customer_cancelled', 'no_drivers_available', 'system_cancelled', 'other'],
+    default: null
+  },
+  cancellation_time: {
+    type: Date,
+    default: null
+  },
 }, {
   timestamps: true
 });

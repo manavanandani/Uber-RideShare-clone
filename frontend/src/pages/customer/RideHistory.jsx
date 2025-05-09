@@ -111,6 +111,12 @@ function RideHistory() {
                 <TableCell>Fare</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
+              {rides.status === 'cancelled' && (
+  <Typography variant="caption" color="error">
+    Cancelled: {rides.cancellation_time ? new Date(rides.cancellation_time).toLocaleString() : 'N/A'}
+    {rides.cancellation_reason && ` (${rides.cancellation_reason.replace('_', ' ')})`}
+  </Typography>
+)}
             </TableHead>
             <TableBody>
               {rides.length === 0 ? (

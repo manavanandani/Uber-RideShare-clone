@@ -23,6 +23,8 @@ router.post('/:ride_id/rate', verifyRole('customer'), rideController.rateRide);
 router.patch('/:ride_id/accept', verifyRole('driver'), rideController.acceptRide);
 router.patch('/:ride_id/start', verifyRole('driver'), rideController.startRide);
 router.patch('/:ride_id/complete', verifyRole('driver'), rideController.completeRide);
+router.patch('/:ride_id/cancel-customer', verifyRole('customer'), rideController.cancelRideByCustomer);
+router.patch('/:ride_id/cancel-driver', verifyRole('driver'), rideController.cancelRideByDriver);
 router.post('/:ride_id/rate-customer', verifyRole('driver'), rideController.rateRide);
 
 module.exports = router;

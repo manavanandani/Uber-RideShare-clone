@@ -48,6 +48,11 @@ function ActiveRide() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   
+  // Add these states for cancellation functionality
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  
   // Ride steps based on status
   const steps = [
     { label: 'Ride Accepted', description: 'You have accepted the ride request.' },
@@ -56,71 +61,70 @@ function ActiveRide() {
     { label: 'Completed', description: 'Ride completed successfully.' }
   ];
 
-
-useEffect(() => {
-  // Get current location
-  if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(
-      (position) => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-      }
-    );
-  }
-  
-  const fetchActiveRide = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('Fetching active ride for driver:', user.driver_id);
-      // Get driver's active ride
-      const response = await driverService.getActiveRide(user.driver_id);
-      console.log('Active ride response:', response);
-      
-      if (response.data) {
-        // Format locations for the map component
-        const formattedRide = {
-          ...response.data,
-          pickup_location: {
-            latitude: response.data.pickup_location.coordinates[1],
-            longitude: response.data.pickup_location.coordinates[0]
-          },
-          dropoff_location: {
-            latitude: response.data.dropoff_location.coordinates[1],
-            longitude: response.data.dropoff_location.coordinates[0]
-          }
-        };
-        
-        setRide(formattedRide);
-        
-        // Set the active step based on ride status
-        if (formattedRide.status === 'accepted') {
-          setActiveStep(1); // Pickup customer
-        } else if (formattedRide.status === 'in_progress') {
-          setActiveStep(2); // In progress
+  useEffect(() => {
+    // Get current location
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
         }
-      } else {
-        setError("No active ride found.");
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error loading active ride:', err);
-      setError(err.response?.data?.message || 'Failed to load active ride');
-      setLoading(false);
+      );
     }
-  };
-  
-  if (user?.driver_id) {
-    fetchActiveRide();
-  }
-}, [user]);
+    
+    const fetchActiveRide = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('Fetching active ride for driver:', user.driver_id);
+        // Get driver's active ride
+        const response = await driverService.getActiveRide(user.driver_id);
+        console.log('Active ride response:', response);
+        
+        if (response.data) {
+          // Format locations for the map component
+          const formattedRide = {
+            ...response.data,
+            pickup_location: {
+              latitude: response.data.pickup_location.coordinates[1],
+              longitude: response.data.pickup_location.coordinates[0]
+            },
+            dropoff_location: {
+              latitude: response.data.dropoff_location.coordinates[1],
+              longitude: response.data.dropoff_location.coordinates[0]
+            }
+          };
+          
+          setRide(formattedRide);
+          
+          // Set the active step based on ride status
+          if (formattedRide.status === 'accepted') {
+            setActiveStep(1); // Pickup customer
+          } else if (formattedRide.status === 'in_progress') {
+            setActiveStep(2); // In progress
+          }
+        } else {
+          setError("No active ride found.");
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading active ride:', err);
+        setError(err.response?.data?.message || 'Failed to load active ride');
+        setLoading(false);
+      }
+    };
+    
+    if (user?.driver_id) {
+      fetchActiveRide();
+    }
+  }, [user]);
 
   const handleStartRide = async () => {
     if (!ride) return;
@@ -170,6 +174,25 @@ useEffect(() => {
       navigate('/driver');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit rating');
+    }
+  };
+
+  // Add the cancel ride handler
+  const handleCancelRide = async () => {
+    if (!ride) return;
+    
+    try {
+      setCancelling(true);
+      await driverService.cancelRide(ride.ride_id, cancelReason);
+      setShowCancelDialog(false);
+      
+      // Navigate back to dashboard after cancellation
+      navigate('/driver');
+      
+      setCancelling(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to cancel ride');
+      setCancelling(false);
     }
   };
 
@@ -251,15 +274,29 @@ useEffect(() => {
                     <Typography>{step.description}</Typography>
                     <Box sx={{ mb: 2, mt: 1 }}>
                       {index === 1 && ride.status === 'accepted' && (
-                        <Button
-                          variant="contained"
-                          onClick={handleStartRide}
-                          disabled={updating}
-                          startIcon={<CarIcon />}
-                          sx={{ mt: 1, mr: 1 }}
-                        >
-                          {updating ? <CircularProgress size={24} /> : 'Start Ride'}
-                        </Button>
+                        // Add both Start Ride and Cancel Ride buttons in the accepted state
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <Button
+                            variant="contained"
+                            onClick={handleStartRide}
+                            disabled={updating}
+                            startIcon={<CarIcon />}
+                            sx={{ mt: 1, mr: 1 }}
+                          >
+                            {updating ? <CircularProgress size={24} /> : 'Start Ride'}
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => setShowCancelDialog(true)}
+                            disabled={updating}
+                            startIcon={<CancelIcon />}
+                            sx={{ mt: 1 }}
+                          >
+                            Cancel Ride
+                          </Button>
+                        </Box>
                       )}
                       {index === 2 && ride.status === 'in_progress' && (
                         <Button
@@ -450,6 +487,45 @@ useEffect(() => {
           <Button onClick={() => navigate('/driver')}>Skip</Button>
           <Button onClick={handleRateCustomer} disabled={!rating} color="primary">
             Submit Rating
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Cancel Ride Dialog */}
+      <Dialog open={showCancelDialog} onClose={() => setShowCancelDialog(false)}>
+        <DialogTitle>Cancel Ride</DialogTitle>
+        <DialogContent>
+          <Box sx={{ my: 2 }}>
+            <Typography variant="body1" gutterBottom>
+              Are you sure you want to cancel this ride?
+            </Typography>
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              Cancelling rides may affect your acceptance rate and driver rating.
+            </Typography>
+            <TextField
+              autoFocus
+              margin="dense"
+              id="cancelReason"
+              label="Reason for cancellation (optional)"
+              type="text"
+              fullWidth
+              multiline
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCancelDialog(false)}>
+            Keep Ride
+          </Button>
+          <Button 
+            onClick={handleCancelRide} 
+            color="error"
+            disabled={cancelling}
+          >
+            {cancelling ? <CircularProgress size={24} /> : 'Cancel Ride'}
           </Button>
         </DialogActions>
       </Dialog>

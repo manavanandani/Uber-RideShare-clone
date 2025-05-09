@@ -27,7 +27,8 @@ async function createKafkaTopics() {
       { topic: 'ride_responses', numPartitions: 3, replicationFactor: 1 },
       { topic: 'billing_events', numPartitions: 3, replicationFactor: 1 },
       { topic: 'driver_events', numPartitions: 3, replicationFactor: 1 },
-      { topic: 'customer_events', numPartitions: 3, replicationFactor: 1 }
+      { topic: 'customer_events', numPartitions: 3, replicationFactor: 1 },
+      { topic: 'ride_cancellations', numPartitions: 3, replicationFactor: 1 },
     ];
     
     // Filter out existing topics

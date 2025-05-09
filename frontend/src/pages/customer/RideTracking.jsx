@@ -1,4 +1,4 @@
-// src/pages/customer/RideTracking.jsx
+// frontend/src/pages/customer/RideTracking.jsx
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -28,7 +28,8 @@ import {
   AccessTime as TimeIcon,
   Person as PersonIcon,
   DirectionsCar as CarIcon,
-  Check as CheckIcon
+  Check as CheckIcon,
+  Cancel as CancelIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
@@ -41,8 +42,11 @@ function RideTracking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(null);
 
   // Initial load of ride details
@@ -152,6 +156,36 @@ function RideTracking() {
     }
   }, [ride, rideId, user?.customer_id]);
 
+  // Auto-cancellation effect for long-waiting requested rides
+  useEffect(() => {
+    // Only set timeout for rides in 'requested' status
+    if (ride && ride.status === 'requested') {
+      // Calculate how long the ride has been in requested status
+      const requestTime = new Date(ride.date_time).getTime();
+      const currentTime = new Date().getTime();
+      const elapsedTime = currentTime - requestTime;
+      
+      // If it's already been waiting for more than 5 minutes, don't set a new timer
+      if (elapsedTime > 5 * 60 * 1000) {
+        return; 
+      }
+      
+      // Calculate remaining time until 5 minutes have passed
+      const remainingTime = Math.max(0, 5 * 60 * 1000 - elapsedTime);
+      
+      // Set a timeout to show a warning after the remaining time
+      const timeoutId = setTimeout(() => {
+        // Ask user if they want to cancel the ride
+        if (confirm('No drivers have accepted your ride yet. Would you like to cancel?')) {
+          handleCancelRide();
+        }
+      }, remainingTime);
+      
+      // Clean up timeout on component unmount
+      return () => clearTimeout(timeoutId);
+    }
+  }, [ride]);
+
   const handleRateDriver = async () => {
     try {
       await customerService.rateRide(rideId, rating, comment);
@@ -165,6 +199,26 @@ function RideTracking() {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit rating');
+    }
+  };
+
+  const handleCancelRide = async () => {
+    try {
+      setCancelling(true);
+      await customerService.cancelRide(rideId, cancelReason);
+      setShowCancelDialog(false);
+      
+      // Refresh ride data to update status
+      const response = await api.get(`/rides/customer/${user.customer_id}`);
+      const updatedRide = response.data.data.find(r => r.ride_id === rideId);
+      if (updatedRide) {
+        setRide(updatedRide);
+      }
+      
+      setCancelling(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to cancel ride');
+      setCancelling(false);
     }
   };
 
@@ -210,7 +264,8 @@ function RideTracking() {
               ride.status === 'requested' ? 0 :
               ride.status === 'accepted' ? 1 :
               ride.status === 'in_progress' ? 2 :
-              ride.status === 'completed' ? 3 : 0
+              ride.status === 'completed' ? 3 : 
+              ride.status === 'cancelled' ? -1 : 0
             }>
               <Step key="requested">
                 <StepLabel>Requested</StepLabel>
@@ -225,6 +280,13 @@ function RideTracking() {
                 <StepLabel>Completed</StepLabel>
               </Step>
             </Stepper>
+            
+            {ride.status === 'cancelled' && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                This ride was cancelled.
+                {ride.cancellation_reason && ` Reason: ${ride.cancellation_reason.replace('_', ' ')}`}
+              </Alert>
+            )}
           </Paper>
           
           <Paper sx={{ p: 3, mb: 3 }}>
@@ -263,7 +325,7 @@ function RideTracking() {
             </Grid>
             
             <Box sx={{ mt: 2, height: 300 }}>
-            <MapWithMarkers 
+              <MapWithMarkers 
                 pickup={{
                   lat: ride.pickup_location.latitude,
                   lng: ride.pickup_location.longitude
@@ -276,6 +338,22 @@ function RideTracking() {
                 height={300}
               />
             </Box>
+            // Continuing with the frontend/src/pages/customer/RideTracking.jsx component
+
+            {/* Add Cancel Button for rides in requested or accepted status */}
+            {(ride.status === 'requested' || ride.status === 'accepted') && (
+              <Box sx={{ mt: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="error"
+                  startIcon={<CancelIcon />}
+                  onClick={() => setShowCancelDialog(true)}
+                  fullWidth
+                >
+                  Cancel Ride
+                </Button>
+              </Box>
+            )}
           </Paper>
         </Grid>
         
@@ -320,44 +398,60 @@ function RideTracking() {
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ 
-                  width: 40, 
-                  height: 40, 
-                  borderRadius: '50%', 
-                  bgcolor: 'primary.main', 
-                  color: 'white', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  mr: 2
-                }}>
-                  {ride.driver_info?.first_name?.[0] || 'D'}
-                </Box>
-                <Box>
-                  <Typography variant="body1">
-                    {ride.driver_info?.first_name || 'Driver'} {ride.driver_info?.last_name || ''}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Rating 
-                      value={ride.driver_info?.rating || 4.5} 
-                      precision={0.5} 
-                      readOnly 
-                      size="small"
-                    />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      {ride.driver_info?.rating?.toFixed(1) || '4.5'}
+              {ride.driver_id ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: '50%', 
+                    bgcolor: 'primary.main', 
+                    color: 'white', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mr: 2
+                  }}>
+                    {ride.driver_info?.first_name?.[0] || 'D'}
+                  </Box>
+                  <Box>
+                    <Typography variant="body1">
+                      {ride.driver_info?.first_name || 'Driver'} {ride.driver_info?.last_name || ''}
                     </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Rating 
+                        value={ride.driver_info?.rating || 4.5} 
+                        precision={0.5} 
+                        readOnly 
+                        size="small"
+                      />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        {ride.driver_info?.rating?.toFixed(1) || '4.5'}
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  {ride.status === 'cancelled' ? (
+                    <Typography color="error">
+                      This ride was cancelled.
+                    </Typography>
+                  ) : (
+                    <Typography color="info.main">
+                      Waiting for a driver to accept your ride...
+                    </Typography>
+                  )}
+                </Box>
+              )}
               
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CarIcon sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  {ride.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
-                </Typography>
-              </Box>
+              {ride.driver_id && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CarIcon sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    {ride.driver_info?.car_details || 'Toyota Camry, White (ABC123)'}
+                  </Typography>
+                </Box>
+              )}
               
               <Box sx={{ mt: 2 }}>
                 {ride.status === 'completed' && !ride.rating?.customer_to_driver && (
@@ -428,6 +522,47 @@ function RideTracking() {
           <Button onClick={() => setShowRatingDialog(false)}>Cancel</Button>
           <Button onClick={handleRateDriver} disabled={!rating}>
             Submit Rating
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Cancel Ride Dialog */}
+      <Dialog open={showCancelDialog} onClose={() => setShowCancelDialog(false)}>
+        <DialogTitle>Cancel Ride</DialogTitle>
+        <DialogContent>
+          <Box sx={{ my: 2 }}>
+            <Typography variant="body1" gutterBottom>
+              Are you sure you want to cancel this ride?
+              {ride.status === 'accepted' && (
+                <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                  Note: Cancelling after a driver has accepted may incur a cancellation fee.
+                </Typography>
+              )}
+            </Typography>
+            <TextField
+              autoFocus
+              margin="dense"
+              id="cancelReason"
+              label="Reason for cancellation (optional)"
+              type="text"
+              fullWidth
+              multiline
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCancelDialog(false)}>
+            Keep Ride
+          </Button>
+          <Button 
+            onClick={handleCancelRide} 
+            color="error"
+            disabled={cancelling}
+          >
+            {cancelling ? <CircularProgress size={24} /> : 'Cancel Ride'}
           </Button>
         </DialogActions>
       </Dialog>

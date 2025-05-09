@@ -159,6 +159,11 @@ getEarnings: async (driverId, period = 'all') => {
     const response = await api.post(`/rides/${rideId}/rate-customer`, { rating, comment });
     return response.data;
   },
+
+  cancelRide: async (rideId, reason = '') => {
+  const response = await api.patch(`/rides/${rideId}/cancel-driver`, { reason });
+  return response.data;
+},
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {
