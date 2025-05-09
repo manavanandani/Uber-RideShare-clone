@@ -367,20 +367,32 @@ function RideTracking() {
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body1">Base Fare:</Typography>
-                <Typography variant="body1">${(ride.fare_amount * 0.4).toFixed(2)}</Typography>
+                <Typography variant="body1">
+                  ${(ride.fare_amount ? (ride.fare_amount * 0.4) : 0).toFixed(2)}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Distance ({ride.distance?.toFixed(1) || '0.0'} km):</Typography>
-                <Typography variant="body1">${(ride.distance * 1.5 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">
+                  Distance ({(ride.distance || 0).toFixed(1)} km):
+                </Typography>
+                <Typography variant="body1">
+                  ${((ride.distance || 0) * 1.5).toFixed(2)}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body1">Time ({ride.duration?.toFixed(0) || '0'} min):</Typography>
-                <Typography variant="body1">${(ride.duration * 0.2 || 0).toFixed(2)}</Typography>
+                <Typography variant="body1">
+                  Time ({(ride.duration || 0).toFixed(0)} min):
+                </Typography>
+                <Typography variant="body1">
+                  ${((ride.duration || 0) * 0.2).toFixed(2)}
+                </Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="h6">Total Fare:</Typography>
-                <Typography variant="h6">${ride.fare_amount.toFixed(2)}</Typography>
+                <Typography variant="h6">
+                  ${(ride.fare_amount || 0).toFixed(2)}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" color="textSecondary">Payment Status:</Typography>
