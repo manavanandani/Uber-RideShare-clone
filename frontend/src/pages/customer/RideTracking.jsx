@@ -34,6 +34,7 @@ import {
 import api from '../../services/api';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
 import { customerService } from '../../services/customerService';
+import { billingService } from '../../services/billingService';
 
 function RideTracking() {
   const { rideId } = useParams();
@@ -48,6 +49,25 @@ function RideTracking() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [billing, setBilling] = useState(null);
+
+  const fetchBillingInfo = async (rideId) => {
+    try {
+      if (!user || !user.customer_id) return;
+    
+      const response = await billingService.getRideBilling(user.customer_id, rideId);
+      if (response && response.data) {
+        setBilling(response.data);
+      } else {
+        // If no bill exists yet, set billing to null
+        setBilling(null);
+      }
+    } catch (err) {
+      console.error('Error fetching billing information:', err);
+      // Don't set error state to avoid disrupting the UI
+      setBilling(null);
+    }
+  };
 
   // Initial load of ride details
   useEffect(() => {
@@ -66,20 +86,26 @@ function RideTracking() {
           return;
         }
         
-        // Transform location data
+        // Transform location data with proper null checks
         rideData = {
           ...rideData,
-          pickup_location: rideData.pickup_location && {
-            latitude: rideData.pickup_location.coordinates ? rideData.pickup_location.coordinates[1] : 0,
-            longitude: rideData.pickup_location.coordinates ? rideData.pickup_location.coordinates[0] : 0
-          },
-          dropoff_location: rideData.dropoff_location && {
-            latitude: rideData.dropoff_location.coordinates ? rideData.dropoff_location.coordinates[1] : 0,
-            longitude: rideData.dropoff_location.coordinates ? rideData.dropoff_location.coordinates[0] : 0
-          }
+          pickup_location: rideData.pickup_location && rideData.pickup_location.coordinates ? {
+            latitude: typeof rideData.pickup_location.coordinates[1] === 'number' ? rideData.pickup_location.coordinates[1] : 0,
+            longitude: typeof rideData.pickup_location.coordinates[0] === 'number' ? rideData.pickup_location.coordinates[0] : 0
+          } : { latitude: 0, longitude: 0 },
+          dropoff_location: rideData.dropoff_location && rideData.dropoff_location.coordinates ? {
+            latitude: typeof rideData.dropoff_location.coordinates[1] === 'number' ? rideData.dropoff_location.coordinates[1] : 0,
+            longitude: typeof rideData.dropoff_location.coordinates[0] === 'number' ? rideData.dropoff_location.coordinates[0] : 0
+          } : { latitude: 0, longitude: 0 }
         };
         
         setRide(rideData);
+        
+        // Fetch billing information if ride exists
+        if (rideData.ride_id) {
+          await fetchBillingInfo(rideData.ride_id);
+        }
+        
         setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load ride details');
@@ -105,36 +131,40 @@ function RideTracking() {
       const interval = setInterval(async () => {
         try {
           // Check if the ride status has updated
-          const response = await api.get(`/rides/customer/${user.customer_id}/active`);
+          const response = await api.get(`/rides/${rideId}`);
           
           if (response.data && response.data.data) {
+            // Use the direct ride endpoint instead of the active ride endpoint
+            const updatedRideData = response.data.data;
+            
+            // Transform location data with proper null checks
             const updatedRide = {
-              ...response.data.data,
-              pickup_location: response.data.data.pickup_location && {
-                latitude: response.data.data.pickup_location.coordinates ? response.data.data.pickup_location.coordinates[1] : 0,
-                longitude: response.data.data.pickup_location.coordinates ? response.data.data.pickup_location.coordinates[0] : 0
-              },
-              dropoff_location: response.data.data.dropoff_location && {
-                latitude: response.data.data.dropoff_location.coordinates ? response.data.data.dropoff_location.coordinates[1] : 0,
-                longitude: response.data.data.dropoff_location.coordinates ? response.data.data.dropoff_location.coordinates[0] : 0
-              }
+              ...updatedRideData,
+              pickup_location: updatedRideData.pickup_location && updatedRideData.pickup_location.coordinates ? {
+                latitude: typeof updatedRideData.pickup_location.coordinates[1] === 'number' ? updatedRideData.pickup_location.coordinates[1] : 0,
+                longitude: typeof updatedRideData.pickup_location.coordinates[0] === 'number' ? updatedRideData.pickup_location.coordinates[0] : 0
+              } : { latitude: 0, longitude: 0 },
+              dropoff_location: updatedRideData.dropoff_location && updatedRideData.dropoff_location.coordinates ? {
+                latitude: typeof updatedRideData.dropoff_location.coordinates[1] === 'number' ? updatedRideData.dropoff_location.coordinates[1] : 0,
+                longitude: typeof updatedRideData.dropoff_location.coordinates[0] === 'number' ? updatedRideData.dropoff_location.coordinates[0] : 0
+              } : { latitude: 0, longitude: 0 }
             };
             
-            // Only update if the ride ID matches and there's an actual change
-            if (updatedRide.ride_id === rideId && 
-                (updatedRide.status !== ride.status || 
-                 JSON.stringify(updatedRide) !== JSON.stringify(ride))) {
-              
+            // Only update if there's an actual change
+            if (JSON.stringify(updatedRide) !== JSON.stringify(ride)) {
               console.log('Ride status updated:', updatedRide.status);
               setRide(updatedRide);
               
+              // Also refresh billing info when ride status changes
+              await fetchBillingInfo(updatedRide.ride_id);
+              
               // If the ride is completed, stop polling and show rating dialog
-              if (updatedRide.status === 'completed') {
+              if (updatedRide.status === 'completed' || updatedRide.status === 'cancelled') {
                 clearInterval(interval);
                 setPollingInterval(null);
                 
-                // Only show rating dialog if not already rated
-                if (!updatedRide.rating?.customer_to_driver) {
+                // Only show rating dialog if not already rated and ride is completed
+                if (updatedRide.status === 'completed' && !updatedRide.rating?.customer_to_driver) {
                   setShowRatingDialog(true);
                 }
               }
@@ -145,7 +175,7 @@ function RideTracking() {
           // Don't set the error state to avoid disrupting the UI
           // Just log it and continue polling
         }
-      }, 10000); // Poll every 10 seconds
+      }, 5000); // Poll every 5 seconds
       
       setPollingInterval(interval);
       
@@ -193,9 +223,26 @@ function RideTracking() {
       
       // Refresh ride data to update rating
       const response = await api.get(`/rides/customer/${user.customer_id}`);
-      const updatedRide = response.data.data.find(r => r.ride_id === rideId);
-      if (updatedRide) {
-        setRide(updatedRide);
+      const updatedRideData = response.data.data.find(r => r.ride_id === rideId);
+      
+      if (updatedRideData) {
+        // Make sure to transform the location data properly
+        const transformedRide = {
+          ...updatedRideData,
+          pickup_location: updatedRideData.pickup_location && updatedRideData.pickup_location.coordinates ? {
+            latitude: typeof updatedRideData.pickup_location.coordinates[1] === 'number' ? updatedRideData.pickup_location.coordinates[1] : 0,
+            longitude: typeof updatedRideData.pickup_location.coordinates[0] === 'number' ? updatedRideData.pickup_location.coordinates[0] : 0
+          } : { latitude: 0, longitude: 0 },
+          dropoff_location: updatedRideData.dropoff_location && updatedRideData.dropoff_location.coordinates ? {
+            latitude: typeof updatedRideData.dropoff_location.coordinates[1] === 'number' ? updatedRideData.dropoff_location.coordinates[1] : 0,
+            longitude: typeof updatedRideData.dropoff_location.coordinates[0] === 'number' ? updatedRideData.dropoff_location.coordinates[0] : 0
+          } : { latitude: 0, longitude: 0 }
+        };
+        
+        setRide(transformedRide);
+        
+        // Also refresh billing info
+        await fetchBillingInfo(transformedRide.ride_id);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit rating');
@@ -300,13 +347,25 @@ function RideTracking() {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Pickup:</strong> {`${ride.pickup_location.latitude.toFixed(6)}, ${ride.pickup_location.longitude.toFixed(6)}`}
+                    <strong>Pickup:</strong> {
+                      ride.pickup_location && 
+                      typeof ride.pickup_location.latitude === 'number' && 
+                      typeof ride.pickup_location.longitude === 'number' 
+                        ? `${ride.pickup_location.latitude.toFixed(6)}, ${ride.pickup_location.longitude.toFixed(6)}`
+                        : 'Location data unavailable'
+                    }
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-                    <strong>Dropoff:</strong> {`${ride.dropoff_location.latitude.toFixed(6)}, ${ride.dropoff_location.longitude.toFixed(6)}`}
+                    <strong>Dropoff:</strong> {
+                      ride.dropoff_location && 
+                      typeof ride.dropoff_location.latitude === 'number' && 
+                      typeof ride.dropoff_location.longitude === 'number'
+                        ? `${ride.dropoff_location.latitude.toFixed(6)}, ${ride.dropoff_location.longitude.toFixed(6)}`
+                        : 'Location data unavailable'
+                    }
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -325,20 +384,38 @@ function RideTracking() {
             </Grid>
             
             <Box sx={{ mt: 2, height: 300 }}>
-              <MapWithMarkers 
-                pickup={{
-                  lat: ride.pickup_location.latitude,
-                  lng: ride.pickup_location.longitude
-                }}
-                dropoff={{
-                  lat: ride.dropoff_location.latitude,
-                  lng: ride.dropoff_location.longitude
-                }}
-                showDirections={true}
-                height={300}
-              />
+              {ride && 
+               ride.pickup_location && ride.pickup_location.latitude && ride.pickup_location.longitude &&
+               ride.dropoff_location && ride.dropoff_location.latitude && ride.dropoff_location.longitude ? (
+                <MapWithMarkers 
+                  pickup={{
+                    lat: parseFloat(ride.pickup_location.latitude),
+                    lng: parseFloat(ride.pickup_location.longitude)
+                  }}
+                  dropoff={{
+                    lat: parseFloat(ride.dropoff_location.latitude),
+                    lng: parseFloat(ride.dropoff_location.longitude)
+                  }}
+                  showDirections={true}
+                  height={300}
+                />
+              ) : (
+                <Box 
+                  sx={{ 
+                    height: 300, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    bgcolor: 'grey.100',
+                    borderRadius: 1
+                  }}
+                >
+                  <Typography align="center" color="text.secondary">
+                    Map data unavailable
+                  </Typography>
+                </Box>
+              )}
             </Box>
-            // Continuing with the frontend/src/pages/customer/RideTracking.jsx component
 
             {/* Add Cancel Button for rides in requested or accepted status */}
             {(ride.status === 'requested' || ride.status === 'accepted') && (
@@ -396,8 +473,11 @@ function RideTracking() {
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2" color="textSecondary">Payment Status:</Typography>
-                <Typography variant="body2" color="success.main">
-                  {ride.payment_status || 'Paid'}
+                <Typography variant="body2" color={
+                  billing?.payment_status === 'paid' ? 'success.main' : 
+                  billing?.payment_status === 'failed' ? 'error.main' : 'warning.main'
+                }>
+                  {billing?.payment_status ? billing.payment_status.charAt(0).toUpperCase() + billing.payment_status.slice(1) : 'Pending'}
                 </Typography>
               </Box>
             </CardContent>
