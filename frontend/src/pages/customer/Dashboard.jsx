@@ -39,14 +39,27 @@ function CustomerDashboard() {
         const ridesResponse = await customerService.getRideHistory(user.customer_id);
         const profileResponse = await customerService.getProfile(user.customer_id);
         
+        // Transform the location data in each ride
+        const transformedRides = ridesResponse.data.map(ride => ({
+          ...ride,
+          pickup_location: ride.pickup_location && {
+            latitude: ride.pickup_location.coordinates ? ride.pickup_location.coordinates[1] : 0,
+            longitude: ride.pickup_location.coordinates ? ride.pickup_location.coordinates[0] : 0
+          },
+          dropoff_location: ride.dropoff_location && {
+            latitude: ride.dropoff_location.coordinates ? ride.dropoff_location.coordinates[1] : 0,
+            longitude: ride.dropoff_location.coordinates ? ride.dropoff_location.coordinates[0] : 0
+          }
+        }));
+        
         // Combine data to create a dashboard view
         setDashboard({
           profile: profileResponse.data,
-          rides: ridesResponse.data,
+          rides: transformedRides,
           stats: {
-            totalRides: ridesResponse.data.length,
-            completedRides: ridesResponse.data.filter(ride => ride.status === 'completed').length,
-            cancelledRides: ridesResponse.data.filter(ride => ride.status === 'cancelled').length,
+            totalRides: transformedRides.length,
+            completedRides: transformedRides.filter(ride => ride.status === 'completed').length,
+            cancelledRides: transformedRides.filter(ride => ride.status === 'cancelled').length,
             rating: profileResponse.data.rating || 0
           }
         });
@@ -192,8 +205,8 @@ function CustomerDashboard() {
                               {new Date(ride.date_time).toLocaleString()}
                             </Typography>
                             <br />
-                            {`${ride.pickup_location.latitude.toFixed(4)}, ${ride.pickup_location.longitude.toFixed(4)} → 
-                              ${ride.dropoff_location.latitude.toFixed(4)}, ${ride.dropoff_location.longitude.toFixed(4)}`}
+                            {`${ride.pickup_location.latitude.toFixed(6)}, ${ride.pickup_location.longitude.toFixed(6)} → 
+                              ${ride.dropoff_location.latitude.toFixed(6)}, ${ride.dropoff_location.longitude.toFixed(6)}`}
                             <br />
                             {`Status: ${ride.status}`}
                           </>
