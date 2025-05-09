@@ -452,6 +452,20 @@ exports.acceptRide = async (req, res) => {
   
   try {
     console.log(`Driver ${req.user.driver_id} attempting to accept ride ${ride_id}`);
+
+    // Check if driver already has an active ride
+    const activeRides = await Ride.find({
+      driver_id: req.user.driver_id,
+      status: { $in: ['accepted', 'in_progress'] }
+    });
+
+    if (activeRides.length > 0) {
+      return res.status(400).json({ 
+        message: 'Cannot accept a new ride while you have an active ride',
+        active_ride_id: activeRides[0].ride_id
+      });
+    }
+    
     
     const ride = await Ride.findOne({ ride_id });
     
