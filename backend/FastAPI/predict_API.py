@@ -111,15 +111,14 @@ async def predict_fare(ride: RideRequest):
         prediction = model.predict(features)
         
         # Calculate the implied surge factor for transparency
-        base_fare = 3.0 + (distance * 1.5) + (distance * 0.2)
-        surge_factor = max(1.0, prediction[0] / base_fare)
+        # base_fare = 3.0 + (distance * 1.5) + (distance * 0.2)
+        # surge_factor = max(1.0, prediction[0] / base_fare)
         
         return {
             "status": "success",
             "predicted_fare": float(max(3.0, prediction[0])),
             "distance_km": distance,
-            "demand_factors": demand_data,
-            "surge_factor": float(surge_factor)
+            "demand_factors": demand_data
         }
     except Exception as e:
         # Fallback to basic calculation on error
