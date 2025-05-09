@@ -48,14 +48,28 @@ export const driverService = {
 
   // Get active ride
   getActiveRide: async (driverId) => {
-    console.log('Calling getActiveRide API for driver:', driverId);
+  console.log('Calling getActiveRide API for driver:', driverId);
+  
+  try {
     const response = await api.get(`/rides/driver/${driverId}/active`);
     console.log('getActiveRide API response:', response);
     
-    return response.data && response.data.data 
-      ? { data: response.data.data }
-      : response.data;
-  },
+    // Check if the response contains the data property correctly
+    if (response.data && response.data.data) {
+      return response.data;
+    }
+    
+    // If response structure is different, format it accordingly
+    if (response.data) {
+      return { data: response.data };
+    }
+    
+    return { data: null };
+  } catch (error) {
+    console.error('Error fetching active ride:', error);
+    return { data: null };
+  }
+},
   
   // Start ride (after picking up passenger)
   startRide: async (rideId) => {
@@ -65,9 +79,16 @@ export const driverService = {
   
   // Complete ride
   completeRide: async (rideId) => {
+  try {
+    console.log(`Calling completeRide API for ride: ${rideId}`);
     const response = await api.patch(`/rides/${rideId}/complete`);
+    console.log('completeRide API response:', response);
     return response.data;
-  },
+  } catch (error) {
+    console.error('Error in completeRide service call:', error);
+    throw error; // Re-throw to be handled by the component
+  }
+},
 
   // Address update
   updateAddress: async (driverId, addressData) => {

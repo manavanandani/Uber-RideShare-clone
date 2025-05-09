@@ -17,13 +17,20 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  TextField,
+  Collapse,
+  IconButton
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
-  DirectionsCar as CarIcon
+  DirectionsCar as CarIcon,
+  MyLocation as LocationIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
+import axios from 'axios';
 
 function AvailableRides() {
   const { user } = useSelector(state => state.auth);
@@ -36,33 +43,42 @@ function AvailableRides() {
   const [location, setLocation] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [driverStatus, setDriverStatus] = useState(user?.status || 'offline');
-
-// Add this useEffect to poll the driver's status
-useEffect(() => {
-  // Set initial status from user object
-  setDriverStatus(user?.status || 'offline');
   
-  const checkDriverStatus = async () => {
-    try {
-      const response = await driverService.getProfile(user.driver_id);
-      if (response.data && response.data.status) {
-        setDriverStatus(response.data.status);
+  // Address update form states
+  const [addressFormOpen, setAddressFormOpen] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    address: '',
+    city: '',
+    state: '',
+    zip_code: ''
+  });
+  const [updatingAddress, setUpdatingAddress] = useState(false);
+
+  // Add this useEffect to poll the driver's status
+  useEffect(() => {
+    // Set initial status from user object
+    setDriverStatus(user?.status || 'offline');
+    
+    const checkDriverStatus = async () => {
+      try {
+        const response = await driverService.getProfile(user.driver_id);
+        if (response.data && response.data.status) {
+          setDriverStatus(response.data.status);
+        }
+      } catch (err) {
+        console.error('Error fetching driver status:', err);
       }
-    } catch (err) {
-      console.error('Error fetching driver status:', err);
-    }
-  };
-  
-  // Check initially
-  checkDriverStatus();
-  
-  // Set up polling every 10 seconds
-  const statusInterval = setInterval(checkDriverStatus, 10000);
-  
-  // Clean up
-  return () => clearInterval(statusInterval);
-}, [user]);
-
+    };
+    
+    // Check initially
+    checkDriverStatus();
+    
+    // Set up polling every 10 seconds
+    const statusInterval = setInterval(checkDriverStatus, 10000);
+    
+    // Clean up
+    return () => clearInterval(statusInterval);
+  }, [user]);
 
   useEffect(() => {
     // Get current location
@@ -75,6 +91,9 @@ useEffect(() => {
           };
           setLocation(currentLocation);
           fetchAvailableRides(currentLocation);
+          
+          // After getting location, try to get the address
+          reverseGeocode(currentLocation.latitude, currentLocation.longitude);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -85,48 +104,6 @@ useEffect(() => {
       setError("Geolocation is not supported by this browser.");
     }
   }, [user]);
-
-
-useEffect(() => {
-  // Function to update location and available rides
-  const updateLocationAndRides = async () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const currentLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          
-          // Only update if location has changed significantly (more than 0.5 km)
-          if (location) {
-            const { calculateDistance } = await import('../../utils/locationUtils');
-            const distance = calculateDistance(location, currentLocation);
-            if (distance < 0.5) {
-              return; // Skip update if haven't moved much
-            }
-          }
-          
-          setLocation(currentLocation);
-          
-          // Silently update driver location in database
-          await driverService.updateStatus(user.driver_id, 'available', currentLocation);
-          
-          // Update available rides
-          await fetchAvailableRides(currentLocation);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-        }
-      );
-    }
-  };
-  
-  // Update location every minute
-  const locationInterval = setInterval(updateLocationAndRides, 60000);
-  
-  return () => clearInterval(locationInterval);
-}, [location, user]);
 
   const fetchAvailableRides = async (loc) => {
     try {
@@ -146,42 +123,46 @@ useEffect(() => {
     }
   };
 
-const refreshLocationAndRides = async () => {
-  setRefreshing(true);
-  try {
-    // Get current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const newLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          setLocation(newLocation);
-          
-          // Update driver location in database
-          await driverService.updateStatus(user.driver_id, 'available', newLocation);
-          
-          // Fetch available rides with new location
-          await fetchAvailableRides(newLocation);
-          setRefreshing(false);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setError("Could not update your location. Please enable location services.");
-          setRefreshing(false);
-        }
-      );
-    } else {
-      setError("Geolocation is not supported by this browser.");
+  const refreshLocationAndRides = async () => {
+    setRefreshing(true);
+    try {
+      // Get current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const newLocation = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            };
+            setLocation(newLocation);
+            
+            // Update driver location in database
+            await driverService.updateStatus(user.driver_id, 'available', newLocation);
+            
+            // Fetch available rides with new location
+            await fetchAvailableRides(newLocation);
+            
+            // Try to get the address
+            reverseGeocode(newLocation.latitude, newLocation.longitude);
+            
+            setRefreshing(false);
+          },
+          (error) => {
+            console.error("Error getting location:", error);
+            setError("Could not update your location. Please enable location services.");
+            setRefreshing(false);
+          }
+        );
+      } else {
+        setError("Geolocation is not supported by this browser.");
+        setRefreshing(false);
+      }
+    } catch (err) {
+      console.error('Error refreshing location:', err);
+      setError('Failed to refresh your location and available rides');
       setRefreshing(false);
     }
-  } catch (err) {
-    console.error('Error refreshing location:', err);
-    setError('Failed to refresh your location and available rides');
-    setRefreshing(false);
-  }
-};
+  };
 
   const handleSelectRide = (ride) => {
     console.log('Selected ride:', ride);
@@ -208,69 +189,182 @@ const refreshLocationAndRides = async () => {
     setSelectedRide(formattedRide);
   };
 
-const handleAcceptRide = async () => {
-  if (!selectedRide) return;
+  const handleAcceptRide = async () => {
+    if (!selectedRide) return;
 
-  if (driverStatus === 'offline') {
-    setError("You are currently offline. Please go online to accept rides.");
-    return;
-  }
-  
-  // Check if user is offline
-  if (user.status === 'offline') {
-    setError("You are currently offline. Please go online to accept rides.");
-    return;
-  }
-  
-  // Check if ride is too far before trying to accept
-  if (selectedRide.distance_to_pickup > 16) {
-    setError("This ride is too far away to accept (more than 10 miles from your current location)");
-    return;
-  }
-  
-  try {
-    setAccepting(true);
-    console.log('Accepting ride:', selectedRide.ride_id);
-    
-    // Call the API to accept the ride
-    const response = await driverService.acceptRide(selectedRide.ride_id);
-    console.log('Ride accepted response:', response);
-    
-    // Get the updated driver profile to reflect new status
-    await driverService.getProfile(user.driver_id);
-    
-    setAccepting(false);
-
-    // Show success message
-    alert('Ride accepted successfully! Navigating to active ride...');
-    
-    setTimeout(() => {
-      navigate('/driver/rides/active');
-    }, 500);
-  } catch (err) {
-    console.error('Error accepting ride:', err);
-    let errorMessage = err.response?.data?.message || 'Failed to accept ride';
-    
-    // Check for specific error cases
-    if (err.response?.data?.active_ride_id) {
-      errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
-      
-      // Option to navigate to the active ride
-      if (confirm(`${errorMessage}\n\nDo you want to navigate to your active ride?`)) {
-        navigate('/driver/rides/active');
-        return;
-      }
-    } else if (err.response?.status === 403 || 
-              (err.response?.data?.message && err.response.data.message.includes('offline'))) {
-      errorMessage = "You must be online to accept rides. Please go online first.";
-    } else if (err.response?.data?.distance) {
-      errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
+    if (driverStatus === 'offline') {
+      setError("You are currently offline. Please go online to accept rides.");
+      return;
     }
     
-    setError(errorMessage);
-    setAccepting(false);
-  }
-};
+    // Check if user is offline
+    if (user.status === 'offline') {
+      setError("You are currently offline. Please go online to accept rides.");
+      return;
+    }
+    
+    // Check if ride is too far before trying to accept
+    if (selectedRide.distance_to_pickup > 16) {
+      setError("This ride is too far away to accept (more than 10 miles from your current location)");
+      return;
+    }
+    
+    try {
+      setAccepting(true);
+      console.log('Accepting ride:', selectedRide.ride_id);
+      
+      // Call the API to accept the ride
+      const response = await driverService.acceptRide(selectedRide.ride_id);
+      console.log('Ride accepted response:', response);
+      
+      // Get the updated driver profile to reflect new status
+      await driverService.getProfile(user.driver_id);
+      
+      setAccepting(false);
+
+      // Show success message
+      alert('Ride accepted successfully! Navigating to active ride...');
+      
+      setTimeout(() => {
+        navigate('/driver/rides/active');
+      }, 500);
+    } catch (err) {
+      console.error('Error accepting ride:', err);
+      let errorMessage = err.response?.data?.message || 'Failed to accept ride';
+      
+      // Check for specific error cases
+      if (err.response?.data?.active_ride_id) {
+        errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
+        
+        // Option to navigate to the active ride
+        if (confirm(`${errorMessage}\n\nDo you want to navigate to your active ride?`)) {
+          navigate('/driver/rides/active');
+          return;
+        }
+      } else if (err.response?.status === 403 || 
+                (err.response?.data?.message && err.response.data.message.includes('offline'))) {
+        errorMessage = "You must be online to accept rides. Please go online first.";
+      } else if (err.response?.data?.distance) {
+        errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
+      }
+      
+      setError(errorMessage);
+      setAccepting(false);
+    }
+  };
+  
+  // Function to handle address form changes
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Function to geocode an address using Nominatim
+  const geocodeAddress = async (fullAddress) => {
+    try {
+      const encodedAddress = encodeURIComponent(fullAddress);
+      
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'UberSimulationApp/1.0'
+          }
+        }
+      );
+      
+      if (response.data && response.data.length > 0) {
+        const result = response.data[0];
+        return {
+          latitude: parseFloat(result.lat),
+          longitude: parseFloat(result.lon),
+          displayName: result.display_name
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      throw new Error('Failed to geocode address');
+    }
+  };
+  
+  // Function for reverse geocoding (coordinates to address)
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        {
+          headers: {
+            'User-Agent': 'UberSimulationApp/1.0'
+          }
+        }
+      );
+      
+      if (response.data && response.data.address) {
+        const addr = response.data.address;
+        
+        // Try to extract address components
+        setAddressForm({
+          address: [addr.house_number, addr.road, addr.neighbourhood].filter(Boolean).join(', ') || addr.display_name || '',
+          city: addr.city || addr.town || addr.village || addr.county || '',
+          state: addr.state || '',
+          zip_code: addr.postcode || ''
+        });
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+    }
+  };
+  
+  // Function to handle address update submission
+  const handleUpdateAddress = async () => {
+    try {
+      setUpdatingAddress(true);
+      setError(null);
+      
+      // Validate form fields
+      if (!addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
+        setError('All address fields are required');
+        setUpdatingAddress(false);
+        return;
+      }
+      
+      // Construct full address for geocoding
+      const fullAddress = `${addressForm.address}, ${addressForm.city}, ${addressForm.state} ${addressForm.zip_code}`;
+      
+      // Geocode the address
+      const coordinates = await geocodeAddress(fullAddress);
+      if (!coordinates) {
+        setError('Could not geocode the provided address');
+        setUpdatingAddress(false);
+        return;
+      }
+      
+      // Update the location state
+      setLocation({
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      });
+      
+      // Call the service to update address
+      await driverService.updateAddress(user.driver_id, addressForm);
+      
+      // Fetch available rides with the new location
+      await fetchAvailableRides({
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      });
+      
+      setAddressFormOpen(false);
+      setUpdatingAddress(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update location');
+      setUpdatingAddress(false);
+    }
+  };
 
   return (
     <Box>
@@ -284,6 +378,85 @@ const handleAcceptRide = async () => {
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </Box>
+
+      {/* Location Card with Address Form */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Your Location</Typography>
+          <Button 
+            startIcon={addressFormOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            onClick={() => setAddressFormOpen(!addressFormOpen)}
+            color="primary"
+          >
+            {addressFormOpen ? "Hide Address Form" : "Update Address"}
+          </Button>
+        </Box>
+        
+        {/* Current Location Display */}
+        <Typography variant="body1" gutterBottom>
+          Current coordinates: {location ? 
+            `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` : 
+            'Unknown'}
+        </Typography>
+        
+        {/* Address Update Form */}
+        <Collapse in={addressFormOpen}>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Street Address"
+                  name="address"
+                  value={addressForm.address}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={5}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  name="city"
+                  value={addressForm.city}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  fullWidth
+                  label="State"
+                  name="state"
+                  value={addressForm.state}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="ZIP Code"
+                  name="zip_code"
+                  value={addressForm.zip_code}
+                  onChange={handleAddressChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  onClick={handleUpdateAddress}
+                  disabled={updatingAddress}
+                  startIcon={<LocationIcon />}
+                >
+                  {updatingAddress ? <CircularProgress size={24} /> : 'Update Location'}
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+        </Collapse>
+      </Paper>
 
       {driverStatus === 'offline' && (
       <Alert severity="warning" sx={{ mb: 3 }}>

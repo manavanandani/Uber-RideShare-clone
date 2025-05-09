@@ -473,4 +473,27 @@ exports.updateDriverAddress = async (req, res) => {
   }
 };
 
+// Helper function for geocoding
+const geocodeAddressForDriver  = async (address) => {
+  try {
+    // Use Node-geocoder or similar library
+    const geocoder = require('node-geocoder')({
+      provider: 'openstreetmap'
+    });
+    
+    const results = await geocoder.geocode(address);
+    
+    if (results && results.length > 0) {
+      return {
+        latitude: results[0].latitude,
+        longitude: results[0].longitude
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return null;
+  }
+};
+
 module.exports = exports;

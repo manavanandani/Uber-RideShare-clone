@@ -62,6 +62,7 @@ exports.getRideById = async (req, res) => {
   try {
     const { ride_id } = req.params;
     
+    // Find the ride and populate driver and customer info in one query
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
@@ -77,9 +78,32 @@ exports.getRideById = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to view this ride' });
     }
     
+    // Fetch driver and customer information if they exist
+    let driver_info = null;
+    let customer_info = null;
+    
+    if (ride.driver_id) {
+      driver_info = await Driver.findOne({ driver_id: ride.driver_id })
+        .select('driver_id first_name last_name phone car_details rating')
+        .lean();
+    }
+    
+    if (ride.customer_id) {
+      customer_info = await Customer.findOne({ customer_id: ride.customer_id })
+        .select('customer_id first_name last_name phone rating')
+        .lean();
+    }
+    
+    // Create response with ride data and user information
+    const rideResponse = {
+      ...ride.toObject(),
+      driver_info,
+      customer_info
+    };
+    
     res.status(200).json({
       message: 'Ride retrieved successfully',
-      data: ride
+      data: rideResponse
     });
     
   } catch (err) {
@@ -98,6 +122,21 @@ exports.createRide = async (req, res) => {
       passenger_count
     } = req.body;
 
+    const customer_id = req.user.customer_id; // Extracted from JWT
+
+    // Check if customer already has an active ride
+    const activeRide = await Ride.findOne({
+      customer_id,
+      status: { $in: ['requested', 'accepted', 'in_progress'] }
+    });
+
+    if (activeRide) {
+      return res.status(400).json({ 
+        message: 'You already have an active ride. Please cancel it before booking a new one.',
+        active_ride_id: activeRide.ride_id
+      });
+    }
+
     // Convert API location format to MongoDB GeoJSON format
     const pickupGeo = {
       type: 'Point',
@@ -112,7 +151,7 @@ exports.createRide = async (req, res) => {
     // Generate a ride_id in SSN format
     const ride_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
     
-    const customer_id = req.user.customer_id; // Extracted from JWT
+    //const customer_id = req.user.customer_id; // Extracted from JWT
 
     // Find nearby available drivers using proper GeoJSON query
     const nearbyDrivers = await Driver.find({
@@ -564,6 +603,7 @@ exports.acceptRide = async (req, res) => {
     res.status(500).json({ message: 'Failed to accept ride', error: err.message });
   }
 };
+
 exports.getActiveRideForCustomer = async (req, res) => {
   const { customer_id } = req.params;
   
@@ -573,7 +613,7 @@ exports.getActiveRideForCustomer = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access' });
     }
     
-    // Find the active ride (either accepted or in_progress)
+    // Find the active ride
     const activeRide = await Ride.findOne({
       customer_id,
       status: { $in: ['requested', 'accepted', 'in_progress'] }
@@ -583,9 +623,23 @@ exports.getActiveRideForCustomer = async (req, res) => {
       return res.status(404).json({ message: 'No active ride found' });
     }
     
+    // Add driver information if a driver has been assigned
+    let driver_info = null;
+    if (activeRide.driver_id) {
+      driver_info = await Driver.findOne({ driver_id: activeRide.driver_id })
+        .select('driver_id first_name last_name phone car_details rating')
+        .lean();
+    }
+    
+    // Create response with ride and driver data
+    const rideResponse = {
+      ...activeRide.toObject(),
+      driver_info
+    };
+    
     res.status(200).json({
       message: 'Active ride retrieved successfully',
-      data: activeRide
+      data: rideResponse
     });
   } catch (err) {
     console.error('Error retrieving active ride:', err);
@@ -602,7 +656,7 @@ exports.getActiveRideForDriver = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access' });
     }
     
-    // Find the active ride (either accepted or in_progress)
+    // Find the active ride
     const activeRide = await Ride.findOne({
       driver_id,
       status: { $in: ['accepted', 'in_progress'] }
@@ -612,9 +666,20 @@ exports.getActiveRideForDriver = async (req, res) => {
       return res.status(404).json({ message: 'No active ride found' });
     }
     
+    // Get customer information
+    const customer_info = await Customer.findOne({ customer_id: activeRide.customer_id })
+      .select('customer_id first_name last_name phone rating')
+      .lean();
+    
+    // Create response with ride and customer data
+    const rideResponse = {
+      ...activeRide.toObject(),
+      customer_info
+    };
+    
     res.status(200).json({
       message: 'Active ride retrieved successfully',
-      data: activeRide
+      data: rideResponse
     });
   } catch (err) {
     console.error('Error retrieving active ride:', err);
@@ -626,9 +691,12 @@ exports.completeRide = async (req, res) => {
   const { ride_id } = req.params;
   
   try {
+    console.log(`Attempting to complete ride ${ride_id} by driver ${req.user.driver_id}`);
+    
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
+      console.log(`Ride ${ride_id} not found`);
       return res.status(404).json({ message: 'Ride not found' });
     }
     
@@ -637,16 +705,20 @@ exports.completeRide = async (req, res) => {
     
     // Check if the ride is associated with the authenticated driver
     if (req.user && req.user.driver_id && ride.driver_id !== req.user.driver_id) {
+      console.log(`Ride ${ride_id} not assigned to driver ${req.user.driver_id}`);
       return res.status(403).json({ message: 'Ride not assigned to you' });
     }
     
     // Make sure the ride is in the right state
     if (ride.status !== 'in_progress') {
+      console.log(`Cannot complete ride ${ride_id}: status is ${ride.status}, not in_progress`);
       return res.status(400).json({ 
         message: `Ride is ${ride.status}, not in progress`,
         current_status: ride.status 
       });
     }
+    
+    console.log(`Updating ride ${ride_id} status to completed`);
     
     // Update ride status to completed
     const updatedRide = await Ride.findOneAndUpdate(
@@ -654,6 +726,8 @@ exports.completeRide = async (req, res) => {
       { $set: { status: 'completed' } },
       { new: true }
     );
+    
+    console.log(`Successfully updated ride ${ride_id} status`);
     
     // Update driver status back to available and update location
     await Driver.findOneAndUpdate(
@@ -667,16 +741,14 @@ exports.completeRide = async (req, res) => {
       }
     );
     
-    // Add ride to driver's history
-    await Driver.findOneAndUpdate(
-      { driver_id: ride.driver_id },
-      { $push: { ride_history: ride_id } }
-    );
+    console.log(`Updated driver ${ride.driver_id} status to available`);
     
     // Create bill with proper error handling
     try {
       // Generate a bill ID
       const bill_id = `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
+      
+      console.log(`Generating bill ${bill_id} for ride ${ride_id}`);
       
       const pickupCoords = ride.pickup_location && ride.pickup_location.coordinates 
         ? ride.pickup_location.coordinates 
@@ -686,7 +758,7 @@ exports.completeRide = async (req, res) => {
         ? ride.dropoff_location.coordinates 
         : [0, 0];
 
-      // check if bill already exists
+      // Check if bill already exists
       const existingBill = await Billing.findOne({ ride_id });
       
       if (existingBill) {
@@ -704,7 +776,6 @@ exports.completeRide = async (req, res) => {
           }
         });
       }
-
       
       const newBill = new Billing({
         bill_id,
@@ -749,6 +820,8 @@ exports.completeRide = async (req, res) => {
       await invalidateCache(`*customer*${ride.customer_id}*`);
       await invalidateCache(`*billing*${bill_id}*`);
       
+      console.log(`Sending successful response for ride ${ride_id} completion`);
+      
       res.status(200).json({
         message: 'Ride completed successfully and bill created',
         data: {
@@ -756,12 +829,15 @@ exports.completeRide = async (req, res) => {
           bill: {
             bill_id,
             total_amount: newBill.total_amount,
-            payment_status: 'pending'
+            payment_status: 'completed'
           }
         }
       });
     } catch (billError) {
       console.error('Error creating bill:', billError);
+
+      await publishPaymentProcessed(bill_id, 'completed');
+
       
       // Still return success for the ride completion but note the billing error
       res.status(200).json({
