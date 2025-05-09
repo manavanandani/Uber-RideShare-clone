@@ -85,6 +85,9 @@ function DriverLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
+    if (import.meta.env.DEV && window.__REDUX_DEVTOOLS_EXTENSION__) {
+      window.__REDUX_DEVTOOLS_EXTENSION__.disconnect();
+    }
     navigate('/login');
   };
 
