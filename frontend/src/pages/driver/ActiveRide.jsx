@@ -1,5 +1,5 @@
 // src/pages/driver/ActiveRide.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,7 +26,6 @@ import {
   Card,
   CardContent
 } from '@mui/material';
-import {Star as StarIcon} from '@mui/icons-material';
 import {
   DirectionsCar as CarIcon,
   Check as CheckIcon,
@@ -58,6 +57,13 @@ function ActiveRide() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   
+  // Use a ref to track the polling interval
+  const pollingIntervalRef = useRef(null);
+  // Add a ref to track if a fetch is in progress to prevent overlapping calls
+  const fetchInProgressRef = useRef(false);
+  // Add a ref to track if component is mounted
+  const isMountedRef = useRef(true);
+
   // Ride steps based on status
   const steps = [
     { label: 'Ride Accepted', description: 'You have accepted the ride request.' },
@@ -66,65 +72,87 @@ function ActiveRide() {
     { label: 'Completed', description: 'Ride completed successfully.' }
   ];
 
+  // Function to check if a ride object is valid and has necessary data
+  const isValidRide = (rideData) => {
+    return rideData && 
+           rideData.ride_id && 
+           rideData.status && 
+           ['accepted', 'in_progress', 'completed'].includes(rideData.status);
+  };
+
   useEffect(() => {
-    // Get current location and set up location tracking
+    // Mark component as mounted
+    isMountedRef.current = true;
+    
+    // Clean up on unmount
+    return () => {
+      isMountedRef.current = false;
+      
+      // Clear any polling interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Get current location
     if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+      navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (!isMountedRef.current) return;
+          
           const currentLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           };
           setLocation(currentLocation);
-          
-          // If we have an active ride and driver is available, update driver location
-          if (ride && ride.status !== 'completed' && user && user.driver_id) {
-            // Consider updating driver location in backend
-            driverService.updateStatus(user.driver_id, 'busy', currentLocation)
-              .catch(err => console.error('Error updating driver location:', err));
-          }
         },
         (error) => {
           console.error("Error getting location:", error);
-        },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        }
       );
-      
-      // Cleanup watchPosition on component unmount
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-      };
     }
-  }, [ride, user]);
+  }, []);
   
-  useEffect(() => {
-    const fetchActiveRide = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchActiveRide = async () => {
+    // If fetch is already in progress, skip this one
+    if (fetchInProgressRef.current || !isMountedRef.current) return;
+    
+    try {
+      fetchInProgressRef.current = true;
+      
+      if (!isMountedRef.current) return;
+      
+      // Only show loading on first fetch
+      if (!ride) setLoading(true);
+      
+      console.log('Fetching active ride for driver:', user.driver_id);
+      const response = await driverService.getActiveRide(user.driver_id);
+      console.log('Active ride response:', response);
+      
+      if (!isMountedRef.current) return;
+      
+      // Check if we have a valid response with actual ride data
+      if (response && response.data && isValidRide(response.data)) {
+        console.log('Valid active ride found:', response.data);
         
-        console.log('Fetching active ride for driver:', user.driver_id);
-        // Get driver's active ride
-        const response = await driverService.getActiveRide(user.driver_id);
-        console.log('Active ride response:', response);
+        // Format locations for the map component with careful null handling
+        const formattedRide = {
+          ...response.data,
+          pickup_location: response.data.pickup_location && response.data.pickup_location.coordinates ? {
+            latitude: response.data.pickup_location.coordinates[1],
+            longitude: response.data.pickup_location.coordinates[0]
+          } : null,
+          dropoff_location: response.data.dropoff_location && response.data.dropoff_location.coordinates ? {
+            latitude: response.data.dropoff_location.coordinates[1],
+            longitude: response.data.dropoff_location.coordinates[0]
+          } : null
+        };
         
-        if (response.data) {
-          // Log customer info to debug
-          console.log('Customer info in response:', response.data.customer_info);
-          
-          // Format locations for the map component with careful null handling
-          const formattedRide = {
-            ...response.data,
-            pickup_location: response.data.pickup_location && response.data.pickup_location.coordinates ? {
-              latitude: response.data.pickup_location.coordinates[1],
-              longitude: response.data.pickup_location.coordinates[0]
-            } : null,
-            dropoff_location: response.data.dropoff_location && response.data.dropoff_location.coordinates ? {
-              latitude: response.data.dropoff_location.coordinates[1],
-              longitude: response.data.dropoff_location.coordinates[0]
-            } : null
-          };
-          
+        // Only update state if something changed
+        if (!ride || ride.ride_id !== formattedRide.ride_id || ride.status !== formattedRide.status) {
           setRide(formattedRide);
           
           // Set the active step based on ride status
@@ -134,27 +162,96 @@ function ActiveRide() {
             setActiveStep(2); // In progress
           } else if (formattedRide.status === 'completed') {
             setActiveStep(3); // Completed
+            
+            // Clear polling on completed ride
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
           }
-        } else {
-          setError("No active ride found.");
+        }
+      } else {
+        // No valid ride found or empty response
+        console.log('No valid active ride found');
+        setRide(null);
+        
+        // Clear polling if no valid ride
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
         }
         
-        setLoading(false);
-      } catch (err) {
-        console.error('Error loading active ride:', err);
-        setError(err.response?.data?.message || 'Failed to load active ride');
-        setLoading(false);
+        // Update driver status to available if set to busy incorrectly
+        if (user && user.driver_id && user.status === 'busy' && location) {
+          try {
+            console.log('Resetting driver status from busy to available');
+            await driverService.updateStatus(user.driver_id, 'available', location);
+          } catch (statusErr) {
+            console.error('Failed to update driver status:', statusErr);
+          }
+        }
       }
-    };
-    
+      
+      if (!isMountedRef.current) return;
+      setLoading(false);
+      setError(null);
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      
+      console.error('Error loading active ride:', err);
+      setError(err.response?.data?.message || 'Failed to load active ride');
+      setLoading(false);
+      
+      // Don't set ride to null if we already have one - keep showing the last known state
+      if (!ride) setRide(null);
+    } finally {
+      fetchInProgressRef.current = false;
+    }
+  };
+  
+  // Initial fetch when component mounts
+  useEffect(() => {
     if (user?.driver_id) {
       fetchActiveRide();
       
-      // Poll for updates every 10 seconds
-      const intervalId = setInterval(fetchActiveRide, 10000);
+      // Set up polling - only once
+      if (!pollingIntervalRef.current) {
+        pollingIntervalRef.current = setInterval(() => {
+          // Only poll if the ride is not completed
+          if (ride && ride.status !== 'completed') {
+            fetchActiveRide();
+          } else if (!ride) {
+            // If there's no ride, poll a few times then stop
+            const checkCount = 3;
+            let currentCheck = 0;
+            
+            const checkInterval = setInterval(() => {
+              currentCheck++;
+              fetchActiveRide();
+              
+              if (currentCheck >= checkCount) {
+                clearInterval(checkInterval);
+                
+                // If we still don't have a ride after checks, clear polling
+                if (!ride && pollingIntervalRef.current) {
+                  clearInterval(pollingIntervalRef.current);
+                  pollingIntervalRef.current = null;
+                }
+              }
+            }, 5000);
+            
+            return () => clearInterval(checkInterval);
+          }
+        }, 15000); // Reduced polling frequency to 15 seconds
+      }
       
-      // Clear interval on component unmount
-      return () => clearInterval(intervalId);
+      // Cleanup on unmount
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
     }
   }, [user]);
 
@@ -169,6 +266,9 @@ function ActiveRide() {
       setRide(prev => ({ ...prev, status: 'in_progress' }));
       setActiveStep(2);
       setUpdating(false);
+      
+      // Fetch the latest state immediately after update
+      setTimeout(() => fetchActiveRide(), 1000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to start ride');
       setUpdating(false);
@@ -176,43 +276,49 @@ function ActiveRide() {
   };
 
   const handleCompleteRide = async () => {
-  if (!ride) return;
-  
-  try {
-    setUpdating(true);
-    console.log('Attempting to complete ride:', ride.ride_id);
+    if (!ride) return;
     
-    const response = await driverService.completeRide(ride.ride_id);
-    console.log('Ride completed response:', response);
-    
-    // Update local state
-    setRide(prev => ({ ...prev, status: 'completed' }));
-    setActiveStep(3);
-    
-    // Update driver status back to available
-    await driverService.getProfile(user.driver_id);
+    try {
+      setUpdating(true);
+      console.log('Attempting to complete ride:', ride.ride_id);
+      
+      const response = await driverService.completeRide(ride.ride_id);
+      console.log('Ride completed response:', response);
+      
+      // Update local state
+      setRide(prev => ({ ...prev, status: 'completed' }));
+      setActiveStep(3);
+      
+      // Clear polling when ride is completed
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
+      // Update driver status back to available
+      await driverService.getProfile(user.driver_id);
 
-    setUpdating(false);
-    
-    // Show rating dialog
-    setShowRatingDialog(true);
-  } catch (err) {
-    console.error('Error completing ride:', err);
-    // More detailed error handling
-    if (err.response) {
-      console.error('Response data:', err.response.data);
-      console.error('Response status:', err.response.status);
-      setError(err.response.data?.message || `Error ${err.response.status}: Failed to complete ride`);
-    } else if (err.request) {
-      console.error('No response received:', err.request);
-      setError('No response received from server. Please check your connection.');
-    } else {
-      console.error('Error message:', err.message);
-      setError(`Error: ${err.message}`);
+      setUpdating(false);
+      
+      // Show rating dialog
+      setShowRatingDialog(true);
+    } catch (err) {
+      console.error('Error completing ride:', err);
+      // More detailed error handling
+      if (err.response) {
+        console.error('Response data:', err.response.data);
+        console.error('Response status:', err.response.status);
+        setError(err.response.data?.message || `Error ${err.response.status}: Failed to complete ride`);
+      } else if (err.request) {
+        console.error('No response received:', err.request);
+        setError('No response received from server. Please check your connection.');
+      } else {
+        console.error('Error message:', err.message);
+        setError(`Error: ${err.message}`);
+      }
+      setUpdating(false);
     }
-    setUpdating(false);
-  }
-};
+  };
 
   const handleRateCustomer = async () => {
     try {
@@ -234,6 +340,12 @@ function ActiveRide() {
       await driverService.cancelRide(ride.ride_id, cancelReason);
       setShowCancelDialog(false);
       
+      // Clear polling when ride is cancelled
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
       // Navigate back to dashboard after cancellation
       navigate('/driver');
       
@@ -241,6 +353,26 @@ function ActiveRide() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to cancel ride');
       setCancelling(false);
+    }
+  };
+
+  // Function to get status color
+  const getStatusColor = (status) => {
+    if (!status) return 'default';
+    
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'in_progress':
+        return 'primary';
+      case 'accepted':
+        return 'info';
+      case 'requested':
+        return 'warning';
+      case 'cancelled':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -252,31 +384,16 @@ function ActiveRide() {
     );
   }
   
-  if (error && !ride) {
+  // If no valid ride is found, show message and button
+  if (!ride || !isValidRide(ride)) {
     return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {error}
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Alert severity="info" sx={{ mb: 4 }}>
+          You don't have any active rides right now.
         </Alert>
         <Button
           variant="contained"
-          onClick={() => navigate('/driver/rides/available')}
-          startIcon={<CarIcon />}
-        >
-          Find Available Rides
-        </Button>
-      </Box>
-    );
-  }
-  
-  if (!ride) {
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          No active ride found.
-        </Alert>
-        <Button
-          variant="contained"
+          size="large"
           onClick={() => navigate('/driver/rides/available')}
           startIcon={<CarIcon />}
         >
@@ -286,6 +403,7 @@ function ActiveRide() {
     );
   }
 
+  // Rest of the component...
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -302,14 +420,10 @@ function ActiveRide() {
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Ride #{ride.ride_id}</Typography>
+              <Typography variant="h6">Ride #{ride.ride_id || 'N/A'}</Typography>
               <Chip 
-                label={ride.status.charAt(0).toUpperCase() + ride.status.slice(1)} 
-                color={
-                  ride.status === 'completed' ? 'success' : 
-                  ride.status === 'in_progress' ? 'primary' : 
-                  'default'
-                }
+                label={ride.status ? ride.status.charAt(0).toUpperCase() + ride.status.slice(1) : 'Unknown'}
+                color={getStatusColor(ride.status)}
               />
             </Box>
             <Divider sx={{ mb: 2 }} />
@@ -321,7 +435,7 @@ function ActiveRide() {
                   <StepContent>
                     <Typography>{step.description}</Typography>
                     <Box sx={{ mb: 2, mt: 1 }}>
-                      {index === 1 && ride.status === 'accepted' && (
+                      {index === 1 && ride?.status === 'accepted' && (
                         // Add both Start Ride and Cancel Ride buttons in the accepted state
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                           <Button
@@ -346,7 +460,7 @@ function ActiveRide() {
                           </Button>
                         </Box>
                       )}
-                      {index === 2 && ride.status === 'in_progress' && (
+                      {index === 2 && ride?.status === 'in_progress' && (
                         <Button
                           variant="contained"
                           onClick={handleCompleteRide}
@@ -363,14 +477,14 @@ function ActiveRide() {
               ))}
             </Stepper>
             
-            {ride.status === 'completed' && (
+            {ride?.status === 'completed' && (
               <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <CheckIcon color="success" sx={{ fontSize: 48, mb: 1 }} />
                 <Typography variant="h6" color="success.main">
                   Ride Completed Successfully
                 </Typography>
                 <Typography variant="body2">
-                  Fare: ${ride.fare_amount?.toFixed(2) || '0.00'}
+                  Fare: ${(ride.fare_amount || 0).toFixed(2)}
                 </Typography>
                 <Button 
                   variant="outlined" 
@@ -391,7 +505,7 @@ function ActiveRide() {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             
-            {ride.customer_info ? (
+            {ride?.customer_info ? (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
@@ -426,11 +540,11 @@ function ActiveRide() {
                   </Box>
                 )}
                 
-                {ride.status === 'completed' && !ride.rating?.driver_to_customer && (
+                {ride?.status === 'completed' && !ride?.rating?.driver_to_customer && (
                   <Button 
                     variant="outlined" 
                     fullWidth
-                    startIcon={<StarIcon />}
+                    //startIcon={<StarIcon />}
                     onClick={() => setShowRatingDialog(true)}
                     sx={{ mt: 2 }}
                   >
@@ -438,7 +552,7 @@ function ActiveRide() {
                   </Button>
                 )}
                 
-                {ride.rating?.driver_to_customer && (
+                {ride?.rating?.driver_to_customer && (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Your Rating
@@ -491,7 +605,7 @@ function ActiveRide() {
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2">Ride Time</Typography>
                 <Typography variant="body2" gutterBottom>
-                  {new Date(ride.date_time).toLocaleString()}
+                  {ride.date_time ? new Date(ride.date_time).toLocaleString() : 'N/A'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -503,7 +617,7 @@ function ActiveRide() {
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2">Fare Amount</Typography>
                 <Typography variant="body1" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  ${ride.fare_amount?.toFixed(2) || '0.00'}
+                  ${(ride.fare_amount || 0).toFixed(2)}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
