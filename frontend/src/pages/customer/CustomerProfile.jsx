@@ -118,6 +118,18 @@ function CustomerProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate credit card number if it's been changed (not masked)
+    if (formData.credit_card.number && !formData.credit_card.number.includes('*') && !/^\d{16}$/.test(formData.credit_card.number)) {
+      setError('Credit card must be exactly 16 digits');
+      return;
+    }
+    
+    // Validate CVV if it's been changed (not masked)
+    if (formData.credit_card.cvv && formData.credit_card.cvv !== '***' && !/^\d{3}$/.test(formData.credit_card.cvv)) {
+      setError('CVV must be exactly 3 digits');
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -325,6 +337,9 @@ const handleDeleteAccount = async () => {
                     value={formData.credit_card.number}
                     onChange={handleChange}
                     required
+                    inputProps={{ maxLength: 16 }}
+                    helperText="Must be exactly 16 digits with no spaces"
+                    error={formData.credit_card.number && !formData.credit_card.number.includes('*') && !/^\d{16}$/.test(formData.credit_card.number)}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -357,6 +372,9 @@ const handleDeleteAccount = async () => {
                     onChange={handleChange}
                     required
                     type="password"
+                    inputProps={{ maxLength: 3 }}
+                    helperText="Must be exactly 3 digits"
+                    error={formData.credit_card.cvv && formData.credit_card.cvv !== '***' && !/^\d{3}$/.test(formData.credit_card.cvv)}
                   />
                 </Grid>
                 

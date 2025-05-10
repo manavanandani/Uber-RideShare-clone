@@ -37,10 +37,10 @@ const CustomerSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true, minlength: 4 },
   credit_card: {
-    number: {type: String, required: true, minlength: 13, maxlength: 19, match: [/^\d{13,19}$/, 'Invalid credit card number format']},
+    number: {type: String, required: true, minlength: 16, maxlength: 16, match: [/^\d{16}$/, 'Credit card must be exactly 16 digits']},
     expiry: {type: String, required: true, match: [/^(0[1-9]|1[0-2])\/\d{2}$/, 'Invalid expiry date format (MM/YY)']},
     name_on_card: { type: String, required: true },
-    cvv: {type: String, required: true, minlength: 3, maxlength: 4, match: [/^\d{3,4}$/, 'Invalid CVV format']}
+    cvv: {type: String, required: true, minlength: 3, maxlength: 3, match: [/^\d{3}$/, 'CVV must be exactly 3 digits']}
   },
   rating: { type: Number, default: 0, required: true },
   is_deleted: { type: Boolean, default: false },

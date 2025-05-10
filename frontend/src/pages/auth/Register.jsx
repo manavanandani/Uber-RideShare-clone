@@ -56,13 +56,6 @@ function Register() {
   const { loading, error } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  //function generateRandomSsn() {
-  //  const part1 = Math.floor(Math.random() * 900 + 100).toString();
-  //  const part2 = Math.floor(Math.random() * 90 + 10).toString();
-  //  const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
-  //  return `${part1}-${part2}-${part3}`;
-  //}
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,6 +93,17 @@ function Register() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate credit card number and CVV
+    if (!/^\d{16}$/.test(formData.credit_card.number)) {
+      dispatch({ type: 'auth/setError', payload: 'Credit card must be exactly 16 digits' });
+      return;
+    }
+    
+    if (!/^\d{3}$/.test(formData.credit_card.cvv)) {
+      dispatch({ type: 'auth/setError', payload: 'CVV must be exactly 3 digits' });
+      return;
+    }
     
     // Add role
     const userData = { ...formData, role: 'customer' };
@@ -287,7 +291,7 @@ function Register() {
                   name="credit_card.number"
                   value={formData.credit_card.number}
                   onChange={handleChange}
-                  helperText="13-19 digits with no spaces"
+                  helperText="16 digits with no spaces"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -312,7 +316,9 @@ function Register() {
                   name="credit_card.cvv"
                   value={formData.credit_card.cvv}
                   onChange={handleChange}
-                  helperText="3-4 digits"
+                  helperText="3 digits"
+                  inputProps={{ maxLength: 3 }}
+                  error={formData.credit_card.cvv && !/^\d{3}$/.test(formData.credit_card.cvv)}
                 />
               </Grid>
               <Grid item xs={12}>
