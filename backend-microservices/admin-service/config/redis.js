@@ -100,6 +100,23 @@ const cacheMiddleware = (duration) => {
         const cachedData = await redisClient.get(key);
         if (cachedData) {
           console.log(`Cache hit for ${req.originalUrl}`);
+          
+          // For endpoints that return lists of users, add a check to filter deleted profiles
+          if (req.originalUrl.includes('/drivers') || req.originalUrl.includes('/customers')) {
+            try {
+              // Parse cached data
+              const parsedData = JSON.parse(cachedData);
+              
+              // If data is an array, filter out deleted profiles
+              if (parsedData.data && Array.isArray(parsedData.data)) {
+                parsedData.data = parsedData.data.filter(item => !item.is_deleted);
+                return res.json(parsedData);
+              }
+            } catch (filterError) {
+              console.error('Error filtering deleted profiles from cache:', filterError);
+            }
+          }
+          
           return res.json(JSON.parse(cachedData));
         }
       } catch (cacheError) {

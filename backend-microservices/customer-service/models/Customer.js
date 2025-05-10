@@ -29,19 +29,31 @@ const CustomerSchema = new mongoose.Schema({
   },
   zip_code: {
     type: String,
+    maxlength: 10,
     match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'],
     required: true
   },
-  phone: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  phone: { 
+    type: String, 
+    required: true,
+    match: [/^\d{10}$/, 'Phone number must be exactly 10 digits']
+  },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email format']
+  },
   password: { type: String, required: true, minlength: 4 },
   credit_card: {
-    number: {type: String, required: true, match: [/^\d{13,19}$/, 'Invalid credit card number format']},
+    number: {type: String, required: true, minlength: 16, maxlength: 16, match: [/^\d{16}$/, 'Credit card must be exactly 16 digits']},
     expiry: {type: String, required: true, match: [/^(0[1-9]|1[0-2])\/\d{2}$/, 'Invalid expiry date format (MM/YY)']},
     name_on_card: { type: String, required: true },
-    cvv: {type: String, required: true, match: [/^\d{3,4}$/, 'Invalid CVV format']}
+    cvv: {type: String, required: true, minlength: 3, maxlength: 3, match: [/^\d{3}$/, 'CVV must be exactly 3 digits']}
   },
   rating: { type: Number, default: 0, required: true },
+  is_deleted: { type: Boolean, default: false },
+  deletion_date: { type: Date, default: null },
   reviews: [{
     driver_id: { type: String, required: true },
     rating: { type: Number, required: true },
@@ -77,5 +89,6 @@ CustomerSchema.methods.matchPassword = async function (enteredPassword) {
 
 // Add index for geospatial queries
 CustomerSchema.index({ 'last_location': '2dsphere' });
+CustomerSchema.index({ is_deleted: 1 });
 
 module.exports = mongoose.model('Customer', CustomerSchema);

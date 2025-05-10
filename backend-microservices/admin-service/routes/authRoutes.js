@@ -1,11 +1,12 @@
-    const express = require('express');
-    const router = express.Router();
-    const authController = require('../controllers/authController');
-    const verifyRole = require('../middleware/verifyRole');
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const verifyRole = require('../middleware/verifyRole');
 
-    // Login routes
-    router.post('/admin/login', authController.adminLogin);
+// Login route for admin
+router.post('/admin/login', authController.adminLogin);
 
-    // Get current user profile
-    router.get('/me', verifyRole('admin'), authController.getCurrentUser);
-    module.exports = router;
+// Get current authenticated user
+router.get('/me', verifyRole(['admin']), authController.getCurrentUser);
+
+module.exports = router;
