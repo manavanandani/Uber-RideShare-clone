@@ -3,3 +3,4 @@ package-lock.json
 FastAPI/__pycache__
 FASTAPI/xgboost_fare_model.pkl
 FASTAPI/uber.csv
+docker-compose.yml

@@ -352,7 +352,7 @@ function Register() {
 
   return (
     <Container component="main" maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
+      <Paper elevation={3} sx={{ p: 4, mt: 5, mb: 5 }}>
         <Box
           sx={{
             display: 'flex',
