@@ -587,7 +587,7 @@ exports.uploadCustomerMedia = async (req, res) => {
       customer.intro_media.image_urls = [];
     }
     
-    customer.intro_media.image_urls.push(fileUrl);
+    customer.intro_media.image_urls.unshift(fileUrl);
     
     // Save the updated customer
     await customer.save();

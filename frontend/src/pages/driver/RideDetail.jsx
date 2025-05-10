@@ -17,16 +17,22 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  Avatar
 } from '@mui/material';
 import {
-  LocationOn as LocationIcon,
-  AccessTime as TimeIcon,
-  Person as PersonIcon,
   DirectionsCar as CarIcon,
+  Check as CheckIcon,
+  SportsScore as FinishIcon,
+  Cancel as CancelIcon,
+  Phone as PhoneIcon,
+  Message as MessageIcon,
+  LocationOn as LocationIcon,
+  Person as PersonIcon,
   ArrowBack as BackIcon,
   Money as MoneyIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  AccessTime as TimeIcon
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
@@ -43,42 +49,40 @@ function RideDetail() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  // In src/pages/driver/RideDetail.jsx
-
-// Update the fetchRideDetails function in the useEffect
-useEffect(() => {
-  const fetchRideDetails = async () => {
-    try {
-      setLoading(true);
-      // Get driver's rides
-      const response = await driverService.getRideHistory(user.driver_id);
-      
-      // Find the specific ride
-      const rideData = response.data.find(r => r.ride_id === rideId);
-      
-      if (!rideData) {
-        setError('Ride not found');
+  useEffect(() => {
+    const fetchRideDetails = async () => {
+      try {
+        setLoading(true);
+        // Get driver's rides
+        const response = await driverService.getRideHistory(user.driver_id);
+        
+        // Find the specific ride
+        const rideData = response.data.find(r => r.ride_id === rideId);
+        
+        if (!rideData) {
+          setError('Ride not found');
+          setLoading(false);
+          return;
+        }
+        
+        // If we need more detailed information including customer data
+        // Make a second API call to get the complete ride details
+        const detailResponse = await api.get(`/rides/${rideId}`);
+        let detailedRide = detailResponse.data.data;
+        console.log("Detailed ride with customer info:", detailedRide);
+        
+        setRide(detailedRide);
         setLoading(false);
-        return;
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load ride details');
+        setLoading(false);
       }
-      
-      // If we need more detailed information including customer data
-      // Make a second API call to get the complete ride details
-      const detailResponse = await api.get(`/rides/${rideId}`);
-      let detailedRide = detailResponse.data.data;
-      
-      setRide(detailedRide);
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load ride details');
-      setLoading(false);
+    };
+    
+    if (rideId && user?.driver_id) {
+      fetchRideDetails();
     }
-  };
-  
-  if (rideId && user?.driver_id) {
-    fetchRideDetails();
-  }
-}, [rideId, user]);
+  }, [rideId, user]);
 
   const handleRateCustomer = async () => {
     try {
@@ -171,18 +175,18 @@ useEffect(() => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="primary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-  <strong>Pickup:</strong> {ride.pickup_location && ride.pickup_location.coordinates ? 
-    `${ride.pickup_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.pickup_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
-    'N/A'}
-</Typography>
+                    <strong>Pickup:</strong> {ride.pickup_location && ride.pickup_location.coordinates ? 
+                      `${ride.pickup_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.pickup_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                      'N/A'}
+                  </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <LocationIcon color="secondary" sx={{ mr: 1 }} />
                   <Typography variant="body1">
-  <strong>Dropoff:</strong> {ride.dropoff_location && ride.dropoff_location.coordinates ? 
-    `${ride.dropoff_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.dropoff_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
-    'N/A'}
-</Typography>
+                    <strong>Dropoff:</strong> {ride.dropoff_location && ride.dropoff_location.coordinates ? 
+                      `${ride.dropoff_location.coordinates[1]?.toFixed(4) || '0.0000'}, ${ride.dropoff_location.coordinates[0]?.toFixed(4) || '0.0000'}` : 
+                      'N/A'}
+                  </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <TimeIcon sx={{ mr: 1 }} />
@@ -199,25 +203,25 @@ useEffect(() => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <MoneyIcon sx={{ mr: 1 }} />
                   <Typography variant="body1">
-  <strong>Fare:</strong> ${(ride.fare_amount || 0).toFixed(2)}
-</Typography>
+                    <strong>Fare:</strong> ${(ride.fare_amount || 0).toFixed(2)}
+                  </Typography>
                 </Box>
               </Grid>
             </Grid>
             
             <Box sx={{ mt: 2, height: 300 }}>
-            <MapWithMarkers 
-  pickup={ride.pickup_location && ride.pickup_location.coordinates ? {
-    lat: ride.pickup_location.coordinates[1] || 0,
-    lng: ride.pickup_location.coordinates[0] || 0
-  } : null}
-  dropoff={ride.dropoff_location && ride.dropoff_location.coordinates ? {
-    lat: ride.dropoff_location.coordinates[1] || 0,
-    lng: ride.dropoff_location.coordinates[0] || 0
-  } : null}
-  showDirections={true}
-  height={300}
-/>
+              <MapWithMarkers 
+                pickup={ride.pickup_location && ride.pickup_location.coordinates ? {
+                  lat: ride.pickup_location.coordinates[1] || 0,
+                  lng: ride.pickup_location.coordinates[0] || 0
+                } : null}
+                dropoff={ride.dropoff_location && ride.dropoff_location.coordinates ? {
+                  lat: ride.dropoff_location.coordinates[1] || 0,
+                  lng: ride.dropoff_location.coordinates[0] || 0
+                } : null}
+                showDirections={true}
+                height={300}
+              />
             </Box>
           </Paper>
           
@@ -230,9 +234,7 @@ useEffect(() => {
             <Grid container spacing={3}>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5">
-  {ride.distance ? `${(ride.distance || 0).toFixed(2)} km` : 'N/A'}
-</Typography>
+                  <Typography variant="body2" color="textSecondary">Distance</Typography>
                   <Typography variant="h5">
                     {ride.distance ? `${ride.distance.toFixed(2)} km` : 'N/A'}
                   </Typography>
@@ -240,9 +242,7 @@ useEffect(() => {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5">
-  {ride.duration ? `${Math.round(ride.duration || 0)} mins` : 'N/A'}
-</Typography>
+                  <Typography variant="body2" color="textSecondary">Duration</Typography>
                   <Typography variant="h5">
                     {ride.duration ? `${Math.round(ride.duration)} mins` : 'N/A'}
                   </Typography>
@@ -250,11 +250,7 @@ useEffect(() => {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5">
-  {ride.distance && ride.fare_amount
-    ? `$${((ride.fare_amount || 0) / (ride.distance || 1)).toFixed(2)}`
-    : 'N/A'}
-</Typography>
+                  <Typography variant="body2" color="textSecondary">Fare per km</Typography>
                   <Typography variant="h5">
                     {ride.distance && ride.fare_amount
                       ? `$${(ride.fare_amount / ride.distance).toFixed(2)}`
@@ -304,38 +300,63 @@ useEffect(() => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             
-            <Box sx={{ 
-  width: 40, 
-  height: 40, 
-  borderRadius: '50%', 
-  bgcolor: 'primary.main', 
-  color: 'white', 
-  display: 'flex', 
-  alignItems: 'center', 
-  justifyContent: 'center',
-  mr: 2,
-  backgroundImage: ride.customer_info?.intro_media?.image_urls?.length > 0 
-    ? `url(http://localhost:5000${ride.customer_info.intro_media.image_urls[0]})` 
-    : 'none',
-  backgroundSize: 'cover',
-  backgroundPosition: 'center'
-}}>
-  {(!ride.customer_info?.intro_media?.image_urls || !ride.customer_info?.intro_media?.image_urls.length) && 
-    (ride.customer_info?.first_name?.[0] || 'C')}
-</Box>
-            
-            {ride.status === 'completed' && !ride.rating?.driver_to_customer && (
-              <Button 
-                variant="outlined" 
-                fullWidth
-                startIcon={<StarIcon />}
-                onClick={() => setShowRatingDialog(true)}
-                sx={{ mt: 2 }}
-              >
-                Rate Customer
-              </Button>
+            {ride.customer_info ? (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar 
+                    sx={{ width: 64, height: 64, mr: 2 }}
+                    src={ride.customer_info?.intro_media?.image_urls?.length > 0 
+                      ? `http://localhost:5000${ride.customer_info.intro_media.image_urls[0]}` 
+                      : ''}
+                  >
+                    {ride.customer_info?.first_name?.[0] || 'C'}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1">
+                      {ride.customer_info.first_name || ''} {ride.customer_info.last_name || ''}
+                    </Typography>
+                    {ride.customer_info.rating !== undefined && (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Rating 
+                          value={ride.customer_info.rating || 0} 
+                          precision={0.5} 
+                          readOnly 
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ ml: 1 }}>
+                          {(ride.customer_info.rating || 0).toFixed(1)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                
+                {ride.customer_info.phone && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Typography variant="body2">
+                      {ride.customer_info.phone}
+                    </Typography>
+                  </Box>
+                )}
+
+                {ride.status === 'completed' && !ride.rating?.driver_to_customer && (
+                  <Button 
+                    variant="outlined" 
+                    fullWidth
+                    startIcon={<StarIcon />}
+                    onClick={() => setShowRatingDialog(true)}
+                    sx={{ mt: 2 }}
+                  >
+                    Rate Customer
+                  </Button>
+                )}
+              </Box>
+            ) : (
+              <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                Customer information is unavailable.
+              </Typography>
             )}
-  
           </Paper>
           
           {ride.status === 'completed' && ride.rating?.customer_to_driver && (
