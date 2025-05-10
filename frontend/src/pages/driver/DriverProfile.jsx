@@ -219,7 +219,7 @@ function DriverProfile() {
       setUploadingMedia(true);
       
       const formData = new FormData();
-      formData.append('media', file);
+      formData.append('file', file);
       
       await driverService.uploadMedia(user.driver_id, formData);
       
