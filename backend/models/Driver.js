@@ -17,7 +17,7 @@ const DriverSchema = new mongoose.Schema({
   address: {type: String, required: true},
   city: {type: String, required: true},
   state: {type: String, uppercase: true, enum: validStates, required: true},
-  zip_code: {type: String, match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'], required: true},
+  zip_code: {type: String, maxlength: 10, match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'], required: true},
   phone: {type: String, required: true},
   email: { type: String, unique: true, required: true },
   password: {type: String, required: true, minlength: 4},
