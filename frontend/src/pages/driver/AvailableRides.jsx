@@ -190,68 +190,79 @@ function AvailableRides() {
   };
 
   const handleAcceptRide = async () => {
-    if (!selectedRide) return;
+  if (!selectedRide) return;
 
-    if (driverStatus === 'offline') {
-      setError("You are currently offline. Please go online to accept rides.");
-      return;
-    }
+  if (driverStatus === 'offline') {
+    setError("You are currently offline. Please go online to accept rides.");
+    return;
+  }
+  
+  // Check if user is offline
+  if (user.status === 'offline') {
+    setError("You are currently offline. Please go online to accept rides.");
+    return;
+  }
+  
+  // Check if ride is too far before trying to accept
+  if (selectedRide.distance_to_pickup > 16) {
+    setError("This ride is too far away to accept (more than 10 miles from your current location)");
+    return;
+  }
+  
+  try {
+    setAccepting(true);
+    console.log('Accepting ride:', selectedRide.ride_id);
     
-    // Check if user is offline
-    if (user.status === 'offline') {
-      setError("You are currently offline. Please go online to accept rides.");
-      return;
-    }
+    // Call the API to accept the ride
+    const response = await driverService.acceptRide(selectedRide.ride_id);
+    console.log('Ride accepted response:', response);
     
-    // Check if ride is too far before trying to accept
-    if (selectedRide.distance_to_pickup > 16) {
-      setError("This ride is too far away to accept (more than 10 miles from your current location)");
-      return;
-    }
+    // Get the updated driver profile to reflect new status
+    await driverService.getProfile(user.driver_id);
     
-    try {
-      setAccepting(true);
-      console.log('Accepting ride:', selectedRide.ride_id);
-      
-      // Call the API to accept the ride
-      const response = await driverService.acceptRide(selectedRide.ride_id);
-      console.log('Ride accepted response:', response);
-      
-      // Get the updated driver profile to reflect new status
-      await driverService.getProfile(user.driver_id);
-      
-      setAccepting(false);
+    setAccepting(false);
 
-      // Show success message
-      alert('Ride accepted successfully! Navigating to active ride...');
+    // Show success message
+    alert('Ride accepted successfully! Navigating to active ride...');
+    
+    setTimeout(() => {
+      navigate('/driver/rides/active');
+    }, 500);
+  } catch (err) {
+    console.error('Error accepting ride:', err);
+    let errorMessage = err.response?.data?.message || 'Failed to accept ride';
+    
+    // Check for specific error cases
+    if (err.response?.data?.active_ride_id) {
+      errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
       
-      setTimeout(() => {
+      // Option to navigate to the active ride
+      if (confirm(`${errorMessage}\n\nDo you want to navigate to your active ride?`)) {
         navigate('/driver/rides/active');
-      }, 500);
-    } catch (err) {
-      console.error('Error accepting ride:', err);
-      let errorMessage = err.response?.data?.message || 'Failed to accept ride';
-      
-      // Check for specific error cases
-      if (err.response?.data?.active_ride_id) {
-        errorMessage = `You already have an active ride (#${err.response.data.active_ride_id}). Complete this ride before accepting a new one.`;
-        
-        // Option to navigate to the active ride
-        if (confirm(`${errorMessage}\n\nDo you want to navigate to your active ride?`)) {
-          navigate('/driver/rides/active');
-          return;
-        }
-      } else if (err.response?.status === 403 || 
-                (err.response?.data?.message && err.response.data.message.includes('offline'))) {
-        errorMessage = "You must be online to accept rides. Please go online first.";
-      } else if (err.response?.data?.distance) {
-        errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
+        return;
       }
-      
-      setError(errorMessage);
-      setAccepting(false);
+    } else if (err.response?.status === 403 || 
+              (err.response?.data?.message && err.response.data.message.includes('offline'))) {
+      errorMessage = "You must be online to accept rides. Please go online first.";
+    } else if (err.response?.data?.message && err.response.data.message.includes('already been accepted')) {
+      errorMessage = "This ride has already been accepted by another driver. Please refresh the list.";
+      // Force refresh the list of available rides after a short delay
+      setTimeout(() => {
+        if (location) {
+          fetchAvailableRides({
+            latitude: location.latitude,
+            longitude: location.longitude
+          });
+        }
+      }, 1000);
+    } else if (err.response?.data?.distance) {
+      errorMessage = `You are ${err.response.data.distance} km away from the pickup location (maximum allowed is 16 km)`;
     }
-  };
+    
+    setError(errorMessage);
+    setAccepting(false);
+  }
+};
   
   // Function to handle address form changes
   const handleAddressChange = (e) => {

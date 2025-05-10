@@ -154,25 +154,20 @@ exports.createRide = async (req, res) => {
 
     // Find nearby available drivers using proper GeoJSON query
     const nearbyDrivers = await Driver.find({
-      'intro_media.location': {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [pickup_location.longitude, pickup_location.latitude]
-          },
-          $maxDistance: 10000 // 10km in meters
-        }
+  'intro_media.location': {
+    $near: {
+      $geometry: {
+        type: 'Point',
+        coordinates: [pickup_location.longitude, pickup_location.latitude]
       },
-      status: 'available'
-    }).limit(5);
+      $maxDistance: 10000 // 10km in meters
+    }
+  },
+  status: 'available'
+}).limit(5);
 
     // If no drivers are available, still create the ride but leave it in "requested" state
     let driver_id = null;
-    if (nearbyDrivers.length > 0) {
-      // Select the closest driver
-      const driver = nearbyDrivers[0];
-      driver_id = driver.driver_id;
-    }
 
     // Calculate fare using the dynamic pricing algorithm
     const priceData = await getDynamicPrice(
@@ -184,19 +179,19 @@ exports.createRide = async (req, res) => {
 
     // Create ride with GeoJSON format locations
     const ride = new Ride({
-      ride_id,
-      pickup_location: pickupGeo,
-      dropoff_location: dropoffGeo,
-      date_time: new Date(date_time || Date.now()),
-      customer_id,
-      driver_id, // This might be null if no drivers are available
-      fare_amount: priceData.fare,
-      passenger_count: passenger_count || 1,
-      distance: priceData.distance,
-      duration: priceData.duration,
-      surge_factor: priceData.surge_factor || 1.0,
-      status: 'requested'
-    });
+  ride_id,
+  pickup_location: pickupGeo,
+  dropoff_location: dropoffGeo,
+  date_time: new Date(date_time || Date.now()),
+  customer_id,
+  driver_id, // This will now always be null initially
+  fare_amount: priceData.fare,
+  passenger_count: passenger_count || 1,
+  distance: priceData.distance,
+  duration: priceData.duration,
+  surge_factor: priceData.surge_factor || 1.0,
+  status: 'requested'
+});
 
     const savedRide = await ride.save();
 
@@ -436,8 +431,10 @@ exports.getNearbyRides = async (req, res) => {
 
   try {
     // Find requested rides within 16km (10 miles) of the driver
+    // IMPORTANT: Only get rides with no driver assigned (driver_id is null)
     const rides = await Ride.find({
       status: 'requested',
+      driver_id: null, // Only get unassigned rides
       'pickup_location': {
         $near: {
           $geometry: {
@@ -500,7 +497,6 @@ exports.acceptRide = async (req, res) => {
       });
     }
 
-
     // Check if driver already has an active ride
     const activeRides = await Ride.find({
       driver_id: req.user.driver_id,
@@ -514,11 +510,18 @@ exports.acceptRide = async (req, res) => {
       });
     }
     
-    
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
+    }
+    
+    // IMPORTANT: Check if ride already has a driver assigned
+    if (ride.driver_id && ride.driver_id !== req.user.driver_id) {
+      return res.status(400).json({ 
+        message: 'This ride has already been accepted by another driver',
+        ride_status: ride.status
+      });
     }
     
     // Get driver's current location
@@ -548,15 +551,14 @@ exports.acceptRide = async (req, res) => {
       });
     }
     
-    //  debugging to see what's happening
-    console.log(`Ride status: ${ride.status}, Current driver: ${ride.driver_id}, Requesting driver: ${req.user.driver_id}`);
-    
+    // Update the query to only match rides that are requested AND have no driver assigned
+    // OR are already assigned to this driver (to handle re-accepting after error)
     const query = { 
       ride_id,
       status: 'requested',
       $or: [
         { driver_id: null }, 
-        { driver_id: req.user.driver_id }, 
+        { driver_id: req.user.driver_id }
       ]
     };
     
