@@ -1,5 +1,8 @@
+// src/pages/driver/DriverProfile.jsx
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { logout } from '../../store/slices/authSlice';
 import {
   Box,
   Paper,
@@ -19,7 +22,12 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemAvatar
+  ListItemAvatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -27,12 +35,16 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Star as StarIcon,
-  LocationOn as LocationIcon
+  LocationOn as LocationIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 
 function DriverProfile() {
   const { user } = useSelector(state => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -61,6 +73,10 @@ function DriverProfile() {
   const [success, setSuccess] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  
+  // States for account deletion
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -146,7 +162,7 @@ function DriverProfile() {
     }
   };
   
-  // New function to handle address update
+  // Function to handle address update
   const handleUpdateAddress = async () => {
     try {
       setUpdatingLocation(true);
@@ -219,7 +235,7 @@ function DriverProfile() {
       setUploadingMedia(true);
       
       const formData = new FormData();
-      formData.append('media', file);
+      formData.append('file', file);
       
       await driverService.uploadMedia(user.driver_id, formData);
       
@@ -239,6 +255,31 @@ function DriverProfile() {
       setUploadingMedia(false);
     }
   };
+
+const handleDeleteAccount = async () => {
+  try {
+    setDeleting(true);
+    setError(null);
+    
+    console.log('Starting driver account deletion process');
+    
+    // Proceed with deletion
+    const response = await driverService.deleteProfile(user.driver_id);
+    console.log('Delete profile response:', response);
+    
+    // Log out the user
+    dispatch(logout());
+    
+    // Navigate to home page
+    navigate('/');
+    
+  } catch (err) {
+    console.error('Profile deletion error:', err);
+    setError(err.response?.data?.message || 'Failed to delete account');
+    setDeleting(false);
+    setShowDeleteDialog(false);
+  }
+};
 
   if (loading) {
     return (
@@ -613,8 +654,63 @@ function DriverProfile() {
               </Grid>
             </Grid>
           </Paper>
+          
+          {/* Account Deletion Section */}
+          <Paper sx={{ p: 3, mt: 3, bgcolor: 'error.light' }}>
+            <Typography variant="h6" gutterBottom color="error">
+              Delete Account
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Typography variant="body2" paragraph>
+              If you delete your account, your personal information will be anonymized, but your ride history and ratings will be maintained in the system for record-keeping purposes.
+            </Typography>
+            
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => setShowDeleteDialog(true)}
+              startIcon={<DeleteIcon />}
+            >
+              Delete My Account
+            </Button>
+          </Paper>
         </Grid>
       </Grid>
+      
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+      >
+        <DialogTitle>
+          Delete Your Account?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This action cannot be undone. Your personal information will be anonymized, but your ride history and ratings will be maintained in the system.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2 }}>
+            Are you sure you want to proceed?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setShowDeleteDialog(false)}
+            color="primary"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteAccount}
+            color="error"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting...' : 'Delete Account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

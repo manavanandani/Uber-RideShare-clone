@@ -3,12 +3,15 @@ const { publishDriverStatusChange } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
 const { geocodeAddress } = require('../utils/locationUtils');
+const Ride = require('../models/Ride');
 
 
 // Get all drivers
 exports.getAllDrivers = async (req, res) => {
   try {
-    const drivers = await Driver.find().select('-password');
+    const drivers = await Driver.find({ is_deleted: { $ne: true } }).select('-password');
+
+    //const drivers = await Driver.find().select('-password');
     
     res.status(200).json({
       message: 'Drivers retrieved successfully',
@@ -215,9 +218,69 @@ exports.deleteDriver = async (req, res) => {
   }
 };
 
+exports.deleteDriverProfile = async (req, res) => {
+  const { driver_id } = req.params;
+  
+  try {
+    console.log(`Received request to delete driver: ${driver_id}`);
+    
+    // Verify authorization
+    if (req.user.role !== 'admin' && req.user.driver_id !== driver_id) {
+      console.log(`Unauthorized deletion attempt for driver ${driver_id} by ${req.user.role} ${req.user.driver_id || req.user.admin_id || req.user.customer_id}`);
+      return res.status(403).json({ message: 'Unauthorized to delete this profile' });
+    }
+    
+    // Find the driver
+    const driver = await Driver.findOne({ driver_id });
+    
+    if (!driver) {
+      console.log(`Driver ${driver_id} not found`);
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+    
+    // Check if already deleted
+    if (driver.is_deleted) {
+      console.log(`Driver ${driver_id} already deleted`);
+      return res.status(400).json({ message: 'Profile already deleted' });
+    }
+    
+    // Important: Use findOneAndUpdate to ensure update happens
+    const result = await Driver.findOneAndUpdate(
+      { driver_id },
+      { 
+        $set: { 
+          is_deleted: true,
+          deletion_date: new Date(),
+          status: 'offline', // Ensure driver is marked offline
+          // Anonymize personal data
+          email: `deleted-${driver_id}@example.com`,
+          phone: '000-000-0000',
+        },
+        $unset: { password: "" }
+      },
+      { new: true }
+    );
+    
+    console.log(`Driver ${driver_id} deletion result:`, result ? 'Success' : 'Failed');
+    
+    // Invalidate cache
+    await invalidateCache(`*driver*${driver_id}*`);
+    
+    res.status(200).json({
+      message: 'Profile deleted successfully',
+      data: { driver_id }
+    });
+    
+  } catch (err) {
+    console.error(`Error deleting driver ${driver_id}:`, err);
+    res.status(500).json({ message: 'Failed to delete profile', error: err.message });
+  }
+};
+
 // Search drivers
 exports.searchDrivers = async (req, res) => {
   try {
+    const query = { is_deleted: { $ne: true } };
     const {
       name,
       city,
@@ -226,7 +289,7 @@ exports.searchDrivers = async (req, res) => {
       max_rating
     } = req.query;
     
-    const query = {};
+    //const query = {};
     
     if (name) {
       query.$or = [

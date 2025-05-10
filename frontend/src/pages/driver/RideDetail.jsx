@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { driverService } from '../../services/driverService';
 import MapWithMarkers from '../../components/common/MapWithMarkers';
+import api from '../../services/api';
 
 function RideDetail() {
   const { rideId } = useParams();
@@ -42,34 +43,42 @@ function RideDetail() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  useEffect(() => {
-    const fetchRideDetails = async () => {
-      try {
-        setLoading(true);
-        // Get driver's rides
-        const response = await driverService.getRideHistory(user.driver_id);
-        
-        // Find the specific ride
-        const rideData = response.data.find(r => r.ride_id === rideId);
-        
-        if (!rideData) {
-          setError('Ride not found');
-          setLoading(false);
-          return;
-        }
-        
-        setRide(rideData);
+  // In src/pages/driver/RideDetail.jsx
+
+// Update the fetchRideDetails function in the useEffect
+useEffect(() => {
+  const fetchRideDetails = async () => {
+    try {
+      setLoading(true);
+      // Get driver's rides
+      const response = await driverService.getRideHistory(user.driver_id);
+      
+      // Find the specific ride
+      const rideData = response.data.find(r => r.ride_id === rideId);
+      
+      if (!rideData) {
+        setError('Ride not found');
         setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load ride details');
-        setLoading(false);
+        return;
       }
-    };
-    
-    if (rideId && user?.driver_id) {
-      fetchRideDetails();
+      
+      // If we need more detailed information including customer data
+      // Make a second API call to get the complete ride details
+      const detailResponse = await api.get(`/rides/${rideId}`);
+      let detailedRide = detailResponse.data.data;
+      
+      setRide(detailedRide);
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load ride details');
+      setLoading(false);
     }
-  }, [rideId, user]);
+  };
+  
+  if (rideId && user?.driver_id) {
+    fetchRideDetails();
+  }
+}, [rideId, user]);
 
   const handleRateCustomer = async () => {
     try {
@@ -340,24 +349,7 @@ function RideDetail() {
                 Rate Customer
               </Button>
             )}
-            
-            {ride.rating?.driver_to_customer && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Your Rating
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Rating 
-                    value={ride.rating.driver_to_customer} 
-                    readOnly 
-                    precision={0.5}
-                  />
-                  <Typography variant="body2" sx={{ ml: 1 }}>
-                    {ride.rating.driver_to_customer.toFixed(1)}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
+  
           </Paper>
           
           {ride.status === 'completed' && ride.rating?.customer_to_driver && (

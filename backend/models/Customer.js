@@ -29,6 +29,7 @@ const CustomerSchema = new mongoose.Schema({
   },
   zip_code: {
     type: String,
+    maxlength: 10,
     match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'],
     required: true
   },
@@ -36,12 +37,14 @@ const CustomerSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true, minlength: 4 },
   credit_card: {
-    number: {type: String, required: true, match: [/^\d{13,19}$/, 'Invalid credit card number format']},
+    number: {type: String, required: true, minlength: 13, maxlength: 19, match: [/^\d{13,19}$/, 'Invalid credit card number format']},
     expiry: {type: String, required: true, match: [/^(0[1-9]|1[0-2])\/\d{2}$/, 'Invalid expiry date format (MM/YY)']},
     name_on_card: { type: String, required: true },
-    cvv: {type: String, required: true, match: [/^\d{3,4}$/, 'Invalid CVV format']}
+    cvv: {type: String, required: true, minlength: 3, maxlength: 4, match: [/^\d{3,4}$/, 'Invalid CVV format']}
   },
   rating: { type: Number, default: 0, required: true },
+  is_deleted: { type: Boolean, default: false },
+  deletion_date: { type: Date, default: null },
   reviews: [{
     driver_id: { type: String, required: true },
     rating: { type: Number, required: true },
@@ -77,5 +80,6 @@ CustomerSchema.methods.matchPassword = async function (enteredPassword) {
 
 // Add index for geospatial queries
 CustomerSchema.index({ 'last_location': '2dsphere' });
+CustomerSchema.index({ is_deleted: 1 });
 
 module.exports = mongoose.model('Customer', CustomerSchema);

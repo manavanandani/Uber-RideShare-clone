@@ -38,15 +38,17 @@ export const customerService = {
     return response.data;
   },
 
-  getActiveRide: async (customerId) => {
+  // Update in customerService.js
+getActiveRide: async (customerId) => {
   try {
     const response = await api.get(`/rides/customer/${customerId}/active`);
     return response.data;
   } catch (err) {
-    // If no active ride is found, the API returns 404
+    // If it's a 404, it means no active ride, so return null data
     if (err.response?.status === 404) {
       return { data: null };
     }
+    // Rethrow for other errors
     throw err;
   }
 },
@@ -58,7 +60,20 @@ export const customerService = {
   },
 
   cancelRide: async (rideId, reason = '') => {
-  const response = await api.patch(`/rides/${rideId}/cancel-customer`, { reason });
-  return response.data;
+    const response = await api.patch(`/rides/${rideId}/cancel-customer`, { reason });
+    return response.data;
+  },
+
+  deleteProfile: async (customerId) => {
+  try {
+    console.log(`Attempting to delete customer profile: ${customerId}`);
+    const response = await api.delete(`/customers/delete/${customerId}`);
+    console.log('Customer deletion response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Customer deletion error:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
 }
 };
