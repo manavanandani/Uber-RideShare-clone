@@ -109,15 +109,15 @@ function CustomerDashboard() {
       <Grid container spacing={3}>
         {/* Stats Cards */}
         <Grid item xs={12} md={3}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CarIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                <CarIcon sx={{ fontSize: 40, mr: 2, color: '#111' }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="#888" gutterBottom sx={{ fontWeight: 600 }}>
                     Total Rides
                   </Typography>
-                  <Typography variant="h4">{dashboard.stats.totalRides}</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800 }}>{dashboard.stats.totalRides}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -152,15 +152,15 @@ function CustomerDashboard() {
 )}
         
         <Grid item xs={12} md={3}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CheckIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+                <CheckIcon sx={{ fontSize: 40, mr: 2, color: '#27ae60' }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="#888" gutterBottom sx={{ fontWeight: 600 }}>
                     Completed
                   </Typography>
-                  <Typography variant="h4">{dashboard.stats.completedRides}</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800 }}>{dashboard.stats.completedRides}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -168,15 +168,15 @@ function CustomerDashboard() {
         </Grid>
         
         <Grid item xs={12} md={3}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <HistoryIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
+                <HistoryIcon sx={{ fontSize: 40, mr: 2, color: '#ff9900' }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="#888" gutterBottom sx={{ fontWeight: 600 }}>
                     Cancelled
                   </Typography>
-                  <Typography variant="h4">{dashboard.stats.cancelledRides}</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 800 }}>{dashboard.stats.cancelledRides}</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -184,16 +184,16 @@ function CustomerDashboard() {
         </Grid>
         
         <Grid item xs={12} md={3}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <StarIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                <StarIcon sx={{ fontSize: 40, mr: 2, color: '#111' }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="#888" gutterBottom sx={{ fontWeight: 600 }}>
                     Your Rating
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ mr: 1 }}>
+                    <Typography variant="h4" sx={{ mr: 1, fontWeight: 800 }}>
                       {dashboard.stats.rating.toFixed(1)}
                     </Typography>
                     <Rating 
@@ -211,9 +211,9 @@ function CustomerDashboard() {
         
         {/* Recent Rides */}
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: '1.2rem' }}>
                 Recent Rides
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -245,7 +245,8 @@ function CustomerDashboard() {
                           component={Link} 
                           to={`/customer/ride/${ride.ride_id}`}
                           size="small"
-                          sx={{ mt: 1 }}
+                          className="uber-btn"
+                          sx={{ mt: 1, fontWeight: 700, fontSize: '1em', px: 3, background: '#000', color: '#fff', borderRadius: 999, boxShadow: 'none', border: 'none', '&:hover': { background: '#222', color: '#fff' } }}
                         >
                           View Details
                         </Button>
@@ -259,7 +260,8 @@ function CustomerDashboard() {
                 <Button 
                   component={Link} 
                   to="/customer/history"
-                  variant="outlined"
+                  className="uber-btn"
+                  sx={{ fontWeight: 700, fontSize: '1em', px: 4, background: '#000', color: '#fff', borderRadius: 999, boxShadow: 'none', border: 'none', '&:hover': { background: '#222', color: '#fff' } }}
                 >
                   View All Rides
                 </Button>
@@ -270,9 +272,9 @@ function CustomerDashboard() {
         
         {/* Quick Actions */}
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', borderRadius: 3 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: '1.2rem' }}>
                 Quick Actions
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -281,10 +283,11 @@ function CustomerDashboard() {
                 <Button 
                   component={Link} 
                   to="/customer/book" 
-                  variant="contained" 
+                  className="uber-btn"
                   size="large"
-                  startIcon={<CarIcon />}
+                  startIcon={<CarIcon sx={{ color: '#fff' }} />}
                   fullWidth
+                  sx={{ fontWeight: 700, fontSize: '1.1em', py: 1.2, background: '#000', color: '#fff', borderRadius: 999, boxShadow: 'none', border: 'none', '&:hover': { background: '#222', color: '#fff' } }}
                 >
                   Book a Ride
                 </Button>
@@ -292,9 +295,10 @@ function CustomerDashboard() {
                 <Button 
                   component={Link} 
                   to="/customer/profile" 
-                  variant="outlined"
+                  className="uber-btn uber-btn-secondary"
                   size="large"
                   fullWidth
+                  sx={{ fontWeight: 700, fontSize: '1.1em', py: 1.2, background: '#fff', color: '#000', border: '2px solid #000', borderRadius: 999, boxShadow: 'none', '&:hover': { background: '#f6f6f6', color: '#000', borderColor: '#000' } }}
                 >
                   Update Profile
                 </Button>

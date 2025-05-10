@@ -287,82 +287,85 @@ function DriverApplication() {
   };
 
   return (
-    <>
-    <Navbar/>
-    <Container component="main" maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-            <DirectionsCarIcon />
-          </Avatar>
-          <Typography component="h1" variant="h5">
-            Driver Application
+    <Box sx={{ minHeight: '100vh', bgcolor: '#fff' }}>
+      {/* Uber black top bar with logo */}
+      <Box sx={{ width: '100%', bgcolor: '#000', py: 2, px: 4, mb: 6 }}>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'Inter, Uber Move, Arial, sans-serif', cursor: 'pointer' }}>
+            Uber
           </Typography>
-          
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-              {error}
-            </Alert>
-          )}
-          
-          <Box sx={{ width: '100%', mt: 3 }}>
-            <Stepper activeStep={activeStep} alternativeLabel>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-            
-            <Box component="form" noValidate sx={{ mt: 3 }}>
-              {renderStepContent(activeStep)}
-              
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-                <Button
-                  disabled={activeStep === 0}
-                  onClick={handleBack}
-                >
-                  Back
-                </Button>
-                <Box>
-                  {activeStep === steps.length - 1 ? (
-                    <Button
-                      variant="contained"
-                      onClick={handleSubmit}
-                      disabled={loading}
-                    >
-                      {loading ? <CircularProgress size={24} /> : 'Submit Application'}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="contained"
-                      onClick={handleNext}
-                    >
-                      Next
-                    </Button>
-                  )}
+        </Link>
+      </Box>
+      <Container component="main" maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
+        <Paper elevation={0} sx={{ p: 4, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', width: '100%' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Avatar sx={{ m: 1, bgcolor: '#222', width: 56, height: 56 }}>
+              <DirectionsCarIcon sx={{ fontSize: 32 }} />
+            </Avatar>
+            <Typography component="h1" variant="h5" sx={{ fontWeight: 800, color: '#111', mb: 2, textAlign: 'left', width: '100%' }}>
+              Driver Application
+            </Typography>
+            {error && (
+              <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <Box sx={{ width: '100%', mt: 3 }}>
+              <Stepper activeStep={activeStep} alternativeLabel>
+                {steps.map((label) => (
+                  <Step key={label}>
+                    <StepLabel>{label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+              <Box component="form" noValidate sx={{ mt: 3 }}>
+                {renderStepContent(activeStep)}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button
+                    disabled={activeStep === 0}
+                    onClick={handleBack}
+                    className="uber-btn uber-btn-secondary"
+                    sx={{ borderRadius: 999, fontWeight: 700, fontSize: '1.1em', py: 1.2, background: '#fff', color: '#000', border: '2px solid #000', boxShadow: 'none', '&:hover': { background: '#f6f6f6', color: '#000', borderColor: '#000' } }}
+                  >
+                    Back
+                  </Button>
+                  <Box>
+                    {activeStep === steps.length - 1 ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="uber-btn"
+                        sx={{ borderRadius: 999, fontWeight: 700, fontSize: '1.1em', py: 1.2, background: '#000', color: '#fff', boxShadow: 'none', border: 'none', '&:hover': { background: '#222', color: '#fff' } }}
+                      >
+                        {loading ? <CircularProgress size={24} /> : 'Submit Application'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        className="uber-btn"
+                        sx={{ borderRadius: 999, fontWeight: 700, fontSize: '1.1em', py: 1.2, background: '#000', color: '#fff', boxShadow: 'none', border: 'none', '&:hover': { background: '#222', color: '#fff' } }}
+                      >
+                        Next
+                      </Button>
+                    )}
+                  </Box>
                 </Box>
               </Box>
             </Box>
+            <Box sx={{ textAlign: 'center', mt: 4, width: '100%' }}>
+              <span style={{ fontSize: 16, color: '#111', fontWeight: 500 }}>
+                Already have a driver account?{' '}
+                <Link to="/login?role=driver" style={{ textDecoration: 'none', color: '#000', fontWeight: 700 }}>
+                  Sign in
+                </Link>
+              </span>
+            </Box>
           </Box>
-          
-          <Grid container justifyContent="flex-end" sx={{ mt: 3 }}>
-            <Grid item>
-              <Link to="/login?role=driver" style={{ textDecoration: 'none', color: 'primary.main' }}>
-                Already have a driver account? Sign in
-              </Link>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-    </Container>
-    </>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 
