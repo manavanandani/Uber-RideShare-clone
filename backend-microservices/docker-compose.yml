@@ -52,6 +52,22 @@ services:
       - "5001:5001"
     environment:
       KAFKA_BROKER: kafka:9092
-      MONGO_URI: mongodb://mongo:27017/admin-service
+      MONGO_URI: mongodb+srv://jiyoonlee:OFMwgS2AStEVOvE9@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+  
+  customer-service:
+    build:
+      context: ./customer-service
+    depend_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      ports:
+        - "5002:5002"
+    environment:
+      KAFKA_BROKER: kafka:9092
+      MONGO_URI: mongodb+srv://jiyoonlee:OFMwgS2AStEVOvE9@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
       REDIS_HOST: redis
       REDIS_PORT: 6379

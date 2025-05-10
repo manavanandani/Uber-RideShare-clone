@@ -1,7 +1,6 @@
 const Admin = require('../models/Admin');
 const { invalidateCache } = require('../config/redis');
-const { publishDriverStatusChange, publishCustomerEvent, publishStatsRequest
-} = require('../services/messageService');
+const { publishDriverStatusChange, publishCustomerEvent } = require('../services/messageService');
 
 // Get all admins
 exports.getAllAdmins = async (req, res) => {
@@ -175,88 +174,106 @@ exports.deleteAdmin = async (req, res) => {
   }
 };
 
-// Review driver account
+// Controller method to review a driver's account
 exports.reviewDriverAccount = async (req, res) => {
   const { driver_id } = req.params;
   const { status, notes } = req.body;
 
   try {
+    // Validate status
     if (!status || !['approved', 'rejected', 'pending_review'].includes(status)) {
       return res.status(400).json({
         message: 'Invalid status. Must be "approved", "rejected", or "pending_review"'
       });
     }
 
-    await publishDriverStatusChange(driver_id, `account_${status}`, {
-      reviewed_by: req.user.admin_id,
-      notes
-    });
+    // Publish driver status change event
+    await publishDriverStatusChange(driver_id, `account_${status}`, notes || '');
 
     res.status(200).json({
-      message: 'Driver account review published successfully',
+      message: 'Driver account review event published successfully',
       data: {
         driver_id,
         status,
-        notes
+        notes: notes || ''
       }
     });
   } catch (error) {
-    console.error('Error publishing driver review:', error);
+    console.error('Error publishing driver account review event:', error);
     res.status(500).json({
-      message: 'Failed to publish driver review',
+      message: 'Failed to publish driver account review event',
       error: error.message
     });
   }
 };
 
-// Review customer account 
+// Controller method to review a customer's account
 exports.reviewCustomerAccount = async (req, res) => {
   const { customer_id } = req.params;
   const { status, notes } = req.body;
 
   try {
+    // Validate status
     if (!status || !['approved', 'suspended', 'active'].includes(status)) {
       return res.status(400).json({
         message: 'Invalid status. Must be "approved", "suspended", or "active"'
       });
     }
 
-    await publishCustomerEvent(customer_id, 'CUSTOMER_ACCOUNT_STATUS_CHANGE', {
-      reviewed_by: req.user.admin_id,
-      status,
-      notes
-    });
+    // Publish customer status change event
+    await publishCustomerEvent(customer_id, 'CUSTOMER_ACCOUNT_STATUS_CHANGE', { status, notes: notes || '' });
 
     res.status(200).json({
-      message: 'Customer account review published successfully',
+      message: 'Customer account review event published successfully',
       data: {
         customer_id,
         status,
-        notes
+        notes: notes || ''
       }
     });
   } catch (error) {
-    console.error('Error publishing customer review:', error);
+    console.error('Error publishing customer account review event:', error);
     res.status(500).json({
-      message: 'Failed to publish customer review',
+      message: 'Failed to publish customer account review event',
       error: error.message
     });
   }
 };
 
-// Get system stats
+// Controller method to retrieve system statistics from multiple microservices
 exports.getSystemStats = async (req, res) => {
   try {
-    const stats = await publishStatsRequest();
+    const driverStats = await requestSystemStats('driver_stats_request');
+    const customerStats = await requestSystemStats('customer_stats_request');
+    const rideStats = await requestSystemStats('ride_stats_request');
+    const billingStats = await requestSystemStats('billing_stats_request');
+
     res.status(200).json({
-      message: 'System statistics retrieved successfully',
-      data: stats
+      message: 'System stats retrieved successfully',
+      data: {
+        driverStats,
+        customerStats,
+        rideStats,
+        billingStats
+      }
     });
   } catch (error) {
     console.error('Error retrieving system stats:', error);
     res.status(500).json({
-      message: 'Failed to retrieve system statistics',
+      message: 'Failed to retrieve system stats',
       error: error.message
     });
   }
 };
+
+// Helper function to simulate a Kafka request-response for system stats
+async function requestSystemStats(requestType) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve({
+        count: 100, // Simulated stats data
+        active: 75  // Simulated active data
+      });
+    }, 1000);
+  });
+}
