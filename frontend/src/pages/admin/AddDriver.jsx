@@ -30,7 +30,7 @@ function AddDriver() {
   const [error, setError] = useState(null);
   
   const [formData, setFormData] = useState({
-    driver_id: generateRandomSsn(),
+    driver_id: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -44,16 +44,66 @@ function AddDriver() {
     account_status: 'approved' // Admin can directly approve drivers
   });
   
-  // Generate SSN format ID
-  function generateRandomSsn() {
-    const part1 = Math.floor(Math.random() * 900 + 100).toString();
-    const part2 = Math.floor(Math.random() * 90 + 10).toString();
-    const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
-    return `${part1}-${part2}-${part3}`;
-  }
+  const [validationErrors, setValidationErrors] = useState({
+    email: false,
+    phone: false,
+    password: false,
+    driver_id: false
+  });
+
+  const [validationMessages, setValidationMessages] = useState({
+    email: '',
+    phone: '',
+    password: '',
+    driver_id: ''
+  });
   
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Validate fields as they change
+    let isValid = true;
+    let errorMessage = '';
+    
+    if (name === 'email') {
+      // Email validation using regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      isValid = emailRegex.test(value);
+      errorMessage = isValid ? '' : 'Please enter a valid email address';
+    }
+    
+    if (name === 'phone') {
+      // Phone validation - only digits and exactly 10 digits
+      const phoneRegex = /^\d{10}$/;
+      isValid = phoneRegex.test(value.replace(/\D/g, ''));
+      errorMessage = isValid ? '' : 'Phone number must be 10 digits';
+    }
+    
+    if (name === 'password') {
+      // Password validation - at least 4 characters
+      isValid = value.length >= 4;
+      errorMessage = isValid ? '' : 'Password must be at least 4 characters';
+    }
+    
+    if (name === 'driver_id') {
+      // SSN format validation (XXX-XX-XXXX)
+      const ssnRegex = /^\d{3}-\d{2}-\d{4}$/;
+      isValid = ssnRegex.test(value);
+      errorMessage = isValid ? '' : 'Driver ID must be in SSN format (XXX-XX-XXXX)';
+    }
+    
+    // Update validation states
+    setValidationErrors(prev => ({
+      ...prev,
+      [name]: !isValid
+    }));
+    
+    setValidationMessages(prev => ({
+      ...prev,
+      [name]: errorMessage
+    }));
+    
+    // Update form data
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -62,6 +112,35 @@ function AddDriver() {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check all validations
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\d{10}$/;
+    const ssnRegex = /^\d{3}-\d{2}-\d{4}$/;
+    
+    const newValidationErrors = {
+      email: !emailRegex.test(formData.email),
+      phone: !phoneRegex.test(formData.phone.replace(/\D/g, '')),
+      password: formData.password.length < 4,
+      driver_id: !ssnRegex.test(formData.driver_id)
+    };
+    
+    const newValidationMessages = {
+      email: newValidationErrors.email ? 'Please enter a valid email address' : '',
+      phone: newValidationErrors.phone ? 'Phone number must be 10 digits' : '',
+      password: newValidationErrors.password ? 'Password must be at least 4 characters' : '',
+      driver_id: newValidationErrors.driver_id ? 'Driver ID must be in SSN format (XXX-XX-XXXX)' : ''
+    };
+    
+    setValidationErrors(newValidationErrors);
+    setValidationMessages(newValidationMessages);
+    
+    // Check if any validation errors exist
+    if (Object.values(newValidationErrors).some(error => error)) {
+      setError('Please fix the validation errors before submitting');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -98,10 +177,13 @@ function AddDriver() {
             
             <Grid item xs={12}>
               <TextField
+                required
                 fullWidth
-                label="Driver ID (Auto-generated)"
+                label="Driver ID (SSN Format: XXX-XX-XXXX)"
+                name="driver_id"
                 value={formData.driver_id}
-                disabled
+                onChange={handleChange}
+                placeholder="123-45-6789"
               />
             </Grid>
             
@@ -136,6 +218,8 @@ function AddDriver() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
+                error={validationErrors.email}
+                helperText={validationMessages.email}
               />
             </Grid>
             
@@ -147,6 +231,9 @@ function AddDriver() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                placeholder="10 digits"
+                error={validationErrors.phone}
+                helperText={validationMessages.phone}
               />
             </Grid>
             
@@ -159,6 +246,8 @@ function AddDriver() {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
+                error={validationErrors.password}
+                helperText={validationMessages.password}
               />
             </Grid>
             

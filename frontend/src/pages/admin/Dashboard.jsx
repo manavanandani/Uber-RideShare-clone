@@ -175,7 +175,7 @@ function AdminDashboard() {
               <Grid item xs={12} md={3}>
                 <Button 
                   component={Link} 
-                  to="/admin/billing/search" 
+                  to="/admin/billing/" 
                   variant="contained" 
                   fullWidth
                   startIcon={<BillingIcon />}

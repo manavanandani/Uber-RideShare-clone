@@ -108,7 +108,7 @@ function DriversManagement() {
 
   const handleReviewClick = (driver) => {
     setCurrentDriver(driver);
-    setReviewStatus(driver.account_status || 'pending_review');
+    setReviewStatus(driver.account_status || 'approved');
     setReviewNotes('');
     setOpenReviewDialog(true);
   };
