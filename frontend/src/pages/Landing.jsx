@@ -19,7 +19,8 @@ import {
   AdminPanelSettings as AdminIcon,
   Security as SecurityIcon,
   AttachMoney as MoneyIcon,
-  Speed as SpeedIcon
+  Speed as SpeedIcon,
+  Fullscreen
 } from '@mui/icons-material';
 
 function Landing() {
@@ -28,13 +29,14 @@ function Landing() {
       {/* Hero Section */}
       <Box 
         sx={{ 
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(/images/hero-bg.jpg)',
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://www.uber-assets.com/image/upload/f_auto,q_auto:eco,c_fill,h_368,w_552/v1730197725/assets/0f/48c7ba-da13-4fdc-b54c-42878042f513/original/Airport-Fall.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           height: '80vh',
+          width: '125%',
           display: 'flex',
-          alignItems: 'center',
-          color: 'white'
+          alignItems: "center",
+          color: 'white',
         }}
       >
         <Container>

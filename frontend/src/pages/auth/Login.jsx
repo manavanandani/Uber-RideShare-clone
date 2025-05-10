@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { login, clearError } from '../../store/slices/authSlice';
+import Navbar from './Navbar';
 import {
   Avatar,
   Button,
@@ -74,8 +75,10 @@ function Login() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
+    <>
+    <Navbar />
+    <Container component="main" maxWidth="lg" align="center">
+      <Paper elevation={3} sx={{ p: 8, mt: 8 }}>
         <Box
           sx={{
             display: 'flex',
@@ -169,6 +172,7 @@ function Login() {
         </Box>
       </Paper>
     </Container>
+    </>
   );
 }
 

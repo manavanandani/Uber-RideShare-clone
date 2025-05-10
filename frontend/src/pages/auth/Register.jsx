@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, clearError } from '../../store/slices/authSlice';
+import Navbar from './Navbar';
 import {
   Avatar,
   Button,
@@ -351,6 +352,8 @@ function Register() {
   };
 
   return (
+    <>
+    <Navbar />
     <Container component="main" maxWidth="md">
       <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
         <Box
@@ -434,6 +437,7 @@ function Register() {
         </Box>
       </Paper>
     </Container>
+    </>
   );
 }
 
