@@ -15,7 +15,7 @@ router.put('/:driver_id', verifyRole(['admin', 'driver']), driverController.upda
 //router.delete('/:driver_id', verifyRole(['admin']), driverController.deleteDriver);
 router.delete('/delete/:driver_id', verifyRole(['admin', 'driver']), driverController.deleteDriverProfile);
 router.patch('/:driver_id/status', verifyRole(['admin', 'driver']), driverController.updateDriverStatus);
-router.post('/:driver_id/media', verifyRole(['admin', 'driver']), upload.single('media'), driverController.uploadDriverMedia);
+router.post('/:driver_id/media', verifyRole(['admin', 'driver']), upload.single('file'), driverController.uploadDriverMedia);
 router.get('/:driver_id/reviews', verifyRole(['admin', 'driver', 'customer']), cacheMiddleware(120), driverController.getDriverReviews);
 
 router.patch('/:driver_id/address', verifyRole(['admin', 'driver']), driverController.updateDriverAddress);
