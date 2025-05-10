@@ -299,7 +299,15 @@ exports.registerCustomer = async (req, res) => {
 // Register new driver
 exports.registerDriver = async (req, res) => {
   try {
-    // Check if driver already exists
+    // First, check specifically if a driver with this SSN already exists
+    const existingDriverById = await Driver.findOne({ driver_id: req.body.driver_id });
+    if (existingDriverById) {
+      return res.status(400).json({
+        message: 'A driver with this SSN already exists. Please use a different SSN or contact support.'
+      });
+    }
+    
+    // Then check if driver already exists with this email or phone
     const existingDriver = await Driver.findOne({
       $or: [
         { email: req.body.email },
@@ -308,9 +316,16 @@ exports.registerDriver = async (req, res) => {
     });
     
     if (existingDriver) {
-      return res.status(400).json({
-        message: 'User already exists with this email or phone number'
-      });
+      // Provide more specific message about which field is duplicated
+      if (existingDriver.email === req.body.email) {
+        return res.status(400).json({
+          message: 'A user with this email address already exists. Please use a different email or reset your password.'
+        });
+      } else {
+        return res.status(400).json({
+          message: 'A user with this phone number already exists. Please use a different phone number.'
+        });
+      }
     }
     
     // Validate SSN format for driver_id
@@ -349,8 +364,27 @@ exports.registerDriver = async (req, res) => {
     });
   } catch (error) {
     console.error('Driver registration error:', error);
+    
+    // Handle MongoDB duplicate key error (code 11000)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      let message = 'Registration failed. ';
+      
+      if (field === 'driver_id') {
+        message += 'This SSN is already registered in our system.';
+      } else if (field === 'email') {
+        message += 'This email address is already registered.';
+      } else if (field === 'phone') {
+        message += 'This phone number is already registered.';
+      } else {
+        message += `The ${field} you provided is already in use.`;
+      }
+      
+      return res.status(400).json({ message });
+    }
+    
     res.status(500).json({
-      message: 'Server error',
+      message: 'Registration failed. Please try again later.',
       error: error.message
     });
   }
