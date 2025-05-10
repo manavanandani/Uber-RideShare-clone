@@ -273,7 +273,10 @@ function DriverProfile() {
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Avatar 
                   sx={{ width: 100, height: 100, mb: 2, fontSize: 40 }}
-                  src={profile?.profile_image || ''}
+                  //src={profile?.profile_image || ''}
+                  src={profile?.intro_media?.image_urls?.length > 0 
+    ? `http://localhost:5000${profile.intro_media.image_urls[0]}` 
+    : ''}
                 >
                   {profile?.first_name?.[0] || 'D'}
                 </Avatar>
@@ -592,7 +595,8 @@ function DriverProfile() {
                                     objectFit: 'cover',
                                     borderRadius: 1
                                   }}
-                                  src={`${import.meta.env.VITE_API_URL || ''}${url}`}
+                                  //src={`${import.meta.env.VITE_API_URL || ''}${url}`}
+                                  src={`http://localhost:5000${url}`}
                                   alt={`Driver image ${index + 1}`}
                                   onError={(e) => {
                                     console.error(`Failed to load image: ${url}`);
