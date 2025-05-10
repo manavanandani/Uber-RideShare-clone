@@ -22,7 +22,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 function RegisterAdmin() {
   const [formData, setFormData] = useState({
-    admin_id: generateRandomSsn(),
+    admin_id: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -39,23 +39,75 @@ function RegisterAdmin() {
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
 
-  function generateRandomSsn() {
-    const part1 = Math.floor(Math.random() * 900 + 100).toString();
-    const part2 = Math.floor(Math.random() * 90 + 10).toString();
-    const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
-    return `${part1}-${part2}-${part3}`;
-  }
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    if (name === 'admin_id') {
+      // Remove all non-digits
+      const digitsOnly = value.replace(/\D/g, '');
+      
+      // Format with hyphens
+      let formattedValue = '';
+      if (digitsOnly.length <= 3) {
+        formattedValue = digitsOnly;
+      } else if (digitsOnly.length <= 5) {
+        formattedValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
+      } else {
+        formattedValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5, 9)}`;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedValue
+      }));
+    } else if (name === 'phone') {
+      // Only allow digits for phone number, max 10
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: digitsOnly
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate SSN format
+    const ssnRegex = /^\d{3}-\d{2}-\d{4}$/;
+    if (!ssnRegex.test(formData.admin_id)) {
+      setError('Please enter a valid SSN in the format XXX-XX-XXXX');
+      return;
+    }
+    
+    // Validate email
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      setError('Invalid email format');
+      return;
+    }
+    
+    // Validate phone
+    if (!/^\d{10}$/.test(formData.phone)) {
+      setError('Phone number must be exactly 10 digits');
+      return;
+    }
+    
+    // Validate password
+    if (formData.password.length < 4) {
+      setError('Password must be at least 4 characters');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -105,12 +157,16 @@ function RegisterAdmin() {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField
+                    required
                     fullWidth
                     id="admin_id"
-                    label="Admin ID (Auto-generated)"
+                    label="Admin ID (SSN format: XXX-XX-XXXX)"
                     name="admin_id"
                     value={formData.admin_id}
-                    disabled
+                    onChange={handleChange}
+                    inputProps={{ maxLength: 11 }}
+                    error={formData.admin_id && !(/^\d{3}-\d{2}-\d{4}$/.test(formData.admin_id))}
+                    helperText="Enter your SSN in the format XXX-XX-XXXX"
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -147,6 +203,8 @@ function RegisterAdmin() {
                     autoComplete="email"
                     value={formData.email}
                     onChange={handleChange}
+                    error={formData.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)}
+                    helperText={formData.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email) ? "Invalid email format" : ""}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -159,6 +217,9 @@ function RegisterAdmin() {
                     autoComplete="tel"
                     value={formData.phone}
                     onChange={handleChange}
+                    inputProps={{ maxLength: 10 }}
+                    error={formData.phone && !/^\d{10}$/.test(formData.phone)}
+                    helperText="Must be exactly 10 digits"
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -172,6 +233,8 @@ function RegisterAdmin() {
                     autoComplete="new-password"
                     value={formData.password}
                     onChange={handleChange}
+                    error={formData.password && formData.password.length < 4}
+                    helperText={formData.password && formData.password.length < 4 ? "Password must be at least 4 characters" : ""}
                   />
                 </Grid>
                 <Grid item xs={12}>
