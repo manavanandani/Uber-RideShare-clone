@@ -414,7 +414,7 @@ exports.uploadDriverMedia = async (req, res) => {
       updateOperation = { $set: { [updateField]: fileUrl } };
     } else {
       // For images, add to the array
-      updateOperation = { $push: { [updateField]: fileUrl } };
+      updateOperation = { $push: { 'intro_media.image_urls': { $each: [fileUrl], $position: 0 } } };
     }
     
     const driver = await Driver.findOneAndUpdate(

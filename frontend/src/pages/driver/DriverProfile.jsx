@@ -572,7 +572,8 @@ function DriverProfile() {
                             <video 
                               controls 
                               style={{ maxWidth: '100%', maxHeight: '400px' }}
-                              src={`${import.meta.env.VITE_API_URL || ''}${profile.intro_media.video_url}`}
+                              //src={`${import.meta.env.VITE_API_URL || ''}${profile.intro_media.video_url}`}
+                              src={`http://localhost:5000${profile.intro_media.video_url}`}
                             />
                           </Box>
                         </Box>
