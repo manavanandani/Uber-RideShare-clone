@@ -1,6 +1,7 @@
 // src/pages/customer/CustomerProfile.jsx
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -13,11 +14,20 @@ import {
   CircularProgress,
   Card,
   CardContent,
-  Rating
+  Rating,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { toast } from 'react-toastify';
 import { customerService } from '../../services/customerService';
+import { logout } from '../../store/slices/authSlice';
 
 function CustomerProfile() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector(state => state.auth);
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({
@@ -41,6 +51,8 @@ function CustomerProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -150,6 +162,25 @@ function CustomerProfile() {
       console.error('Update error details:', err);
       setError(err.response?.data?.message || 'Failed to update profile');
       setSaving(false);
+    }
+  };
+
+  // Add deletion handler
+  const handleDeleteAccount = async () => {
+    try {
+      setDeleting(true);
+      
+      await customerService.deleteProfile(user.customer_id);
+      
+      // Log out user
+      dispatch(logout());
+      navigate('/');
+      
+      // Show success message
+      toast.success('Your account has been deleted successfully');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete account');
+      setDeleting(false);
     }
   };
 
@@ -323,7 +354,16 @@ function CustomerProfile() {
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => setShowDeleteDialog(true)}
+                      startIcon={<DeleteIcon />}
+                      sx={{ mt: 2 }}
+                    >
+                      Delete Account
+                    </Button>
                     <Button
                       type="submit"
                       variant="contained"
@@ -426,6 +466,30 @@ function CustomerProfile() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Add delete dialog */}
+      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Are you sure you want to delete your account? This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            Note: Your ride history and billing information will be retained for record-keeping purposes,
+            but your personal information will be anonymized.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+          <Button
+            color="error"
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+          >
+            {deleting ? <CircularProgress size={24} /> : 'Delete Account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -7,7 +7,8 @@ const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locat
 // Get all customers
 exports.getAllCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find().select('-password -credit_card.cvv');
+    const customers = await Customer.find({ is_deleted: { $ne: true } }).select('-password -credit_card.cvv');
+    //const customers = await Customer.find().select('-password -credit_card.cvv');
     
     res.status(200).json({
       message: 'Customers retrieved successfully',
@@ -297,9 +298,77 @@ exports.deleteCustomer = async (req, res) => {
   }
 };
 
+exports.deleteCustomerProfile = async (req, res) => {
+  const { customer_id } = req.params;
+  
+  try {
+    // Verify authorization (only the customer themselves or admin can delete)
+    if (req.user.role !== 'admin' && req.user.customer_id !== customer_id) {
+      return res.status(403).json({ message: 'Unauthorized to delete this profile' });
+    }
+    
+    // Find the customer
+    const customer = await Customer.findOne({ customer_id });
+    
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    
+    // Check if already deleted
+    if (customer.is_deleted) {
+      return res.status(400).json({ message: 'Profile already deleted' });
+    }
+    
+    // Check for active rides
+    const activeRide = await Ride.findOne({
+      customer_id,
+      status: { $in: ['requested', 'accepted', 'in_progress'] }
+    });
+    
+    if (activeRide) {
+      return res.status(400).json({ 
+        message: 'Cannot delete profile while having active rides',
+        active_ride_id: activeRide.ride_id
+      });
+    }
+    
+    // Perform soft delete
+    await Customer.findOneAndUpdate(
+      { customer_id },
+      { 
+        $set: { 
+          is_deleted: true,
+          deletion_date: new Date(),
+          // Anonymize personal data
+          email: `deleted-${customer_id}@example.com`,
+          phone: `000-000-0000`,
+          password: undefined,
+        } 
+      }
+    );
+    
+    // Invalidate cache
+    await invalidateCache(`*customer*${customer_id}*`);
+    
+    // If this is the user themselves deleting (not admin), log them out by revoking their token
+    if (req.user.role === 'customer' && req.user.customer_id === customer_id) {
+    }
+    
+    res.status(200).json({
+      message: 'Profile deleted successfully',
+      data: { customer_id }
+    });
+    
+  } catch (err) {
+    console.error('Error deleting customer profile:', err);
+    res.status(500).json({ message: 'Failed to delete profile' });
+  }
+};
+
 // Search customers
 exports.searchCustomers = async (req, res) => {
   try {
+    const query = { is_deleted: { $ne: true } };
     const {
       name,
       city,
@@ -308,7 +377,7 @@ exports.searchCustomers = async (req, res) => {
       max_rating
     } = req.query;
     
-    const query = {};
+    //const query = {};
     
     if (name) {
       query.$or = [

@@ -86,6 +86,11 @@ exports.driverLogin = async (req, res) => {
         message: `Account not approved. Current status: ${driver.account_status}` 
       });
     }
+
+    // Check if driver account is deleted
+    if (driver.is_deleted) {
+      return res.status(401).json({ message: 'This account has been deleted' });
+    }
     
     // Check password
     const isMatch = await driver.matchPassword(password);
@@ -130,6 +135,11 @@ exports.customerLogin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
+    // Check if customer account is deleted
+    if (customer.is_deleted) {
+      return res.status(401).json({ message: 'This account has been deleted' });
+    }
+
     // Check if customer account is suspended
     if (customer.account_status === 'suspended') {
       return res.status(403).json({ message: 'Account is suspended' });

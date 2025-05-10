@@ -47,6 +47,8 @@ const DriverSchema = new mongoose.Schema({
   ride_history: {type: [String], default: []},
   status: {type: String, enum: ['available', 'busy', 'offline'], default: 'offline'},
   created_at: {type: Date, default: Date.now},
+  is_deleted: { type: Boolean, default: false },
+  deletion_date: { type: Date, default: null }
 });
 
 DriverSchema.pre('save', async function (next) {
