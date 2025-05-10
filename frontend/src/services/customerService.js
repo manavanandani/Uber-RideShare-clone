@@ -39,17 +39,17 @@ export const customerService = {
   },
 
   getActiveRide: async (customerId) => {
-  try {
-    const response = await api.get(`/rides/customer/${customerId}/active`);
-    return response.data;
-  } catch (err) {
-    // If no active ride is found, the API returns 404
-    if (err.response?.status === 404) {
-      return { data: null };
+    try {
+      const response = await api.get(`/rides/customer/${customerId}/active`);
+      return response.data;
+    } catch (err) {
+      // If no active ride is found, the API returns 404
+      if (err.response?.status === 404) {
+        return { data: null };
+      }
+      throw err;
     }
-    throw err;
-  }
-},
+  },
   
   // Rate a ride
   rateRide: async (rideId, rating, comment) => {
@@ -58,7 +58,12 @@ export const customerService = {
   },
 
   cancelRide: async (rideId, reason = '') => {
-  const response = await api.patch(`/rides/${rideId}/cancel-customer`, { reason });
-  return response.data;
-}
+    const response = await api.patch(`/rides/${rideId}/cancel-customer`, { reason });
+    return response.data;
+  },
+
+  deleteProfile: async (customerId) => {
+    const response = await api.delete(`/customers/delete/${customerId}`);
+    return response.data;
+  }
 };

@@ -8,7 +8,9 @@ const { geocodeAddress } = require('../utils/locationUtils');
 // Get all drivers
 exports.getAllDrivers = async (req, res) => {
   try {
-    const drivers = await Driver.find().select('-password');
+    const drivers = await Driver.find({ is_deleted: { $ne: true } }).select('-password');
+
+    //const drivers = await Driver.find().select('-password');
     
     res.status(200).json({
       message: 'Drivers retrieved successfully',
@@ -215,9 +217,83 @@ exports.deleteDriver = async (req, res) => {
   }
 };
 
+exports.deleteDriverProfile = async (req, res) => {
+  const { driver_id } = req.params;
+  
+  try {
+    // Verify authorization (only the driver themselves or admin can delete)
+    if (req.user.role !== 'admin' && req.user.driver_id !== driver_id) {
+      return res.status(403).json({ message: 'Unauthorized to delete this profile' });
+    }
+    
+    // Find the driver
+    const driver = await Driver.findOne({ driver_id });
+    
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+    
+    // Check if already deleted
+    if (driver.is_deleted) {
+      return res.status(400).json({ message: 'Profile already deleted' });
+    }
+    
+    // Check for active rides
+    const activeRide = await Ride.findOne({
+      driver_id,
+      status: { $in: ['accepted', 'in_progress'] }
+    });
+    
+    if (activeRide) {
+      return res.status(400).json({ 
+        message: 'Cannot delete profile while having active rides',
+        active_ride_id: activeRide.ride_id
+      });
+    }
+    
+    // Perform soft delete
+    await Driver.findOneAndUpdate(
+      { driver_id },
+      { 
+        $set: { 
+          is_deleted: true,
+          deletion_date: new Date(),
+          status: 'offline', // Ensure driver is marked offline
+          // Anonymize personal data
+          email: `deleted-${driver_id}@example.com`,
+          phone: `000-000-0000`,
+          // Invalidate auth by removing password - this is a CRITICAL step
+          password: undefined
+        } 
+      }
+    );
+    
+    // Invalidate cache
+    await invalidateCache(`*driver*${driver_id}*`);
+    await invalidateCache('*drivers*');
+    
+    // Publish driver account deleted event to Kafka
+    await publishDriverStatusChange(
+      driver_id,
+      'deleted',
+      null
+    );
+    
+    res.status(200).json({
+      message: 'Profile deleted successfully',
+      data: { driver_id }
+    });
+    
+  } catch (err) {
+    console.error('Error deleting driver profile:', err);
+    res.status(500).json({ message: 'Failed to delete profile' });
+  }
+};
+
 // Search drivers
 exports.searchDrivers = async (req, res) => {
   try {
+    const query = { is_deleted: { $ne: true } };
     const {
       name,
       city,
@@ -226,7 +302,7 @@ exports.searchDrivers = async (req, res) => {
       max_rating
     } = req.query;
     
-    const query = {};
+    //const query = {};
     
     if (name) {
       query.$or = [

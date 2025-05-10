@@ -185,6 +185,11 @@ getEarnings: async (driverId, period = 'all') => {
   const response = await api.patch(`/rides/${rideId}/cancel-driver`, { reason });
   return response.data;
 },
+
+deleteProfile: async (driverId) => {
+  const response = await api.delete(`/drivers/delete/${driverId}`);
+  return response.data;
+},
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {

@@ -42,6 +42,8 @@ const CustomerSchema = new mongoose.Schema({
     cvv: {type: String, required: true, match: [/^\d{3,4}$/, 'Invalid CVV format']}
   },
   rating: { type: Number, default: 0, required: true },
+  is_deleted: { type: Boolean, default: false },
+  deletion_date: { type: Date, default: null },
   reviews: [{
     driver_id: { type: String, required: true },
     rating: { type: Number, required: true },

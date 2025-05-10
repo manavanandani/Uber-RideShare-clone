@@ -68,6 +68,22 @@ const publishCustomerEvent = async (customerId, eventType, data) => {
   });
 };
 
+const publishDriverAccountDeleted = async (driverId) => {
+  return await sendMessage('driver_events', {
+    type: 'DRIVER_ACCOUNT_DELETED',
+    timestamp: new Date().toISOString(),
+    data: { driverId }
+  });
+};
+
+const publishCustomerAccountDeleted = async (customerId) => {
+  return await sendMessage('customer_events', {
+    type: 'CUSTOMER_ACCOUNT_DELETED',
+    timestamp: new Date().toISOString(),
+    data: { customerId }
+  });
+};
+
 module.exports = {
   publishRideRequest,
   publishRideAccepted,
@@ -76,5 +92,7 @@ module.exports = {
   publishBillingCreated,
   publishPaymentProcessed,
   publishDriverStatusChange,
-  publishCustomerEvent
+  publishCustomerEvent,
+  publishDriverAccountDeleted,
+  publishCustomerAccountDeleted
 };
