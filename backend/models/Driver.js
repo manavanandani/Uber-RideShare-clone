@@ -28,22 +28,23 @@ const DriverSchema = new mongoose.Schema({
     customer_id: {type: String, required: true}, 
     rating: {type: Number, min:1, max:5},
     comment: {type: String},
-    date: {type: Date, required: true, default: Date.now}}],
+    date: {type: Date, required: true, default: Date.now}
+  }],
   intro_media: {
-      image_urls: {type: [String], default: []},
-      video_url: {type: String, default: ''},
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-  coordinates: {
-    type: [Number], // [longitude, latitude]
-    default: [0, 0]
-  }
-  }
-},
+    image_urls: {type: [String], default: []},
+    video_url: {type: String, default: ''},
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [0, 0]
+      }
+    }
+  },
   ride_history: {type: [String], default: []},
   status: {type: String, enum: ['available', 'busy', 'offline'], default: 'offline'},
   created_at: {type: Date, default: Date.now},
@@ -66,6 +67,7 @@ DriverSchema.methods.matchPassword = async function (enteredPassword) {
 DriverSchema.index({ 'intro_media.location': '2dsphere' });
 
 DriverSchema.index({ status: 1, 'intro_media.location': '2dsphere' });
+DriverSchema.index({ is_deleted: 1 });
 
 
 module.exports = mongoose.model('Driver', DriverSchema);

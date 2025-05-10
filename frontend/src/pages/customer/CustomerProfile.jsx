@@ -171,26 +171,11 @@ const handleDeleteAccount = async () => {
     setDeleting(true);
     setError(null);
     
-    // Try to check for active rides, but don't fail if the endpoint returns 404
-    try {
-      const response = await customerService.getActiveRide(user.customer_id);
-      
-      if (response.data) {
-        setError('You cannot delete your account while having active rides');
-        setDeleting(false);
-        setShowDeleteDialog(false);
-        return;
-      }
-    } catch (activeRideErr) {
-      // If error is 404, it means no active ride, which is good
-      // For any other error, log it but continue with deletion
-      if (activeRideErr.response?.status !== 404) {
-        console.warn('Error checking active rides:', activeRideErr);
-      }
-    }
+    console.log('Starting customer account deletion process');
     
     // Proceed with deletion
-    await customerService.deleteProfile(user.customer_id);
+    const response = await customerService.deleteProfile(user.customer_id);
+    console.log('Delete profile response:', response);
     
     // Log out the user
     dispatch(logout());
@@ -199,8 +184,10 @@ const handleDeleteAccount = async () => {
     navigate('/');
     
   } catch (err) {
+    console.error('Profile deletion error:', err);
     setError(err.response?.data?.message || 'Failed to delete account');
     setDeleting(false);
+    setShowDeleteDialog(false);
   }
 };
 

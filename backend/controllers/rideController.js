@@ -620,7 +620,7 @@ exports.getActiveRideForCustomer = async (req, res) => {
     }).sort({ date_time: -1 });
     
     if (!activeRide) {
-      return res.status(404).json({ message: 'No active ride found' });
+      return res.status(200).json({ message: 'No active ride found', data: null });
     }
     
     // Add driver information if a driver has been assigned
@@ -663,7 +663,7 @@ exports.getActiveRideForDriver = async (req, res) => {
     }).sort({ date_time: -1 });
     
     if (!activeRide) {
-      return res.status(404).json({ message: 'No active ride found' });
+      return res.status(200).json({ message: 'No active ride found', data: null });
     }
     
     // Get customer information

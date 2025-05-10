@@ -190,15 +190,23 @@ getEarnings: async (driverId, period = 'all') => {
   const response = await api.patch(`/rides/${rideId}/cancel-driver`, { reason });
   return response.data;
 },
-
-deleteProfile: async (driverId) => {
-  const response = await api.delete(`/drivers/delete/${driverId}`);
-  return response.data;
-},
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {
     const response = await api.post(`/drivers/${driverId}/media`, formData);
     return response.data;
+  },
+
+  deleteProfile: async (driverId) => {
+  try {
+    console.log(`Attempting to delete driver profile: ${driverId}`);
+    const response = await api.delete(`/drivers/delete/${driverId}`);
+    console.log('Driver deletion response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Driver deletion error:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
   }
+}
 };

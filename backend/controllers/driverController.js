@@ -3,6 +3,7 @@ const { publishDriverStatusChange } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
 const { geocodeAddress } = require('../utils/locationUtils');
+const Ride = require('../models/Ride');
 
 
 // Get all drivers
@@ -221,8 +222,11 @@ exports.deleteDriverProfile = async (req, res) => {
   const { driver_id } = req.params;
   
   try {
-    // Verify authorization (only the driver themselves or admin can delete)
+    console.log(`Received request to delete driver: ${driver_id}`);
+    
+    // Verify authorization
     if (req.user.role !== 'admin' && req.user.driver_id !== driver_id) {
+      console.log(`Unauthorized deletion attempt for driver ${driver_id} by ${req.user.role} ${req.user.driver_id || req.user.admin_id || req.user.customer_id}`);
       return res.status(403).json({ message: 'Unauthorized to delete this profile' });
     }
     
@@ -230,29 +234,18 @@ exports.deleteDriverProfile = async (req, res) => {
     const driver = await Driver.findOne({ driver_id });
     
     if (!driver) {
+      console.log(`Driver ${driver_id} not found`);
       return res.status(404).json({ message: 'Driver not found' });
     }
     
     // Check if already deleted
     if (driver.is_deleted) {
+      console.log(`Driver ${driver_id} already deleted`);
       return res.status(400).json({ message: 'Profile already deleted' });
     }
     
-    // Check for active rides - note we're using $ne: 'completed' to also exclude 'cancelled'
-    const activeRide = await Ride.findOne({
-      driver_id,
-      status: { $in: ['accepted', 'in_progress', 'requested'] }
-    });
-    
-    if (activeRide) {
-      return res.status(400).json({ 
-        message: 'Cannot delete profile while having active rides',
-        active_ride_id: activeRide.ride_id
-      });
-    }
-    
-    // Perform soft delete
-    await Driver.findOneAndUpdate(
+    // Important: Use findOneAndUpdate to ensure update happens
+    const result = await Driver.findOneAndUpdate(
       { driver_id },
       { 
         $set: { 
@@ -261,29 +254,17 @@ exports.deleteDriverProfile = async (req, res) => {
           status: 'offline', // Ensure driver is marked offline
           // Anonymize personal data
           email: `deleted-${driver_id}@example.com`,
-          phone: `000-000-0000`,
+          phone: '000-000-0000',
         },
-        // Use $unset to remove the password field
         $unset: { password: "" }
-      }
+      },
+      { new: true }
     );
+    
+    console.log(`Driver ${driver_id} deletion result:`, result ? 'Success' : 'Failed');
     
     // Invalidate cache
     await invalidateCache(`*driver*${driver_id}*`);
-    await invalidateCache('*drivers*');
-    
-    // Publish driver account deleted event
-    if (typeof publishDriverStatusChange === 'function') {
-      try {
-        await publishDriverStatusChange(
-          driver_id,
-          'deleted',
-          null
-        );
-      } catch (kafkaErr) {
-        console.error('Error publishing to Kafka:', kafkaErr);
-      }
-    }
     
     res.status(200).json({
       message: 'Profile deleted successfully',
@@ -291,8 +272,8 @@ exports.deleteDriverProfile = async (req, res) => {
     });
     
   } catch (err) {
-    console.error('Error deleting driver profile:', err);
-    res.status(500).json({ message: 'Failed to delete profile' });
+    console.error(`Error deleting driver ${driver_id}:`, err);
+    res.status(500).json({ message: 'Failed to delete profile', error: err.message });
   }
 };
 

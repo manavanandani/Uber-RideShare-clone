@@ -65,7 +65,15 @@ getActiveRide: async (customerId) => {
   },
 
   deleteProfile: async (customerId) => {
-  const response = await api.delete(`/customers/delete/${customerId}`);
-  return response.data;
-},
+  try {
+    console.log(`Attempting to delete customer profile: ${customerId}`);
+    const response = await api.delete(`/customers/delete/${customerId}`);
+    console.log('Customer deletion response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Customer deletion error:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
 };

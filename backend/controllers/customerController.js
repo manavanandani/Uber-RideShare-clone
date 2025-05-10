@@ -2,6 +2,7 @@ const Customer = require('../models/Customer');
 const { publishCustomerEvent } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
+const Ride = require('../models/Ride');
 
 
 // Get all customers
@@ -302,8 +303,11 @@ exports.deleteCustomerProfile = async (req, res) => {
   const { customer_id } = req.params;
   
   try {
-    // Verify authorization (only the customer themselves or admin can delete)
+    console.log(`Received request to delete customer: ${customer_id}`);
+    
+    // Verify authorization
     if (req.user.role !== 'admin' && req.user.customer_id !== customer_id) {
+      console.log(`Unauthorized deletion attempt for customer ${customer_id} by ${req.user.role} ${req.user.customer_id || req.user.admin_id || req.user.driver_id}`);
       return res.status(403).json({ message: 'Unauthorized to delete this profile' });
     }
     
@@ -311,29 +315,18 @@ exports.deleteCustomerProfile = async (req, res) => {
     const customer = await Customer.findOne({ customer_id });
     
     if (!customer) {
+      console.log(`Customer ${customer_id} not found`);
       return res.status(404).json({ message: 'Customer not found' });
     }
     
     // Check if already deleted
     if (customer.is_deleted) {
+      console.log(`Customer ${customer_id} already deleted`);
       return res.status(400).json({ message: 'Profile already deleted' });
     }
     
-    // Check for active rides
-    const activeRide = await Ride.findOne({
-      customer_id,
-      status: { $in: ['requested', 'accepted', 'in_progress'] }
-    });
-    
-    if (activeRide) {
-      return res.status(400).json({ 
-        message: 'Cannot delete profile while having active rides',
-        active_ride_id: activeRide.ride_id
-      });
-    }
-    
-    // Perform soft delete
-    await Customer.findOneAndUpdate(
+    // Important: Use findOneAndUpdate to ensure update happens
+    const result = await Customer.findOneAndUpdate(
       { customer_id },
       { 
         $set: { 
@@ -341,18 +334,17 @@ exports.deleteCustomerProfile = async (req, res) => {
           deletion_date: new Date(),
           // Anonymize personal data
           email: `deleted-${customer_id}@example.com`,
-          phone: `000-000-0000`,
-          password: undefined,
-        } 
-      }
+          phone: '000-000-0000',
+        },
+        $unset: { password: "" }
+      },
+      { new: true }
     );
+    
+    console.log(`Customer ${customer_id} deletion result:`, result ? 'Success' : 'Failed');
     
     // Invalidate cache
     await invalidateCache(`*customer*${customer_id}*`);
-    
-    // If this is the user themselves deleting (not admin), log them out by revoking their token
-    if (req.user.role === 'customer' && req.user.customer_id === customer_id) {
-    }
     
     res.status(200).json({
       message: 'Profile deleted successfully',
@@ -360,8 +352,8 @@ exports.deleteCustomerProfile = async (req, res) => {
     });
     
   } catch (err) {
-    console.error('Error deleting customer profile:', err);
-    res.status(500).json({ message: 'Failed to delete profile' });
+    console.error(`Error deleting customer ${customer_id}:`, err);
+    res.status(500).json({ message: 'Failed to delete profile', error: err.message });
   }
 };
 

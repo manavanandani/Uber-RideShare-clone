@@ -79,5 +79,6 @@ CustomerSchema.methods.matchPassword = async function (enteredPassword) {
 
 // Add index for geospatial queries
 CustomerSchema.index({ 'last_location': '2dsphere' });
+CustomerSchema.index({ is_deleted: 1 });
 
 module.exports = mongoose.model('Customer', CustomerSchema);
