@@ -16,6 +16,7 @@ router.delete('/delete/:customer_id', verifyRole(['admin', 'customer']), custome
 router.patch('/:customer_id/location', verifyRole(['customer']), customerController.updateCustomerLocation);
 router.get('/:customer_id/reviews', verifyRole(['admin', 'driver', 'customer']), cacheMiddleware(120), customerController.getCustomerReviews);
 router.post('/:customer_id/rides/:ride_id/images', verifyRole(['customer']), upload.array('images', 5), customerController.uploadRideImages);
+router.post('/:customer_id/media', verifyRole(['admin', 'customer']), upload.single('file'), customerController.uploadCustomerMedia);
 
 
 module.exports = router;

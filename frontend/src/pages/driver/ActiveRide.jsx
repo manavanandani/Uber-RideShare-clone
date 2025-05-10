@@ -508,9 +508,14 @@ function ActiveRide() {
             {ride?.customer_info ? (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                    {ride.customer_info.first_name?.[0] || 'C'}
-                  </Avatar>
+                  <Avatar 
+  sx={{ mr: 2 }}
+  src={ride.customer_info?.intro_media?.image_urls?.length > 0 
+    ? `http://localhost:5000${ride.customer_info.intro_media.image_urls[0]}` 
+    : ''}
+>
+  {ride.customer_info?.first_name?.[0] || 'C'}
+</Avatar>
                   <Box>
                     <Typography variant="subtitle1">
                       {ride.customer_info.first_name || ''} {ride.customer_info.last_name || ''}

@@ -51,6 +51,7 @@ const CustomerSchema = new mongoose.Schema({
     name_on_card: { type: String, required: true },
     cvv: {type: String, required: true, minlength: 3, maxlength: 3, match: [/^\d{3}$/, 'CVV must be exactly 3 digits']}
   },
+  intro_media: {image_urls: { type: [String], default: [] }},
   rating: { type: Number, default: 0, required: true },
   is_deleted: { type: Boolean, default: false },
   deletion_date: { type: Date, default: null },

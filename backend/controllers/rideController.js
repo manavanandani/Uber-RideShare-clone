@@ -89,7 +89,7 @@ exports.getRideById = async (req, res) => {
       
       // Fetch customer info
       Customer.findOne({ customer_id: ride.customer_id })
-        .select('customer_id first_name last_name phone rating')
+        .select('customer_id first_name last_name phone rating intro_media')
         .lean()
     ]);
     
@@ -669,7 +669,7 @@ exports.getActiveRideForDriver = async (req, res) => {
     
     // Get customer information
     const customer_info = await Customer.findOne({ customer_id: activeRide.customer_id })
-      .select('customer_id first_name last_name phone rating')
+      .select('customer_id first_name last_name phone rating intro_media')
       .lean();
     
     // Create response with ride and customer data

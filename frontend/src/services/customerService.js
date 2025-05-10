@@ -75,5 +75,22 @@ getActiveRide: async (customerId) => {
     console.error('Error response:', error.response?.data);
     throw error;
   }
-}
+},
+
+uploadMedia: async (customerId, formData) => {
+  try {
+    console.log('Uploading media for driver:', customerId);
+    const response = await api.post(`/customers/${customerId}/media`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    console.log('Upload response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading media:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+  }
 };

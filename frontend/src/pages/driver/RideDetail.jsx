@@ -304,39 +304,25 @@ useEffect(() => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: '50%', 
-                bgcolor: 'primary.main', 
-                color: 'white', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                mr: 2
-              }}>
-                {ride.customer_info?.first_name?.[0] || 'C'}
-              </Box>
-              <Box>
-                <Typography variant="body1">
-                  {ride.customer_info?.first_name || 'Customer'} {ride.customer_info?.last_name || ''}
-                </Typography>
-                {ride.customer_info?.rating && (
-  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-    <Rating 
-      value={ride.customer_info.rating || 0} 
-      precision={0.5} 
-      readOnly 
-      size="small"
-    />
-    <Typography variant="body2" sx={{ ml: 1 }}>
-      {(ride.customer_info.rating || 0).toFixed(1)}
-    </Typography>
-  </Box>
-)}
-              </Box>
-            </Box>
+            <Box sx={{ 
+  width: 40, 
+  height: 40, 
+  borderRadius: '50%', 
+  bgcolor: 'primary.main', 
+  color: 'white', 
+  display: 'flex', 
+  alignItems: 'center', 
+  justifyContent: 'center',
+  mr: 2,
+  backgroundImage: ride.customer_info?.intro_media?.image_urls?.length > 0 
+    ? `url(http://localhost:5000${ride.customer_info.intro_media.image_urls[0]})` 
+    : 'none',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center'
+}}>
+  {(!ride.customer_info?.intro_media?.image_urls || !ride.customer_info?.intro_media?.image_urls.length) && 
+    (ride.customer_info?.first_name?.[0] || 'C')}
+</Box>
             
             {ride.status === 'completed' && !ride.rating?.driver_to_customer && (
               <Button 

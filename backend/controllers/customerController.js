@@ -552,4 +552,64 @@ exports.uploadRideImages = async (req, res) => {
   }
 };
 
+// Get customer media
+exports.uploadCustomerMedia = async (req, res) => {
+  try {
+    console.log('Upload customer media function called');
+    console.log('Request params:', req.params);
+    
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    
+    // Debug the uploaded file
+    console.log('Uploaded file:', req.file);
+    
+    // Set the correct URL format
+    const fileUrl = `/api/media/${req.file.filename}`;
+    console.log('File URL saved:', fileUrl);
+    
+    // First, check if the customer exists
+    const customer = await Customer.findOne({ customer_id: req.params.customer_id });
+    
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    
+    // Initialize intro_media if it doesn't exist
+    if (!customer.intro_media) {
+      customer.intro_media = { image_urls: [] };
+    }
+    
+    // Add the new file URL to the image_urls array
+    // If image_urls doesn't exist, create it as an empty array first
+    if (!customer.intro_media.image_urls) {
+      customer.intro_media.image_urls = [];
+    }
+    
+    customer.intro_media.image_urls.push(fileUrl);
+    
+    // Save the updated customer
+    await customer.save();
+    
+    // Invalidate any relevant caches
+    if (typeof invalidateCache === 'function') {
+      await invalidateCache(`*customer*${req.params.customer_id}*`);
+    }
+    
+    res.status(200).json({
+      message: 'Media uploaded successfully',
+      data: {
+        customer_id: req.params.customer_id,
+        intro_media: customer.intro_media
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading customer media:', error);
+    res.status(500).json({
+      message: 'Failed to upload media',
+      error: error.message
+    });
+  }
+};
 module.exports = exports;
