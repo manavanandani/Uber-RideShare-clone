@@ -69,53 +69,43 @@ function CustomerLayout() {
   };
 
   const drawer = (
-    <div>
+    <div style={{ background: '#fff', height: '100%', borderRight: '1px solid #eee' }}>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: '#000', letterSpacing: '-0.02em' }}>
           Ride Sharing
         </Typography>
       </Toolbar>
       <Divider />
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-        <Avatar sx={{ mr: 2 }}>{user?.first_name?.[0] || 'C'}</Avatar>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Avatar sx={{ mr: 2, width: 44, height: 44, bgcolor: '#222', color: '#fff', fontWeight: 700, fontSize: 22 }}>{user?.first_name?.[0] || 'C'}</Avatar>
         <Box>
-          <Typography variant="subtitle1">{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
-          <Typography variant="body2" color="textSecondary">Customer</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#111' }}>{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>Customer</Typography>
         </Box>
       </Box>
       <Divider />
-      <List>
-        <ListItem button onClick={() => handleNavigation('/customer')}>
-          <ListItemIcon>
-            <DashboardIcon />
-          </ListItemIcon>
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={() => handleNavigation('/customer')} sx={{ borderLeft: window.location.pathname === '/customer' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/customer' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/customer' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><DashboardIcon /></ListItemIcon>
           <ListItemText primary="Dashboard" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/customer/book')}>
-          <ListItemIcon>
-            <CarIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/customer/book')} sx={{ borderLeft: window.location.pathname === '/customer/book' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/customer/book' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/customer/book' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><CarIcon /></ListItemIcon>
           <ListItemText primary="Book a Ride" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/customer/history')}>
-          <ListItemIcon>
-            <HistoryIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/customer/history')} sx={{ borderLeft: window.location.pathname === '/customer/history' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/customer/history' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/customer/history' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><HistoryIcon /></ListItemIcon>
           <ListItemText primary="Ride History" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/customer/profile')}>
-          <ListItemIcon>
-            <PersonIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/customer/profile')} sx={{ borderLeft: window.location.pathname === '/customer/profile' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/customer/profile' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/customer/profile' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><PersonIcon /></ListItemIcon>
           <ListItemText primary="Profile" />
         </ListItem>
       </List>
-      <Divider />
-      <List>
-        <ListItem button onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
+      <Divider sx={{ mt: 2 }} />
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={handleLogout} sx={{ color: '#d32f2f', fontWeight: 700 }}>
+          <ListItemIcon sx={{ color: '#d32f2f' }}><LogoutIcon /></ListItemIcon>
           <ListItemText primary="Logout" />
         </ListItem>
       </List>
@@ -129,6 +119,10 @@ function CustomerLayout() {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          bgcolor: '#000',
+          color: '#fff',
+          boxShadow: 'none',
+          borderBottom: '1px solid #222',
         }}
       >
         <Toolbar>
@@ -140,14 +134,14 @@ function CustomerLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
             Customer Dashboard
           </Typography>
           <IconButton color="inherit">
-            <NotificationIcon />
+            <NotificationIcon sx={{ color: '#fff' }} />
           </IconButton>
           <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 1 }}>
-            <Avatar alt={user?.first_name || 'User'}>
+            <Avatar alt={user?.first_name || 'User'} sx={{ bgcolor: '#fff', color: '#000', fontWeight: 700 }}>
               {user?.first_name?.[0] || 'U'}
             </Avatar>
           </IconButton>
