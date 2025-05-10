@@ -198,11 +198,7 @@ deleteProfile: async (driverId) => {
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {
-    const response = await api.post(`/drivers/${driverId}/media`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.post(`/drivers/${driverId}/media`, formData);
     return response.data;
   }
 };
