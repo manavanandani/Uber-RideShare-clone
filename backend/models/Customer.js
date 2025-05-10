@@ -33,8 +33,17 @@ const CustomerSchema = new mongoose.Schema({
     match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'],
     required: true
   },
-  phone: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  phone: { 
+    type: String, 
+    required: true,
+    match: [/^\d{10}$/, 'Phone number must be exactly 10 digits']
+  },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email format']
+  },
   password: { type: String, required: true, minlength: 4 },
   credit_card: {
     number: {type: String, required: true, minlength: 16, maxlength: 16, match: [/^\d{16}$/, 'Credit card must be exactly 16 digits']},

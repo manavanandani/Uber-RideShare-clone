@@ -118,6 +118,18 @@ function CustomerProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate email
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      setError('Invalid email format');
+      return;
+    }
+    
+    // Validate phone
+    if (!/^\d{10}$/.test(formData.phone)) {
+      setError('Phone number must be exactly 10 digits');
+      return;
+    }
+    
     // Validate credit card number if it's been changed (not masked)
     if (formData.credit_card.number && !formData.credit_card.number.includes('*') && !/^\d{16}$/.test(formData.credit_card.number)) {
       setError('Credit card must be exactly 16 digits');

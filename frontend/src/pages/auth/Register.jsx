@@ -94,13 +94,37 @@ function Register() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Validate credit card number and CVV
+    // Validate email
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      dispatch(clearError());
+      dispatch({ type: 'auth/setError', payload: 'Invalid email format' });
+      return;
+    }
+    
+    // Validate phone
+    if (!/^\d{10}$/.test(formData.phone)) {
+      dispatch(clearError());
+      dispatch({ type: 'auth/setError', payload: 'Phone number must be exactly 10 digits' });
+      return;
+    }
+    
+    // Validate password
+    if (formData.password.length < 4) {
+      dispatch(clearError());
+      dispatch({ type: 'auth/setError', payload: 'Password must be at least 4 characters' });
+      return;
+    }
+    
+    // Validate credit card number
     if (!/^\d{16}$/.test(formData.credit_card.number)) {
+      dispatch(clearError());
       dispatch({ type: 'auth/setError', payload: 'Credit card must be exactly 16 digits' });
       return;
     }
     
+    // Validate CVV
     if (!/^\d{3}$/.test(formData.credit_card.cvv)) {
+      dispatch(clearError());
       dispatch({ type: 'auth/setError', payload: 'CVV must be exactly 3 digits' });
       return;
     }
@@ -160,6 +184,8 @@ function Register() {
                   autoComplete="email"
                   value={formData.email}
                   onChange={handleChange}
+                  error={formData.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)}
+                  helperText={formData.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email) ? "Invalid email format" : ""}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -172,6 +198,9 @@ function Register() {
                   autoComplete="tel"
                   value={formData.phone}
                   onChange={handleChange}
+                  inputProps={{ maxLength: 10 }}
+                  error={formData.phone && !/^\d{10}$/.test(formData.phone)}
+                  helperText="Must be exactly 10 digits"
                 />
               </Grid>
               <Grid item xs={12}>
@@ -185,6 +214,8 @@ function Register() {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
+                  error={formData.password && formData.password.length < 4}
+                  helperText={formData.password && formData.password.length < 4 ? "Password must be at least 4 characters" : ""}
                 />
               </Grid>
             </Grid>
