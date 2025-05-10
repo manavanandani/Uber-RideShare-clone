@@ -392,26 +392,34 @@ exports.updateDriverStatus = async (req, res) => {
 
 // Upload driver introduction media
 exports.uploadDriverMedia = async (req, res) => {
-  const { driver_id } = req.params;
-  
   try {
-    console.log('Upload request for driver:', driver_id);
-    console.log('File:', req.file);
-    
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
     
-    const fileUrl = `/api/media/${req.file.filename}`;
-    console.log('Generated file URL:', fileUrl);
+    // Debug the uploaded file
+    console.log('Uploaded file:', req.file);
     
-    // Update the driver with the new image URL
+    // Set the correct URL format (this is critical!)
+    const fileUrl = `/api/media/${req.file.filename}`;
+    console.log('File URL saved:', fileUrl);
+    
+    // Determine if it's an image or video
+    const isVideo = req.file.mimetype.startsWith('video/');
+    const updateField = isVideo ? 'intro_media.video_url' : 'intro_media.image_urls';
+    
+    let updateOperation;
+    if (isVideo) {
+      // For video, just replace the URL
+      updateOperation = { $set: { [updateField]: fileUrl } };
+    } else {
+      // For images, add to the array
+      updateOperation = { $push: { [updateField]: fileUrl } };
+    }
+    
     const driver = await Driver.findOneAndUpdate(
-      { driver_id },
-      { 
-        $push: { 'intro_media.image_urls': fileUrl },
-        $set: { 'intro_media.profile_image': fileUrl }
-      },
+      { driver_id: req.params.driver_id },
+      updateOperation,
       { new: true }
     );
     
@@ -419,15 +427,10 @@ exports.uploadDriverMedia = async (req, res) => {
       return res.status(404).json({ message: 'Driver not found' });
     }
     
-    // Invalidate cache if needed
-    if (typeof invalidateCache === 'function') {
-      await invalidateCache(`*driver*${driver_id}*`);
-    }
-    
     res.status(200).json({
       message: 'Media uploaded successfully',
       data: {
-        driver_id,
+        driver_id: req.params.driver_id,
         intro_media: driver.intro_media
       }
     });

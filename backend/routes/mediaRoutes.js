@@ -1,56 +1,63 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const Grid = require('gridfs-stream');
+const { GridFSBucket } = require('mongodb');
 
-// Initialize gfs
+// Variable to store the GridFS bucket
 let gfs;
+
+// Initialize the GridFS bucket when the connection is open
 mongoose.connection.once('open', () => {
-  // Initialize Grid Stream
-  gfs = Grid(mongoose.connection.db, mongoose.mongo);
-  gfs.collection('media'); // Must match bucketName in gridFsStorage.js
-  console.log('GridFS media connection established');
+  gfs = new GridFSBucket(mongoose.connection.db, {
+    bucketName: 'media' // Make sure this matches your upload bucket name
+  });
+  console.log('GridFS media bucket initialized');
 });
 
-// Get media file by filename
+// Route to serve files by filename
 router.get('/:filename', (req, res) => {
-  console.log('Media request for filename:', req.params.filename);
-  
-  if (!gfs) {
-    console.error('GridFS not initialized yet');
-    return res.status(500).json({ message: 'Server not ready' });
+  try {
+    const { filename } = req.params;
+    console.log(`Attempting to serve file: ${filename}`);
+    
+    if (!gfs) {
+      console.error('GridFS not initialized');
+      return res.status(500).json({ message: 'Database connection not established' });
+    }
+    
+    // Find the file by filename
+    gfs.find({ filename: filename }).toArray((err, files) => {
+      if (err) {
+        console.error('Error finding file:', err);
+        return res.status(500).json({ message: 'Error finding file' });
+      }
+      
+      if (!files || files.length === 0) {
+        console.error(`File not found: ${filename}`);
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      // Set the proper content type
+      res.set('Content-Type', files[0].contentType);
+      
+      // Create a read stream
+      const readstream = gfs.openDownloadStreamByName(filename);
+      
+      // Handle readstream errors
+      readstream.on('error', (error) => {
+        console.error('Readstream error:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Error reading file stream' });
+        }
+      });
+      
+      // Pipe the file to the response
+      readstream.pipe(res);
+    });
+  } catch (error) {
+    console.error('Error in media route:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  gfs.files.findOne({ filename: req.params.filename }, (err, file) => {
-    if (err) {
-      console.error('Error finding file:', err);
-      return res.status(500).json({ message: 'Server error' });
-    }
-    
-    if (!file || file.length === 0) {
-      console.error('File not found:', req.params.filename);
-      return res.status(404).json({ message: 'File not found' });
-    }
-    
-    console.log('File found:', file.filename, 'contentType:', file.contentType);
-    
-    // Set the content type header
-    res.set('Content-Type', file.contentType);
-    
-    // Create download stream
-    const readstream = gfs.createReadStream({
-      filename: file.filename
-    });
-    
-    // Handle stream errors
-    readstream.on('error', function(err) {
-      console.error('Read stream error:', err);
-      return res.status(500).json({ message: 'Error retrieving file' });
-    });
-    
-    // Pipe the file data to the response
-    readstream.pipe(res);
-  });
 });
 
 module.exports = router;
