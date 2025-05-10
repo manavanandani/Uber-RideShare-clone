@@ -83,7 +83,7 @@ exports.getRideById = async (req, res) => {
       // Only fetch driver info if a driver is assigned
       ride.driver_id 
         ? Driver.findOne({ driver_id: ride.driver_id })
-            .select('driver_id first_name last_name phone car_details rating')
+            .select('driver_id first_name last_name phone car_details rating intro_media')
             .lean()
         : Promise.resolve(null),
       
@@ -628,7 +628,7 @@ exports.getActiveRideForCustomer = async (req, res) => {
     let driver_info = null;
     if (activeRide.driver_id) {
       driver_info = await Driver.findOne({ driver_id: activeRide.driver_id })
-        .select('driver_id first_name last_name phone car_details rating')
+        .select('driver_id first_name last_name phone car_details rating intro_media')
         .lean();
     }
     
