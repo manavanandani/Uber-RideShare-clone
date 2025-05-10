@@ -24,18 +24,12 @@ import {
   Alert,
   Grid,
   InputAdornment,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CheckCircle as ApproveIcon,
-  Cancel as RejectIcon,
   Star as StarIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
@@ -48,13 +42,8 @@ function DriversManagement() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [currentDriver, setCurrentDriver] = useState(null);
-  const [openReviewDialog, setOpenReviewDialog] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState('approved');
-  const [reviewNotes, setReviewNotes] = useState('');
-  const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
     fetchDrivers();
@@ -86,11 +75,6 @@ function DriversManagement() {
     setPage(0);
   };
 
-  const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value);
-    setPage(0);
-  };
-
   const handleDeleteClick = (driver) => {
     setCurrentDriver(driver);
     setOpenDeleteDialog(true);
@@ -106,55 +90,15 @@ function DriversManagement() {
     }
   };
 
-  const handleReviewClick = (driver) => {
-    setCurrentDriver(driver);
-    setReviewStatus(driver.account_status || 'approved');
-    setReviewNotes('');
-    setOpenReviewDialog(true);
-  };
-
-  const handleReviewSubmit = async () => {
-    try {
-      setReviewLoading(true);
-      await api.post(`/admin/drivers/${currentDriver.driver_id}/review`, {
-        status: reviewStatus,
-        notes: reviewNotes
-      });
-      setReviewLoading(false);
-      setOpenReviewDialog(false);
-      fetchDrivers();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update driver status');
-      setReviewLoading(false);
-    }
-  };
-
-  // Filter drivers based on search term and status filter
+  // Filter drivers based on search term only (removed status filter)
   const filteredDrivers = drivers.filter(driver => {
-    const matchesSearch = 
-      searchTerm === '' || 
+    return searchTerm === '' || 
       driver.driver_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${driver.first_name} ${driver.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       driver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       driver.phone.includes(searchTerm) ||
       (driver.car_details && driver.car_details.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      driver.account_status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
   });
-
-  // Get color for account status chip
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'pending_review': return 'warning';
-      case 'rejected': return 'error';
-      default: return 'default';
-    }
-  };
 
   return (
     <Box>
@@ -178,7 +122,7 @@ function DriversManagement() {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={8}>
             <TextField
               fullWidth
               placeholder="Search by ID, name, email, phone, or car details"
@@ -192,21 +136,6 @@ function DriversManagement() {
                 )
               }}
             />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                label="Status"
-              >
-                <MenuItem value="all">All Statuses</MenuItem>
-                <MenuItem value="approved">Approved</MenuItem>
-                <MenuItem value="pending_review">Pending Review</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
-              </Select>
-            </FormControl>
           </Grid>
           <Grid item xs={12} md={4}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -227,7 +156,6 @@ function DriversManagement() {
                 <TableCell>Name</TableCell>
                 <TableCell>Contact</TableCell>
                 <TableCell>Vehicle</TableCell>
-                <TableCell>Status</TableCell>
                 <TableCell>Rating</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
@@ -235,13 +163,13 @@ function DriversManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={6} align="center">
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : filteredDrivers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={6} align="center">
                     No drivers found
                   </TableCell>
                 </TableRow>
@@ -258,13 +186,6 @@ function DriversManagement() {
                       </TableCell>
                       <TableCell>{driver.car_details}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={driver.account_status || 'Pending Review'} 
-                          color={getStatusColor(driver.account_status)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <StarIcon sx={{ color: 'warning.main', fontSize: '1rem', mr: 0.5 }} />
                           <Typography variant="body2">
@@ -280,13 +201,6 @@ function DriversManagement() {
                           size="small"
                         >
                           <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          color="success"
-                          onClick={() => handleReviewClick(driver)}
-                          size="small"
-                        >
-                          <ApproveIcon fontSize="small" />
                         </IconButton>
                         <IconButton
                           color="error"
@@ -327,48 +241,6 @@ function DriversManagement() {
           </Button>
           <Button onClick={handleDeleteConfirm} color="error">
             Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Review Status Dialog */}
-      <Dialog open={openReviewDialog} onClose={() => setOpenReviewDialog(false)}>
-        <DialogTitle>Review Driver Account</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Update the status of {currentDriver?.first_name} {currentDriver?.last_name}'s account.
-          </DialogContentText>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Account Status</InputLabel>
-            <Select
-              value={reviewStatus}
-              onChange={(e) => setReviewStatus(e.target.value)}
-              label="Account Status"
-            >
-              <MenuItem value="approved">Approved</MenuItem>
-              <MenuItem value="pending_review">Pending Review</MenuItem>
-              <MenuItem value="rejected">Rejected</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Notes"
-            multiline
-            rows={4}
-            value={reviewNotes}
-            onChange={(e) => setReviewNotes(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenReviewDialog(false)} color="primary">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleReviewSubmit} 
-            color="primary"
-            disabled={reviewLoading}
-          >
-            {reviewLoading ? <CircularProgress size={24} /> : 'Submit'}
           </Button>
         </DialogActions>
       </Dialog>
