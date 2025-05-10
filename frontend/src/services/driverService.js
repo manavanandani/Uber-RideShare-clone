@@ -47,10 +47,10 @@ export const driverService = {
   },
 
   // Get active ride
-  getActiveRide: async (driverId) => {
-  console.log('Calling getActiveRide API for driver:', driverId);
-  
+  // Update in driverService.js
+getActiveRide: async (driverId) => {
   try {
+    console.log('Calling getActiveRide API for driver:', driverId);
     const response = await api.get(`/rides/driver/${driverId}/active`);
     console.log('getActiveRide API response:', response);
     
@@ -67,7 +67,12 @@ export const driverService = {
     return { data: null };
   } catch (error) {
     console.error('Error fetching active ride:', error);
-    return { data: null };
+    // If it's a 404, it means no active ride, so return null data
+    if (error.response?.status === 404) {
+      return { data: null };
+    }
+    // Rethrow for other errors
+    throw error;
   }
 },
   

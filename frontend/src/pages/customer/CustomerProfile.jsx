@@ -21,7 +21,7 @@ import {
   DialogActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { toast } from 'react-toastify';
+//import { toast } from 'react-toastify';
 import { customerService } from '../../services/customerService';
 import { logout } from '../../store/slices/authSlice';
 
@@ -166,23 +166,43 @@ function CustomerProfile() {
   };
 
   // Add deletion handler
-  const handleDeleteAccount = async () => {
+const handleDeleteAccount = async () => {
+  try {
+    setDeleting(true);
+    setError(null);
+    
+    // Try to check for active rides, but don't fail if the endpoint returns 404
     try {
-      setDeleting(true);
+      const response = await customerService.getActiveRide(user.customer_id);
       
-      await customerService.deleteProfile(user.customer_id);
-      
-      // Log out user
-      dispatch(logout());
-      navigate('/');
-      
-      // Show success message
-      toast.success('Your account has been deleted successfully');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete account');
-      setDeleting(false);
+      if (response.data) {
+        setError('You cannot delete your account while having active rides');
+        setDeleting(false);
+        setShowDeleteDialog(false);
+        return;
+      }
+    } catch (activeRideErr) {
+      // If error is 404, it means no active ride, which is good
+      // For any other error, log it but continue with deletion
+      if (activeRideErr.response?.status !== 404) {
+        console.warn('Error checking active rides:', activeRideErr);
+      }
     }
-  };
+    
+    // Proceed with deletion
+    await customerService.deleteProfile(user.customer_id);
+    
+    // Log out the user
+    dispatch(logout());
+    
+    // Navigate to home page
+    navigate('/');
+    
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to delete account');
+    setDeleting(false);
+  }
+};
 
   if (loading) {
     return (

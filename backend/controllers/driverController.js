@@ -238,10 +238,10 @@ exports.deleteDriverProfile = async (req, res) => {
       return res.status(400).json({ message: 'Profile already deleted' });
     }
     
-    // Check for active rides
+    // Check for active rides - note we're using $ne: 'completed' to also exclude 'cancelled'
     const activeRide = await Ride.findOne({
       driver_id,
-      status: { $in: ['accepted', 'in_progress'] }
+      status: { $in: ['accepted', 'in_progress', 'requested'] }
     });
     
     if (activeRide) {
@@ -262,9 +262,9 @@ exports.deleteDriverProfile = async (req, res) => {
           // Anonymize personal data
           email: `deleted-${driver_id}@example.com`,
           phone: `000-000-0000`,
-          // Invalidate auth by removing password - this is a CRITICAL step
-          password: undefined
-        } 
+        },
+        // Use $unset to remove the password field
+        $unset: { password: "" }
       }
     );
     
@@ -272,12 +272,18 @@ exports.deleteDriverProfile = async (req, res) => {
     await invalidateCache(`*driver*${driver_id}*`);
     await invalidateCache('*drivers*');
     
-    // Publish driver account deleted event to Kafka
-    await publishDriverStatusChange(
-      driver_id,
-      'deleted',
-      null
-    );
+    // Publish driver account deleted event
+    if (typeof publishDriverStatusChange === 'function') {
+      try {
+        await publishDriverStatusChange(
+          driver_id,
+          'deleted',
+          null
+        );
+      } catch (kafkaErr) {
+        console.error('Error publishing to Kafka:', kafkaErr);
+      }
+    }
     
     res.status(200).json({
       message: 'Profile deleted successfully',

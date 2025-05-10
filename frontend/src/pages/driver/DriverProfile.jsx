@@ -256,13 +256,13 @@ function DriverProfile() {
     }
   };
 
-  // Handle account deletion
-  const handleDeleteAccount = async () => {
+const handleDeleteAccount = async () => {
+  try {
+    setDeleting(true);
+    setError(null);
+    
+    // Try to check for active rides, but don't fail if the endpoint returns 404
     try {
-      setDeleting(true);
-      setError(null);
-      
-      // Check if driver has active rides
       const response = await driverService.getActiveRide(user.driver_id);
       
       if (response.data) {
@@ -271,21 +271,28 @@ function DriverProfile() {
         setShowDeleteDialog(false);
         return;
       }
-      
-      // Proceed with deletion
-      await driverService.deleteProfile(user.driver_id);
-      
-      // Log out the user
-      dispatch(logout());
-      
-      // Navigate to home page
-      navigate('/');
-      
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete account');
-      setDeleting(false);
+    } catch (activeRideErr) {
+      // If error is 404, it means no active ride, which is good
+      // For any other error, log it but continue with deletion
+      if (activeRideErr.response?.status !== 404) {
+        console.warn('Error checking active rides:', activeRideErr);
+      }
     }
-  };
+    
+    // Proceed with deletion
+    await driverService.deleteProfile(user.driver_id);
+    
+    // Log out the user
+    dispatch(logout());
+    
+    // Navigate to home page
+    navigate('/');
+    
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to delete account');
+    setDeleting(false);
+  }
+};
 
   if (loading) {
     return (

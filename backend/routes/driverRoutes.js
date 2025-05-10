@@ -12,7 +12,7 @@ router.get('/', verifyRole(['admin', 'driver']), cacheMiddleware(300), driverCon
 router.get('/:driver_id', verifyRole(['admin', 'driver']), cacheMiddleware(60), driverController.getDriverById);
 router.post('/', verifyRole(['admin']), bulkRequestHandler(driverController.createDriver));
 router.put('/:driver_id', verifyRole(['admin', 'driver']), driverController.updateDriver);
-router.delete('/:driver_id', verifyRole(['admin']), driverController.deleteDriver);
+//router.delete('/:driver_id', verifyRole(['admin']), driverController.deleteDriver);
 router.delete('/delete/:driver_id', verifyRole(['admin', 'driver']), driverController.deleteDriverProfile);
 router.patch('/:driver_id/status', verifyRole(['admin', 'driver']), driverController.updateDriverStatus);
 router.post('/:driver_id/media', verifyRole(['admin', 'driver']), upload.single('media'), driverController.uploadDriverMedia);
