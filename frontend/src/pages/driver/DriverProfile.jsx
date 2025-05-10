@@ -1,8 +1,6 @@
 // src/pages/driver/DriverProfile.jsx
 import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { logout } from '../../store/slices/authSlice';
+import { useSelector } from 'react-redux';
 import {
   Box,
   Paper,
@@ -10,42 +8,66 @@ import {
   TextField,
   Button,
   Grid,
-  Divider,
-  Alert,
   CircularProgress,
+  Alert,
+  Divider,
   Card,
   CardContent,
-  CardMedia,
-  Rating,
-  IconButton,
   Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
+  LinearProgress,
+  Tabs,
+  Tab,
+  IconButton,
+  Snackbar,
   Dialog,
-  DialogTitle,
+  DialogActions,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogTitle,
 } from '@mui/material';
 import {
   Edit as EditIcon,
-  PhotoCamera as CameraIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Star as StarIcon,
-  LocationOn as LocationIcon,
-  Delete as DeleteIcon
+  Upload as UploadIcon,
+  Delete as DeleteIcon,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { driverService } from '../../services/driverService';
+import { logout } from '../../store/slices/authSlice';
+import { useDispatch } from 'react-redux';
+
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`profile-tabpanel-${index}`}
+      aria-labelledby={`profile-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 function DriverProfile() {
   const { user } = useSelector(state => state.auth);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -57,69 +79,53 @@ function DriverProfile() {
     zip_code: '',
     car_details: ''
   });
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   
-  // New state for address update form
-  const [addressForm, setAddressForm] = useState({
-    address: '',
-    city: '',
-    state: '',
-    zip_code: ''
-  });
-  
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [updatingLocation, setUpdatingLocation] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  
-  // States for account deletion
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
+    fetchDriverProfile();
+  }, []);
+
+  const fetchDriverProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await driverService.getProfile(user.driver_id);
+      
+      if (response && response.data) {
+        const profileData = response.data;
+        setProfile(profileData);
         
-        // Fetch driver profile
-        const response = await driverService.getProfile(user.driver_id);
-        
-        setProfile(response.data);
-        
-        // Set form data from profile
+        // Initialize form data
         setFormData({
-          first_name: response.data.first_name || '',
-          last_name: response.data.last_name || '',
-          email: response.data.email || '',
-          phone: response.data.phone || '',
-          address: response.data.address || '',
-          city: response.data.city || '',
-          state: response.data.state || '',
-          zip_code: response.data.zip_code || '',
-          car_details: response.data.car_details || ''
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          address: profileData.address || '',
+          city: profileData.city || '',
+          state: profileData.state || '',
+          zip_code: profileData.zip_code || '',
+          car_details: profileData.car_details || ''
         });
-        
-        // Also initialize the address form
-        setAddressForm({
-          address: response.data.address || '',
-          city: response.data.city || '',
-          state: response.data.state || '',
-          zip_code: response.data.zip_code || ''
-        });
-        
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load profile');
-        setLoading(false);
       }
-    };
-    
-    if (user?.driver_id) {
-      fetchProfile();
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      setErrorMessage('Failed to load profile. Please try again.');
+      setOpenSnackbar(true);
+      setLoading(false);
     }
-  }, [user]);
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -128,89 +134,13 @@ function DriverProfile() {
       [name]: value
     }));
   };
-  
-  // Handler for address form changes
-  const handleAddressChange = (e) => {
-    const { name, value } = e.target;
-    setAddressForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+  const handleEdit = () => {
+    setEditing(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setSaving(true);
-      await driverService.updateProfile(user.driver_id, formData);
-      
-      // Update local state
-      setProfile(prev => ({ ...prev, ...formData }));
-      setSuccess('Profile updated successfully');
-      setSaving(false);
-      setIsEditing(false);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
-      
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile');
-      setSaving(false);
-    }
-  };
-  
-  // Function to handle address update
-  const handleUpdateAddress = async () => {
-    try {
-      setUpdatingLocation(true);
-      setError(null);
-      
-      // Validate form fields
-      if (!addressForm.address || !addressForm.city || !addressForm.state || !addressForm.zip_code) {
-        setError('All address fields are required');
-        setUpdatingLocation(false);
-        return;
-      }
-      
-      // Call the service to update address
-      await driverService.updateAddress(user.driver_id, addressForm);
-      
-      // Update the profile state with new address data
-      setProfile(prev => ({
-        ...prev,
-        address: addressForm.address,
-        city: addressForm.city,
-        state: addressForm.state,
-        zip_code: addressForm.zip_code
-      }));
-      
-      // Also update the main form data
-      setFormData(prev => ({
-        ...prev,
-        address: addressForm.address,
-        city: addressForm.city,
-        state: addressForm.state,
-        zip_code: addressForm.zip_code
-      }));
-      
-      setSuccess('Location updated successfully');
-      setUpdatingLocation(false);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update location');
-      setUpdatingLocation(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    // Reset form data to current profile data
+  const handleCancel = () => {
+    // Reset form data to profile values
     if (profile) {
       setFormData({
         first_name: profile.first_name || '',
@@ -224,66 +154,124 @@ function DriverProfile() {
         car_details: profile.car_details || ''
       });
     }
-    setIsEditing(false);
+    setEditing(false);
   };
-  
-  const handleMediaUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
     
     try {
-      setUploadingMedia(true);
+      const response = await driverService.updateProfile(user.driver_id, formData);
       
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      await driverService.uploadMedia(user.driver_id, formData);
-      
-      // Refresh profile to get updated media
-      const response = await driverService.getProfile(user.driver_id);
       setProfile(response.data);
-      
-      setUploadingMedia(false);
-      setSuccess('Media uploaded successfully');
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload media');
-      setUploadingMedia(false);
+      setSuccessMessage('Profile updated successfully!');
+      setOpenSnackbar(true);
+      setEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setErrorMessage('Failed to update profile. Please try again.');
+      setOpenSnackbar(true);
+    } finally {
+      setSaving(false);
     }
   };
 
-const handleDeleteAccount = async () => {
-  try {
-    setDeleting(true);
-    setError(null);
+  const handleFileSelect = (event) => {
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      setErrorMessage('Please select a file first');
+      setOpenSnackbar(true);
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
     
-    console.log('Starting driver account deletion process');
+    // Create form data
+    const formData = new FormData();
+    formData.append('file', selectedFile); // This MUST match 'file' in backend
     
-    // Proceed with deletion
-    const response = await driverService.deleteProfile(user.driver_id);
-    console.log('Delete profile response:', response);
-    
-    // Log out the user
-    dispatch(logout());
-    
-    // Navigate to home page
-    navigate('/');
-    
-  } catch (err) {
-    console.error('Profile deletion error:', err);
-    setError(err.response?.data?.message || 'Failed to delete account');
-    setDeleting(false);
-    setShowDeleteDialog(false);
-  }
-};
+    try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 300);
+      
+      // Make API call
+      const response = await driverService.uploadMedia(user.driver_id, formData);
+      
+      // Clear interval and set to 100%
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      console.log('Upload successful:', response);
+      
+      // Update profile image in UI
+      if (response.data && response.data.intro_media) {
+        setProfile(prev => ({
+          ...prev,
+          intro_media: response.data.intro_media
+        }));
+      }
+      
+      // Show success message
+      setSuccessMessage('File uploaded successfully!');
+      setOpenSnackbar(true);
+      
+      // Reset state
+      setSelectedFile(null);
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+      }, 1000);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setErrorMessage('Failed to upload file. Please try again.');
+      setOpenSnackbar(true);
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    setOpenDeleteDialog(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      await driverService.deleteProfile(user.driver_id);
+      dispatch(logout());
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to delete account:', error);
+      setErrorMessage('Failed to delete account. Please try again.');
+      setOpenSnackbar(true);
+      setLoading(false);
+    }
+    setOpenDeleteDialog(false);
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
+  };
+
+  const getProfileImageUrl = () => {
+    if (profile?.intro_media?.profile_image) {
+      return profile.intro_media.profile_image;
+    } else if (profile?.intro_media?.image_urls && profile.intro_media.image_urls.length > 0) {
+      return profile.intro_media.image_urls[0];
+    }
+    return null;
+  };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -295,419 +283,505 @@ const handleDeleteAccount = async () => {
         Driver Profile
       </Typography>
       
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
-      
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>
           <Card sx={{ mb: 3 }}>
-            <Box sx={{ position: 'relative' }}>
-              <CardMedia
-                sx={{ height: 140 }}
-                image={profile?.intro_media?.image_urls?.[0] || "https://via.placeholder.com/400x200?text=Driver+Profile"}
-                title="Driver Profile"
-              />
-              <Box sx={{ position: 'absolute', bottom: -40, left: 24 }}>
-                <Avatar 
-                  sx={{ width: 80, height: 80, border: '4px solid white' }}
-                  alt={profile?.first_name || 'User'}
-                >
-                  {profile?.first_name?.[0] || 'D'}
-                </Avatar>
-              </Box>
-              <Box sx={{ position: 'absolute', bottom: 8, right: 8 }}>
-                <input
-                  accept="image/*"
-                  id="upload-profile-photo"
-                  type="file"
-                  style={{ display: 'none' }}
-                  onChange={handleMediaUpload}
-                />
-                <label htmlFor="upload-profile-photo">
-                  <IconButton 
-                    color="primary" 
-                    aria-label="upload picture" 
-                    component="span"
-                    disabled={uploadingMedia}
-                    sx={{ bgcolor: 'background.paper' }}
-                  >
-                    {uploadingMedia ? <CircularProgress size={24} /> : <CameraIcon />}
-                  </IconButton>
-                </label>
-              </Box>
-            </Box>
-            <CardContent sx={{ pt: 6 }}>
-              <Typography variant="h5" gutterBottom>
+            <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Avatar 
+  src={getProfileImageUrl() ? 
+    (getProfileImageUrl().startsWith('http') ? 
+      getProfileImageUrl() : 
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${getProfileImageUrl()}`) 
+    : null
+  }
+  sx={{ 
+    width: 150, 
+    height: 150, 
+    mb: 2,
+    fontSize: 64
+  }}
+  onError={(e) => {
+    console.error('Avatar image failed to load:', getProfileImageUrl());
+    e.target.src = null; // Fall back to initial
+  }}
+>
+  {profile?.first_name?.[0] || 'D'}
+</Avatar>
+              
+              <Typography variant="h5">
                 {profile?.first_name} {profile?.last_name}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Rating 
-                  value={profile?.rating || 0} 
-                  precision={0.5} 
-                  readOnly 
-                  size="small"
+              
+              <Typography variant="body1" color="textSecondary" gutterBottom>
+                Driver
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: profile?.status === 'available' ? 'success.main' : 
+                             profile?.status === 'busy' ? 'warning.main' : 'text.disabled',
+                    mr: 1
+                  }}
                 />
-                <Typography variant="body2" sx={{ ml: 1 }}>
-                  {profile?.rating?.toFixed(1) || '0.0'} ({profile?.reviews?.length || 0} reviews)
+                <Typography variant="body2">
+                  {profile?.status === 'available' ? 'Available' : 
+                   profile?.status === 'busy' ? 'On a ride' : 'Offline'}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="textSecondary">
-                Vehicle: {profile?.car_details || 'Not specified'}
-              </Typography>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="subtitle2" gutterBottom>
-                Account Information
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Driver ID: {profile?.driver_id}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Member Since: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Status: {profile?.status?.charAt(0).toUpperCase() + profile?.status?.slice(1) || 'Offline'}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <LocationIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  Current Location: {profile?.intro_media?.location?.coordinates ? 
-                    `${profile.intro_media.location.coordinates[1].toFixed(4)}, ${profile.intro_media.location.coordinates[0].toFixed(4)}` : 
-                    'Not set'}
+              
+              {profile?.rating && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="body2">
+                    Rating: {profile.rating.toFixed(1)} / 5.0
+                  </Typography>
                 </Box>
-              </Typography>
+              )}
             </CardContent>
           </Card>
           
-          {/* Reviews Card */}
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Recent Reviews
+                Account Information
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
-              {profile?.reviews && profile.reviews.length > 0 ? (
-                <List sx={{ maxHeight: 300, overflow: 'auto' }}>
-                  {profile.reviews.slice(0, 5).map((review, index) => (
-                    <ListItem key={index} divider={index < Math.min(4, profile.reviews.length - 1)}>
-                      <ListItemAvatar>
-                        <Avatar>
-                          {review.customer_id[0] || 'C'}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="subtitle2">
-                              Customer #{review.customer_id}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <StarIcon sx={{ color: 'warning.main', fontSize: 18, mr: 0.5 }} />
-                              <Typography variant="body2">{review.rating}</Typography>
-                            </Box>
-                          </Box>
-                        }
-                        secondary={
-                          <>
-                            <Typography variant="body2">
-                              "{review.comment}"
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {new Date(review.date).toLocaleDateString()}
-                            </Typography>
-                          </>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="textSecondary">
-                  No reviews yet.
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Driver ID
                 </Typography>
-              )}
+                <Typography variant="body1">
+                  {profile?.driver_id || 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Email
+                </Typography>
+                <Typography variant="body1">
+                  {profile?.email || 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Phone
+                </Typography>
+                <Typography variant="body1">
+                  {profile?.phone || 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Member Since
+                </Typography>
+                <Typography variant="body1">
+                  {profile?.created_at 
+                    ? new Date(profile.created_at).toLocaleDateString() 
+                    : 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleDeleteAccount}
+                sx={{ mt: 3 }}
+                fullWidth
+              >
+                Delete Account
+              </Button>
             </CardContent>
           </Card>
         </Grid>
         
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Personal Information</Typography>
-              {!isEditing ? (
-                <Button
-                  startIcon={<EditIcon />}
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit
-                </Button>
-              ) : (
-                <Box>
-                  <Button
-                    startIcon={<CancelIcon />}
-                    onClick={handleCancelEdit}
-                    sx={{ mr: 1 }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    startIcon={<SaveIcon />}
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={saving}
-                  >
-                    {saving ? <CircularProgress size={24} /> : 'Save'}
-                  </Button>
-                </Box>
-              )}
+          <Paper sx={{ mb: 3 }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={tabValue} onChange={handleTabChange} aria-label="profile tabs">
+                <Tab label="Personal Information" id="profile-tab-0" aria-controls="profile-tabpanel-0" />
+                <Tab label="Vehicle Information" id="profile-tab-1" aria-controls="profile-tabpanel-1" />
+                <Tab label="Media & Documents" id="profile-tab-2" aria-controls="profile-tabpanel-2" />
+              </Tabs>
             </Box>
-            <Divider sx={{ mb: 3 }} />
             
-            <Box component="form" onSubmit={handleSubmit}>
+            <TabPanel value={tabValue} index={0}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                {!editing ? (
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<EditIcon />} 
+                    onClick={handleEdit}
+                  >
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button 
+                      variant="outlined" 
+                      color="error"
+                      startIcon={<CancelIcon />} 
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      startIcon={<SaveIcon />} 
+                      onClick={handleSubmit}
+                      disabled={saving}
+                    >
+                      {saving ? <CircularProgress size={24} /> : 'Save'}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+              
+              <form onSubmit={handleSubmit}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="First Name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="City"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      label="State"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      label="ZIP Code"
+                      name="zip_code"
+                      value={formData.zip_code}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                    />
+                  </Grid>
+                </Grid>
+              </form>
+            </TabPanel>
+            
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                {!editing ? (
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<EditIcon />} 
+                    onClick={handleEdit}
+                  >
+                    Edit Vehicle Information
+                  </Button>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button 
+                      variant="outlined" 
+                      color="error"
+                      startIcon={<CancelIcon />} 
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      startIcon={<SaveIcon />} 
+                      onClick={handleSubmit}
+                      disabled={saving}
+                    >
+                      {saving ? <CircularProgress size={24} /> : 'Save'}
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+              
+              <form onSubmit={handleSubmit}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Vehicle Details"
+                      name="car_details"
+                      value={formData.car_details}
+                      onChange={handleChange}
+                      disabled={!editing}
+                      required
+                      multiline
+                      rows={4}
+                      placeholder="Year, Make, Model, Color, License Plate"
+                    />
+                  </Grid>
+                </Grid>
+              </form>
+            </TabPanel>
+            
+            <TabPanel value={tabValue} index={2}>
+              <Typography variant="h6" gutterBottom>
+                Profile Image
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
+<Box sx={{ mb: 4 }}>
+  <input
+    accept="image/*"
+    style={{ display: 'none' }}
+    id="profile-image-upload"
+    type="file"
+    onChange={(event) => {
+      setSelectedFile(event.target.files[0]);
+      console.log('File selected:', event.target.files[0]);
+    }}
+  />
+  <label htmlFor="profile-image-upload">
+    <Button
+      variant="outlined"
+      component="span"
+      startIcon={<UploadIcon />}
+      disabled={uploading}
+    >
+      Select Image
+    </Button>
+  </label>
+  
+  {selectedFile && (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="body2">
+        Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+      </Typography>
+      
+      <Button
+        variant="contained"
+        onClick={async () => {
+          if (!selectedFile) {
+            alert('Please select a file first');
+            return;
+          }
+          
+          setUploading(true);
+          setUploadProgress(0);
+          
+          // Create form data
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          
+          console.log('FormData created with field "file"');
+          
+          try {
+            // Simulate progress
+            const progressInterval = setInterval(() => {
+              setUploadProgress(prev => Math.min(prev + 10, 90));
+            }, 300);
+            
+            console.log('Making API call to upload media...');
+            const response = await driverService.uploadMedia(user.driver_id, formData);
+            console.log('Upload API response:', response);
+            
+            // Clear interval and set to 100%
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            
+            // Reload the profile to get updated media
+            fetchDriverProfile();
+            
+            setSuccessMessage('File uploaded successfully!');
+            setOpenSnackbar(true);
+            
+            // Reset state
+            setSelectedFile(null);
+            setTimeout(() => {
+              setUploading(false);
+              setUploadProgress(0);
+            }, 1000);
+          } catch (error) {
+            console.error('Upload failed:', error);
+            setErrorMessage(`Failed to upload file: ${error.message}`);
+            setOpenSnackbar(true);
+            setUploading(false);
+            setUploadProgress(0);
+          }
+        }}
+        disabled={uploading}
+        sx={{ mt: 1 }}
+      >
+        Upload Image
+      </Button>
+    </Box>
+  )}
+  
+  {uploading && (
+    <Box sx={{ width: '100%', mt: 2 }}>
+      <LinearProgress variant="determinate" value={uploadProgress} />
+      <Typography variant="body2" sx={{ mt: 1 }}>
+        Uploading: {uploadProgress}%
+      </Typography>
+    </Box>
+  )}
+</Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Uploaded Images
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="State"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    fullWidth
-                    label="ZIP Code"
-                    name="zip_code"
-                    value={formData.zip_code}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                    Vehicle Information
-                  </Typography>
-                  <Divider sx={{ mb: 2 }} />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Car Details"
-                    name="car_details"
-                    value={formData.car_details}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    required
-                    multiline
-                    rows={3}
-                    placeholder="Year, Make, Model, Color, License Plate"
-                  />
-                </Grid>
+                {profile?.intro_media?.image_urls && profile.intro_media.image_urls.length > 0 ? (
+                  profile.intro_media.image_urls.map((url, index) => (
+                    <Grid item xs={6} sm={4} md={3} key={index}>
+                      <Box 
+                        sx={{ 
+                          position: 'relative',
+                          height: 150,
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                          border: '1px solid #ccc',
+                          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+                        }}
+                      >
+                        <img 
+          src={url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${url}`} 
+                          alt={`Driver upload ${index}`} 
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover'
+                          }} 
+                          onError={(e) => {
+            console.error('Image failed to load:', url);
+            e.target.src = 'https://via.placeholder.com/150?text=Image+Error';}}
+                        />
+                      </Box>
+                    </Grid>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      No images uploaded yet.
+                    </Typography>
+                  </Grid>
+                )}
               </Grid>
-            </Box>
-          </Paper>
-          
-          {/* New section for updating location */}
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Update Location
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            <Typography variant="body2" color="textSecondary" paragraph>
-              Enter your current address to update your location. This will be used to match you with nearby ride requests.
-            </Typography>
-            
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Street Address"
-                  name="address"
-                  value={addressForm.address}
-                  onChange={handleAddressChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={5}>
-                <TextField
-                  fullWidth
-                  label="City"
-                  name="city"
-                  value={addressForm.city}
-                  onChange={handleAddressChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  label="State"
-                  name="state"
-                  value={addressForm.state}
-                  onChange={handleAddressChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="ZIP Code"
-                  name="zip_code"
-                  value={addressForm.zip_code}
-                  onChange={handleAddressChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  onClick={handleUpdateAddress}
-                  disabled={updatingLocation}
-                  startIcon={<LocationIcon />}
-                >
-                  {updatingLocation ? <CircularProgress size={24} /> : 'Update Location'}
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-          
-          {/* Account Deletion Section */}
-          <Paper sx={{ p: 3, mt: 3, bgcolor: 'error.light' }}>
-            <Typography variant="h6" gutterBottom color="error">
-              Delete Account
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            <Typography variant="body2" paragraph>
-              If you delete your account, your personal information will be anonymized, but your ride history and ratings will be maintained in the system for record-keeping purposes.
-            </Typography>
-            
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => setShowDeleteDialog(true)}
-              startIcon={<DeleteIcon />}
-            >
-              Delete My Account
-            </Button>
+            </TabPanel>
           </Paper>
         </Grid>
       </Grid>
       
-      {/* Delete Account Confirmation Dialog */}
-      <Dialog
-        open={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
       >
-        <DialogTitle>
-          Delete Your Account?
-        </DialogTitle>
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={errorMessage ? "error" : "success"} 
+          sx={{ width: '100%' }}
+        >
+          {errorMessage || successMessage}
+        </Alert>
+      </Snackbar>
+      
+      {/* Delete Account Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+      >
+        <DialogTitle>Delete Account</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This action cannot be undone. Your personal information will be anonymized, but your ride history and ratings will be maintained in the system.
-          </DialogContentText>
-          <DialogContentText sx={{ mt: 2 }}>
-            Are you sure you want to proceed?
+            Are you sure you want to delete your account? This action cannot be undone.
+            All your data, including ride history and earnings information, will be permanently removed.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setShowDeleteDialog(false)}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteAccount}
-            color="error"
-            disabled={deleting}
-            startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
-          >
-            {deleting ? 'Deleting...' : 'Delete Account'}
+          <Button onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
+          <Button onClick={confirmDeleteAccount} color="error" autoFocus>
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

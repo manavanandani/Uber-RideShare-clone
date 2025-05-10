@@ -193,13 +193,21 @@ getEarnings: async (driverId, period = 'all') => {
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {
+  try {
+    console.log('Uploading media for driver:', driverId);
     const response = await api.post(`/drivers/${driverId}/media`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
+    console.log('Upload response:', response.data);
     return response.data;
-  },
+  } catch (error) {
+    console.error('Error uploading media:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+},
 
   deleteProfile: async (driverId) => {
   try {
