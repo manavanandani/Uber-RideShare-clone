@@ -1,5 +1,4 @@
-// src/pages/customer/BookRide.jsx//
-//test push
+// src/pages/customer/BookRide.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -73,27 +72,27 @@ function BookRide() {
   }, [user]);
 
   useEffect(() => {
-  const checkActiveRide = async () => {
-    try {
-      if (user?.customer_id) {
-        // Check if customer has an active ride
-        const response = await customerService.getActiveRide(user.customer_id);
-        
-        if (response.data) {
-          // User has an active ride
-          if (window.confirm('You already have an active ride. Do you want to view it instead of booking a new one?')) {
-            navigate(`/customer/ride/${response.data.ride_id}`);
+    const checkActiveRide = async () => {
+      try {
+        if (user?.customer_id) {
+          // Check if customer has an active ride
+          const response = await customerService.getActiveRide(user.customer_id);
+          
+          if (response.data) {
+            // User has an active ride
+            if (window.confirm('You already have an active ride. Do you want to view it instead of booking a new one?')) {
+              navigate(`/customer/ride/${response.data.ride_id}`);
+            }
           }
         }
+      } catch (err) {
+        console.error('Error checking active ride:', err);
+        // Just continue with booking form if error occurs
       }
-    } catch (err) {
-      console.error('Error checking active ride:', err);
-      // Just continue with booking form if error occurs
-    }
-  };
-  
-  checkActiveRide();
-}, [user, navigate]);
+    };
+    
+    checkActiveRide();
+  }, [user, navigate]);
   
   // Get user's current location
   useEffect(() => {
@@ -132,93 +131,92 @@ function BookRide() {
     }
   }, []);
   
-  // Calculate fare when both pickup and dropoff are set
-  useEffect(() => {
-    const calculateFare = async () => {
-      if (rideData.pickup_location.latitude && rideData.dropoff_location.latitude) {
-        try {
-          setLoading(true);
-          
-          console.log('Starting fare calculation with data:', {
-            pickup: rideData.pickup_location,
-            dropoff: rideData.dropoff_location,
-            datetime: rideData.date_time,
-            passengers: rideData.passenger_count
-          });
-          
-          // Set a timeout to prevent infinite loading
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Fare calculation timeout')), 5000)
-          );
-          
-          // Race the API call with a timeout
-          const response = await Promise.race([
-            customerService.getFareEstimate({
-              pickup_latitude: rideData.pickup_location.latitude,
-              pickup_longitude: rideData.pickup_location.longitude,
-              dropoff_latitude: rideData.dropoff_location.latitude,
-              dropoff_longitude: rideData.dropoff_location.longitude,
-              datetime: rideData.date_time,
-              passenger_count: rideData.passenger_count
-            }),
-            timeoutPromise
-          ]);
-          
-          console.log('Fare estimate response:', response);
-          setFareEstimate(response);
-          setLoading(false);
-        } catch (err) {
-          console.error('Fare calculation error:', err);
-          
-          // Fallback fare calculation on frontend
-          const directDistance = calculateDirectDistance(
-            rideData.pickup_location.latitude,
-            rideData.pickup_location.longitude,
-            rideData.dropoff_location.latitude,
-            rideData.dropoff_location.longitude
-          );
-          
-          // Simple fare calculation - should match backend's emergency fallback
-          const baseFare = 3.0;
-          const distanceFare = directDistance * 1.5;
-          const duration = directDistance * 2; // Rough estimate: 2 minutes per km
-          const timeFare = duration * 0.2;
-          const fare = baseFare + distanceFare + timeFare;
-          
-          // Set a fallback fare estimate
-          setFareEstimate({
-            data: {
-              fare: Math.round(fare * 100) / 100,
-              distance: directDistance,
-              duration: duration,
-              demandSurge: 1.0
-            }
-          });
-          
-          setError('Could not fetch exact fare estimate. Using approximate calculation.');
-          setLoading(false);
+  // Helper function for fare calculation - moved from useEffect to standalone function
+  const calculateFare = async () => {
+    if (!rideData.pickup_location.latitude || !rideData.dropoff_location.latitude) {
+      setError('Both pickup and dropoff locations are required');
+      return false;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Starting fare calculation with data:', {
+        pickup: rideData.pickup_location,
+        dropoff: rideData.dropoff_location,
+        datetime: rideData.date_time,
+        passengers: rideData.passenger_count
+      });
+      
+      // Set a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Fare calculation timeout')), 5000)
+      );
+      
+      // Race the API call with a timeout
+      const response = await Promise.race([
+        customerService.getFareEstimate({
+          pickup_latitude: rideData.pickup_location.latitude,
+          pickup_longitude: rideData.pickup_location.longitude,
+          dropoff_latitude: rideData.dropoff_location.latitude,
+          dropoff_longitude: rideData.dropoff_location.longitude,
+          datetime: rideData.date_time,
+          passenger_count: rideData.passenger_count
+        }),
+        timeoutPromise
+      ]);
+      
+      console.log('Fare estimate response:', response);
+      setFareEstimate(response);
+      setLoading(false);
+      return true;
+    } catch (err) {
+      console.error('Fare calculation error:', err);
+      
+      // Fallback fare calculation on frontend
+      const directDistance = calculateDirectDistance(
+        rideData.pickup_location.latitude,
+        rideData.pickup_location.longitude,
+        rideData.dropoff_location.latitude,
+        rideData.dropoff_location.longitude
+      );
+      
+      // Simple fare calculation - should match backend's emergency fallback
+      const baseFare = 3.0;
+      const distanceFare = directDistance * 1.5;
+      const duration = directDistance * 2; // Rough estimate: 2 minutes per km
+      const timeFare = duration * 0.2;
+      const fare = baseFare + distanceFare + timeFare;
+      
+      // Set a fallback fare estimate
+      setFareEstimate({
+        data: {
+          fare: Math.round(fare * 100) / 100,
+          distance: directDistance,
+          duration: duration,
+          demandSurge: 1.0
         }
-      }
-    };
-
-    // Add this helper function within useEffect
-    function calculateDirectDistance(lat1, lon1, lat2, lon2) {
-      // Haversine formula to calculate direct distance
-      const R = 6371; // Earth's radius in km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c; // Distance in km
+      });
+      
+      setError('Could not fetch exact fare estimate. Using approximate calculation.');
+      setLoading(false);
+      return true; // We still return true because we have a fallback estimate
     }
+  };
 
-    if (markers.pickup && markers.dropoff) {
-      calculateFare();
-    }
-  }, [markers, rideData.date_time, rideData.dropoff_location.latitude, rideData.dropoff_location.longitude, rideData.passenger_count, rideData.pickup_location.latitude, rideData.pickup_location.longitude]);
+  function calculateDirectDistance(lat1, lon1, lat2, lon2) {
+    // Haversine formula to calculate direct distance
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  }
 
   // Function to geocode an address using Nominatim
   const geocodeAddress = async (address) => {
@@ -415,7 +413,7 @@ function BookRide() {
     }));
   };
   
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate data before proceeding
     if (!markers.pickup || !markers.dropoff) {
       setError('Please set both pickup and dropoff locations');
@@ -430,7 +428,14 @@ function BookRide() {
     
     // Clear any previous errors
     setError(null);
-    setActiveStep(1);
+    
+    // Calculate fare estimate before proceeding to next step
+    const fareCalculated = await calculateFare();
+    
+    // Only proceed to next step if fare calculation was successful
+    if (fareCalculated) {
+      setActiveStep(1);
+    }
   };
   
   const handleBack = () => {
@@ -438,47 +443,47 @@ function BookRide() {
   };
   
   const handleBookRide = async () => {
-  try {
-    setBooking(true);
-    setError(null);
-    
-    // Verify user is authenticated
-    if (!user || !user.customer_id) {
-      setError('You must be logged in to book a ride');
-      setBooking(false);
-      return;
-    }
-    
-    // Book ride without specifying a driver (system will assign one)
-    const bookingData = {
-      ...rideData,
-      customer_id: user.customer_id // Ensure customer_id is included
-    };
-    
-    const response = await customerService.bookRide(bookingData);
-    
-    // Navigate to ride tracking page
-    const createdRide = response.data;
-    setBooking(false);
-    
-    navigate(`/customer/ride/${createdRide.ride_id}`);
-  } catch (err) {
-    console.error('Booking error:', err);
-    
-    // Handle active ride error specifically
-    if (err.response?.data?.active_ride_id) {
-      const activeRideId = err.response.data.active_ride_id;
+    try {
+      setBooking(true);
+      setError(null);
       
-      // Ask user if they want to navigate to their active ride
-      if (window.confirm('You already have an active ride. Do you want to view your active ride?')) {
-        navigate(`/customer/ride/${activeRideId}`);
+      // Verify user is authenticated
+      if (!user || !user.customer_id) {
+        setError('You must be logged in to book a ride');
+        setBooking(false);
+        return;
       }
-    } else {
-      setError(err.response?.data?.message || 'Failed to book ride');
+      
+      // Book ride without specifying a driver (system will assign one)
+      const bookingData = {
+        ...rideData,
+        customer_id: user.customer_id // Ensure customer_id is included
+      };
+      
+      const response = await customerService.bookRide(bookingData);
+      
+      // Navigate to ride tracking page
+      const createdRide = response.data;
+      setBooking(false);
+      
+      navigate(`/customer/ride/${createdRide.ride_id}`);
+    } catch (err) {
+      console.error('Booking error:', err);
+      
+      // Handle active ride error specifically
+      if (err.response?.data?.active_ride_id) {
+        const activeRideId = err.response.data.active_ride_id;
+        
+        // Ask user if they want to navigate to their active ride
+        if (window.confirm('You already have an active ride. Do you want to view your active ride?')) {
+          navigate(`/customer/ride/${activeRideId}`);
+        }
+      } else {
+        setError(err.response?.data?.message || 'Failed to book ride');
+      }
+      setBooking(false);
     }
-    setBooking(false);
-  }
-};
+  };
   
   const resetLocationMarker = (type) => {
     if (type === 'pickup') {
@@ -704,22 +709,22 @@ function BookRide() {
       )}
 
       {hasActiveRide && (
-  <Alert 
-    severity="warning" 
-    sx={{ mb: 3 }}
-    action={
-      <Button 
-        color="inherit" 
-        size="small"
-        onClick={() => navigate(`/customer/ride/${activeRideId}`)}
-      >
-        View Active Ride
-      </Button>
-    }
-  >
-    You already have an active ride. It's recommended to complete or cancel that ride before booking a new one.
-  </Alert>
-)}
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              onClick={() => navigate(`/customer/ride/${activeRideId}`)}
+            >
+              View Active Ride
+            </Button>
+          }
+        >
+          You already have an active ride. It's recommended to complete or cancel that ride before booking a new one.
+        </Alert>
+      )}
       
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ mb: 2 }}>
@@ -773,7 +778,7 @@ function BookRide() {
                     !user?.customer_id
                   }
                 >
-                  Next
+                  {loading ? <CircularProgress size={24} /> : 'Next'}
                 </Button>
               )}
             </Box>
