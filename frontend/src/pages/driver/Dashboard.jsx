@@ -47,8 +47,11 @@ function DriverDashboard() {
           });
         },
         (error) => {
-          console.error("Error getting location:", error);
-          setError("Could not get your current location.");
+          let message = "Could not get your current location.";
+          if (error.code === 1) message = "Location permission denied. Please allow location access in your browser.";
+          if (error.code === 2) message = "Location unavailable. Please check your device settings.";
+          if (error.code === 3) message = "Location request timed out. Please try again.";
+          setError(message);
         }
       );
     }
@@ -122,250 +125,170 @@ function DriverDashboard() {
   const recentRides = dashboard.rides.slice(0, 5); // Get 5 most recent rides
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Welcome back, {dashboard.profile.first_name}!
-      </Typography>
-      
+    <Box sx={{ bgcolor: '#f7f7f7', minHeight: '100vh' }}>
       <Grid container spacing={3}>
-        
-        
-        {/* Active Ride Alert (if any) */}
-        {dashboard.stats.activeRide && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="h6">Active Ride</Typography>
-                  <Typography variant="body1">
-                    You have an ongoing ride. Status: {dashboard.stats.activeRide.status}
-                  </Typography>
-                </Box>
-                <Button 
-                  component={Link} 
-                  to={`/driver/rides/active`}
-                  variant="contained" 
-                  color="secondary"
-                >
-                  Manage Ride
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        )}
-        
         {/* Stats Cards */}
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CarIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Total Rides
-                  </Typography>
-                  <Typography variant="h4">{dashboard.stats.totalRides}</Typography>
-                </Box>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff', height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <CarIcon sx={{ fontSize: 40, mr: 2, color: '#000' }} />
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontWeight: 700, color: '#222' }}>
+                  Total Rides
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900 }}>{dashboard.stats.totalRides}</Typography>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </Paper>
         </Grid>
-        
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <MoneyIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Today's Earnings
-                  </Typography>
-                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
-                </Box>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff', height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <MoneyIcon sx={{ fontSize: 40, mr: 2, color: '#43a047' }} />
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontWeight: 700, color: '#222' }}>
+                  Today's Earnings
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900 }}>${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </Paper>
         </Grid>
-        
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <PeopleIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Completed Rides
-                  </Typography>
-                  <Typography variant="h4">{dashboard.stats.completedRides}</Typography>
-                </Box>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff', height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <PeopleIcon sx={{ fontSize: 40, mr: 2, color: '#1976d2' }} />
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontWeight: 700, color: '#222' }}>
+                  Completed Rides
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900 }}>{dashboard.stats.completedRides}</Typography>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </Paper>
         </Grid>
-        
         <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <StarIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Your Rating
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff', height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <StarIcon sx={{ fontSize: 40, mr: 2, color: '#FFD600' }} />
+              <Box>
+                <Typography color="textSecondary" gutterBottom sx={{ fontWeight: 700, color: '#222' }}>
+                  Your Rating
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="h4" sx={{ mr: 1, fontWeight: 900 }}>
+                    {dashboard.stats.rating.toFixed(1)}
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="h4" sx={{ mr: 1 }}>
-                      {dashboard.stats.rating.toFixed(1)}
-                    </Typography>
-                    <Rating 
-                      value={dashboard.stats.rating} 
-                      readOnly 
-                      precision={0.5} 
-                      size="small" 
-                    />
-                  </Box>
+                  <Rating value={dashboard.stats.rating} readOnly precision={0.5} size="small" />
                 </Box>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </Paper>
         </Grid>
-        
         {/* Map Area */}
         <Grid item xs={12} md={8}>
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Your Location
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Box sx={{ height: 300 }}>
-                {location ? (
-                  <MapWithMarkers
-                    pickup={{
-                      lat: location.latitude,
-                      lng: location.longitude
-                    }}
-                    height={300}
-                  />
-                ) : (
-                  <Box sx={{ 
-                    height: 300, 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center',
-                    bgcolor: 'grey.100'
-                  }}>
-                    <Typography>Location not available. Please enable location services.</Typography>
-                  </Box>
-                )}
-              </Box>
-              
-              {location && (
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Current coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                  </Typography>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff', mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 800, color: '#111' }}>
+              Your Location
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Box sx={{ height: 300 }}>
+              {location ? (
+                <MapWithMarkers
+                  pickup={{
+                    lat: location.latitude,
+                    lng: location.longitude
+                  }}
+                  height={300}
+                />
+              ) : (
+                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'grey.100' }}>
+                  <Typography>Location not available. Please enable location services.</Typography>
                 </Box>
               )}
-            </CardContent>
-          </Card>
+            </Box>
+            {location && (
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="textSecondary">
+                  Current coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                </Typography>
+              </Box>
+            )}
+          </Paper>
         </Grid>
-        
         {/* Earnings Summary */}
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Earnings Summary
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <List>
-                <ListItem divider>
-                  <ListItemText primary="Today" />
-                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
-                </ListItem>
-                <ListItem divider>
-                  <ListItemText primary="This Week" />
-                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
-                </ListItem>
-                <ListItem divider>
-                  <ListItemText primary="This Month" />
-                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary="Total Earnings" />
-                  <Typography variant="h4">${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
-                </ListItem>
-              </List>
-              
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button 
-                  component={Link} 
-                  to="/driver/earnings"
-                  variant="outlined"
-                >
-                  View Detailed Earnings
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 800, color: '#111' }}>
+              Earnings Summary
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <List>
+              <ListItem divider>
+                <ListItemText primary="Today" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>${dashboard.earnings.today?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
+              </ListItem>
+              <ListItem divider>
+                <ListItemText primary="This Week" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>${dashboard.earnings.week?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
+              </ListItem>
+              <ListItem divider>
+                <ListItemText primary="This Month" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>${dashboard.earnings.month?.totalEarnings?.toFixed(2) || '0.00'}</Typography>
+              </ListItem>
+              <ListItem>
+                <ListItemText primary="Total Earnings" />
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>${dashboard.earnings.total?.toFixed(2) || '0.00'}</Typography>
+              </ListItem>
+            </List>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Button component={Link} to="/driver/earnings" variant="outlined" sx={{ borderRadius: 999, fontWeight: 700, px: 3, py: 1 }}>
+                View Detailed Earnings
+              </Button>
+            </Box>
+          </Paper>
         </Grid>
-        
         {/* Recent Rides */}
         <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Recent Rides
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              {recentRides.length === 0 ? (
-                <Typography>No rides yet. Go online to start accepting rides!</Typography>
-              ) : (
-                <List>
-                  {recentRides.map((ride) => (
-                    <ListItem key={ride.ride_id} divider>
-                      <ListItemText
-                        primary={`Ride #${ride.ride_id}`}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="textPrimary">
-                              {new Date(ride.date_time).toLocaleString()}
-                            </Typography>
-                            <br />
-                            {`Status: ${ride.status}`}
-                          </>
-                        }
-                      />
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <Typography variant="h6">${ride.fare_amount?.toFixed(2) || '0.00'}</Typography>
-                        <Button 
-                          component={Link} 
-                          to={`/driver/history/${ride.ride_id}`}
-                          size="small"
-                          sx={{ mt: 1 }}
-                        >
-                          View Details
-                        </Button>
-                      </Box>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-              
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button 
-                  component={Link} 
-                  to="/driver/history"
-                  variant="outlined"
-                >
-                  View All Rides
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, boxShadow: '0 2px 16px rgba(0,0,0,0.04)', bgcolor: '#fff' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 800, color: '#111' }}>
+              Recent Rides
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            {recentRides.length === 0 ? (
+              <Typography>No rides yet. Go online to start accepting rides!</Typography>
+            ) : (
+              <List>
+                {recentRides.map((ride) => (
+                  <ListItem key={ride.ride_id} divider>
+                    <ListItemText
+                      primary={`Ride #${ride.ride_id}`}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="textPrimary">
+                            {new Date(ride.date_time).toLocaleString()}
+                          </Typography>
+                          <br />
+                          {`Status: ${ride.status}`}
+                        </>
+                      }
+                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>${ride.fare_amount?.toFixed(2) || '0.00'}</Typography>
+                      <Button component={Link} to={`/driver/history/${ride.ride_id}`} size="small" sx={{ mt: 1, borderRadius: 999, fontWeight: 700, px: 2, py: 0.5 }}>
+                        View Details
+                      </Button>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Button component={Link} to="/driver/history" variant="contained" sx={{ borderRadius: 999, fontWeight: 700, px: 3, py: 1, background: '#000', color: '#fff', '&:hover': { background: '#222' } }}>
+                View All Rides
+              </Button>
+            </Box>
+          </Paper>
         </Grid>
       </Grid>
     </Box>

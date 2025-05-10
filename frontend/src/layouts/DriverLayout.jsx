@@ -179,18 +179,18 @@ function DriverLayout() {
   };
 
   const drawer = (
-    <div>
+    <div style={{ background: '#fff', height: '100%', borderRight: '1px solid #eee' }}>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: '#000', letterSpacing: '-0.02em' }}>
           Ride Sharing
         </Typography>
       </Toolbar>
       <Divider />
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-        <Avatar sx={{ mr: 2 }}>{user?.first_name?.[0] || 'D'}</Avatar>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Avatar sx={{ mr: 2, width: 44, height: 44, bgcolor: '#222', color: '#fff', fontWeight: 700, fontSize: 22 }}>{user?.first_name?.[0] || 'D'}</Avatar>
         <Box>
-          <Typography variant="subtitle1">{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
-          <Typography variant="body2" color="textSecondary">Driver</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#111' }}>{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>Driver</Typography>
         </Box>
       </Box>
       <Divider />
@@ -208,50 +208,36 @@ function DriverLayout() {
         />
       </Box>
       <Divider />
-      <List>
-        <ListItem button onClick={() => handleNavigation('/driver')}>
-          <ListItemIcon>
-            <DashboardIcon />
-          </ListItemIcon>
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={() => handleNavigation('/driver')} sx={{ borderLeft: window.location.pathname === '/driver' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><DashboardIcon /></ListItemIcon>
           <ListItemText primary="Dashboard" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/driver/rides/available')}>
-          <ListItemIcon>
-            <CarIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/driver/rides/available')} sx={{ borderLeft: window.location.pathname === '/driver/rides/available' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver/rides/available' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver/rides/available' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><CarIcon /></ListItemIcon>
           <ListItemText primary="Available Rides" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/driver/rides/active')}>
-          <ListItemIcon>
-            <CarIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/driver/rides/active')} sx={{ borderLeft: window.location.pathname === '/driver/rides/active' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver/rides/active' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver/rides/active' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><CarIcon /></ListItemIcon>
           <ListItemText primary="Active Ride" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/driver/history')}>
-          <ListItemIcon>
-            <HistoryIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/driver/history')} sx={{ borderLeft: window.location.pathname === '/driver/history' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver/history' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver/history' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><HistoryIcon /></ListItemIcon>
           <ListItemText primary="Ride History" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/driver/earnings')}>
-          <ListItemIcon>
-            <EarningsIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/driver/earnings')} sx={{ borderLeft: window.location.pathname === '/driver/earnings' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver/earnings' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver/earnings' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><EarningsIcon /></ListItemIcon>
           <ListItemText primary="Earnings" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/driver/profile')}>
-          <ListItemIcon>
-            <PersonIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/driver/profile')} sx={{ borderLeft: window.location.pathname === '/driver/profile' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/driver/profile' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/driver/profile' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><PersonIcon /></ListItemIcon>
           <ListItemText primary="Profile" />
         </ListItem>
       </List>
-      <Divider />
-      <List>
-        <ListItem button onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
+      <Divider sx={{ mt: 2 }} />
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={handleLogout} sx={{ color: '#d32f2f', fontWeight: 700 }}>
+          <ListItemIcon sx={{ color: '#d32f2f' }}><LogoutIcon /></ListItemIcon>
           <ListItemText primary="Logout" />
         </ListItem>
       </List>
@@ -260,86 +246,61 @@ function DriverLayout() {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Driver Dashboard
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
-              <Typography variant="body2" sx={{ mr: 1 }}>
-                {driverStatus === 'busy' ? 'On a Ride' : (isOnline ? 'Online' : 'Offline')}
-              </Typography>
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  bgcolor: driverStatus === 'busy' ? 'warning.main' : (isOnline ? 'success.main' : 'text.disabled'),
-                }}
+      {/* Black Uber-style top bar */}
+      <Box sx={{
+        width: '100%',
+        bgcolor: '#000',
+        py: 2,
+        px: 4,
+        position: 'fixed',
+        zIndex: 1201,
+        left: { sm: `${drawerWidth}px` },
+        right: 0,
+        top: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 2px 12px 0 rgba(0,0,0,0.10)',
+      }}>
+        {/* Left: Title */}
+        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'Inter, Uber Move, Arial, sans-serif', display: 'flex', alignItems: 'center', height: 48 }}>
+          Driver Dashboard
+        </Typography>
+        {/* Right: Online/Offline Toggle, Status Dot, Avatar */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isOnline}
+                onChange={handleToggleStatus}
+                color="success"
+                disabled={driverStatus === 'busy' || isUpdating}
               />
-            </Box>
-            <IconButton color="inherit">
-              <NotificationIcon />
-            </IconButton>
-            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 1 }}>
-              <Avatar alt={user?.first_name || 'User'}>
-                {user?.first_name?.[0] || 'U'}
-              </Avatar>
-            </IconButton>
-          </Box>
-          <Menu
-            sx={{ mt: '45px' }}
-            id="menu-appbar"
-            anchorEl={anchorElUser}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
+            }
+            label={driverStatus === 'busy' ? 'On a Ride' : (isOnline ? 'Online' : 'Offline')}
+            sx={{ color: '#fff', mr: 2, '.MuiFormControlLabel-label': { color: '#fff', fontWeight: 700 } }}
+          />
+          <Box
+            sx={{
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              bgcolor: driverStatus === 'busy' ? 'warning.main' : (isOnline ? 'success.main' : 'text.disabled'),
+              mr: 3,
+              border: '2px solid #fff',
             }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            open={Boolean(anchorElUser)}
-            onClose={handleCloseUserMenu}
-          >
-            <MenuItem onClick={() => {
-              handleCloseUserMenu();
-              navigate('/driver/profile');
-            }}>
-              <ListItemIcon>
-                <PersonIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography textAlign="center">Profile</Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={() => {
-              handleCloseUserMenu();
-              handleLogout();
-            }}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography textAlign="center">Logout</Typography>
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
+          />
+          <IconButton onClick={() => navigate('/driver/profile')} sx={{ p: 0, ml: 2, transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'scale(1.08)', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.18)' } }}>
+            <Avatar
+              alt={user?.first_name || 'User'}
+              src={user?.intro_media?.image_urls?.length > 0 ? `http://localhost:5000${user.intro_media.image_urls[0]}` : ''}
+              sx={{ width: 48, height: 48, bgcolor: '#fff', color: '#000', fontWeight: 700, border: '3px solid #fff', boxShadow: '0 1px 6px 0 rgba(0,0,0,0.10)' }}
+            >
+              {user?.first_name?.[0] || 'U'}
+            </Avatar>
+          </IconButton>
+        </Box>
+      </Box>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -348,22 +309,14 @@ function DriverLayout() {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile
-          }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
+          ModalProps={{ keepMounted: true }}
+          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
         >
           {drawer}
         </Drawer>
         <Drawer
           variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
+          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
           open
         >
           {drawer}
@@ -373,7 +326,8 @@ function DriverLayout() {
         component="main"
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
-        <Toolbar />
+        {/* Add top padding to account for the fixed black bar */}
+        <Toolbar sx={{ minHeight: 64 }} />
         <Container maxWidth="lg">
           <Outlet />
         </Container>

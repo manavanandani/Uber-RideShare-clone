@@ -250,7 +250,7 @@ function DriverProfile() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Driver Profile
+        My Profile
       </Typography>
       
       {error && (
@@ -266,17 +266,16 @@ function DriverProfile() {
       )}
       
       <Grid container spacing={3}>
-        {/* Profile Info Card */}
+        {/* Profile Info Card (left column) */}
         <Grid item xs={12} md={4}>
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Avatar 
                   sx={{ width: 100, height: 100, mb: 2, fontSize: 40 }}
-                  //src={profile?.profile_image || ''}
                   src={profile?.intro_media?.image_urls?.length > 0 
-    ? `http://localhost:5000${profile.intro_media.image_urls[0]}` 
-    : ''}
+                    ? `http://localhost:5000${profile.intro_media.image_urls[0]}` 
+                    : ''}
                 >
                   {profile?.first_name?.[0] || 'D'}
                 </Avatar>
@@ -364,7 +363,7 @@ function DriverProfile() {
           </Box>
         </Grid>
         
-        {/* Tabs Section */}
+        {/* Tabs Section (right column) */}
         <Grid item xs={12} md={8}>
           <Paper sx={{ mb: 3 }}>
             <Tabs value={tabValue} onChange={handleTabChange} centered>
@@ -572,7 +571,6 @@ function DriverProfile() {
                             <video 
                               controls 
                               style={{ maxWidth: '100%', maxHeight: '400px' }}
-                              //src={`${import.meta.env.VITE_API_URL || ''}${profile.intro_media.video_url}`}
                               src={`http://localhost:5000${profile.intro_media.video_url}`}
                             />
                           </Box>
@@ -596,7 +594,6 @@ function DriverProfile() {
                                     objectFit: 'cover',
                                     borderRadius: 1
                                   }}
-                                  //src={`${import.meta.env.VITE_API_URL || ''}${url}`}
                                   src={`http://localhost:5000${url}`}
                                   alt={`Driver image ${index + 1}`}
                                   onError={(e) => {
