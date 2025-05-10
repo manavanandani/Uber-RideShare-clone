@@ -271,7 +271,9 @@ function DriverProfile() {
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Avatar 
                   sx={{ width: 100, height: 100, mb: 2, fontSize: 40 }}
-                  src={profile?.profile_image || ''}
+                  src={profile?.intro_media?.image_urls?.length > 0 
+    ? `http://localhost:5000${profile.intro_media.image_urls[0]}` 
+    : ''}
                 >
                   {profile?.first_name?.[0] || 'D'}
                 </Avatar>
