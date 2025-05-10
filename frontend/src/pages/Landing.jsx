@@ -19,7 +19,8 @@ import {
   AdminPanelSettings as AdminIcon,
   Security as SecurityIcon,
   AttachMoney as MoneyIcon,
-  Speed as SpeedIcon
+  Speed as SpeedIcon,
+  Fullscreen
 } from '@mui/icons-material';
 
 function Landing() {

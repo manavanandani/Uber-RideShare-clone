@@ -47,10 +47,10 @@ export const driverService = {
   },
 
   // Get active ride
-  getActiveRide: async (driverId) => {
-  console.log('Calling getActiveRide API for driver:', driverId);
-  
+  // Update in driverService.js
+getActiveRide: async (driverId) => {
   try {
+    console.log('Calling getActiveRide API for driver:', driverId);
     const response = await api.get(`/rides/driver/${driverId}/active`);
     console.log('getActiveRide API response:', response);
     
@@ -67,7 +67,12 @@ export const driverService = {
     return { data: null };
   } catch (error) {
     console.error('Error fetching active ride:', error);
-    return { data: null };
+    // If it's a 404, it means no active ride, so return null data
+    if (error.response?.status === 404) {
+      return { data: null };
+    }
+    // Rethrow for other errors
+    throw error;
   }
 },
   
@@ -188,11 +193,32 @@ getEarnings: async (driverId, period = 'all') => {
   
   // Upload driver profile photo or vehicle images
   uploadMedia: async (driverId, formData) => {
+  try {
+    console.log('Uploading media for driver:', driverId);
     const response = await api.post(`/drivers/${driverId}/media`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+        'Content-Type': 'multipart/form-data'
+      }
     });
+    console.log('Upload response:', response.data);
     return response.data;
+  } catch (error) {
+    console.error('Error uploading media:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
   }
+},
+
+  deleteProfile: async (driverId) => {
+  try {
+    console.log(`Attempting to delete driver profile: ${driverId}`);
+    const response = await api.delete(`/drivers/delete/${driverId}`);
+    console.log('Driver deletion response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Driver deletion error:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
 };

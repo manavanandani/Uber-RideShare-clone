@@ -24,7 +24,6 @@ else:
 
 class RideRequest(BaseModel):
     pickup_datetime: str
-    passenger_count: int
     pickup_longitude: float
     pickup_latitude: float
     dropoff_longitude: float
@@ -56,18 +55,10 @@ async def estimate_demand(latitude, longitude, dt):
     is_evening_rush = 1 if (hour >= 17 and hour <= 19 and day < 5) else 0
     is_weekend_night = 1 if ((hour >= 22 or hour <= 3) and (day >= 5)) else 0
     
-    # Simple location-based proxy (could be replaced with actual data from your database)
-    # For San Francisco, we know downtown has higher demand
-    sf_downtown_lat = 37.7749
-    sf_downtown_lon = -122.4194
-    distance_from_downtown = haversine_distance(latitude, longitude, sf_downtown_lat, sf_downtown_lon)
-    location_density = max(5, 20 - distance_from_downtown) # Simple proxy
-    
     return {
         "is_morning_rush": is_morning_rush,
         "is_evening_rush": is_evening_rush, 
-        "is_weekend_night": is_weekend_night,
-        "location_density": location_density
+        "is_weekend_night": is_weekend_night
     }
 
 @app.post("/predict")
@@ -107,30 +98,27 @@ async def predict_fare(ride: RideRequest):
         
         # Prepare features for model - including demand features
         features = np.array([
-            ride.passenger_count,
             distance,
             hour,
             day,
             month,
             demand_data["is_morning_rush"],
             demand_data["is_evening_rush"],
-            demand_data["is_weekend_night"],
-            demand_data["location_density"]
+            demand_data["is_weekend_night"]
         ]).reshape(1, -1)
         
         # Make prediction
         prediction = model.predict(features)
         
         # Calculate the implied surge factor for transparency
-        base_fare = 3.0 + (distance * 1.5) + (distance * 0.2)
-        surge_factor = max(1.0, prediction[0] / base_fare)
+        # base_fare = 3.0 + (distance * 1.5) + (distance * 0.2)
+        # surge_factor = max(1.0, prediction[0] / base_fare)
         
         return {
             "status": "success",
             "predicted_fare": float(max(3.0, prediction[0])),
             "distance_km": distance,
-            "demand_factors": demand_data,
-            "surge_factor": float(surge_factor)
+            "demand_factors": demand_data
         }
     except Exception as e:
         # Fallback to basic calculation on error

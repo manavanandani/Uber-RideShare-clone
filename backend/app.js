@@ -10,6 +10,8 @@ const rideRoutes = require('./routes/rideRoutes');
 const pricingRoutes = require('./routes/pricingRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const authRoutes = require('./routes/authRoutes');
+const mediaRoutes = require('./routes/mediaRoutes');
+
 
 const { initKafka } = require('./config/kafka');
 
@@ -43,6 +45,8 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/rides', rideRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/media', mediaRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

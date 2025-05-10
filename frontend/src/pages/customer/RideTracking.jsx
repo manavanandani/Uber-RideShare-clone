@@ -70,53 +70,56 @@ function RideTracking() {
   };
 
   // Initial load of ride details
-  useEffect(() => {
-    const fetchRideDetails = async () => {
-      try {
-        setLoading(true);
-        // If you're a customer fetching your own ride
-        const response = await api.get(`/rides/customer/${user.customer_id}`);
-        
-        // Find the specific ride
-        let rideData = response.data.data.find(r => r.ride_id === rideId);
-        
-        if (!rideData) {
-          setError('Ride not found');
-          setLoading(false);
-          return;
-        }
-        
-        // Transform location data with proper null checks
-        rideData = {
-          ...rideData,
-          pickup_location: rideData.pickup_location && rideData.pickup_location.coordinates ? {
-            latitude: typeof rideData.pickup_location.coordinates[1] === 'number' ? rideData.pickup_location.coordinates[1] : 0,
-            longitude: typeof rideData.pickup_location.coordinates[0] === 'number' ? rideData.pickup_location.coordinates[0] : 0
-          } : { latitude: 0, longitude: 0 },
-          dropoff_location: rideData.dropoff_location && rideData.dropoff_location.coordinates ? {
-            latitude: typeof rideData.dropoff_location.coordinates[1] === 'number' ? rideData.dropoff_location.coordinates[1] : 0,
-            longitude: typeof rideData.dropoff_location.coordinates[0] === 'number' ? rideData.dropoff_location.coordinates[0] : 0
-          } : { latitude: 0, longitude: 0 }
-        };
-        
-        setRide(rideData);
-        
-        // Fetch billing information if ride exists
-        if (rideData.ride_id) {
-          await fetchBillingInfo(rideData.ride_id);
-        }
-        
+  // In src/pages/customer/RideTracking.jsx
+
+// Update the fetchRideDetails function in useEffect
+useEffect(() => {
+  const fetchRideDetails = async () => {
+    try {
+      setLoading(true);
+      
+      // Make a direct call to get the specific ride with complete details
+      const response = await api.get(`/rides/${rideId}`);
+      
+      if (!response.data || !response.data.data) {
+        setError('Ride not found');
         setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load ride details');
-        setLoading(false);
+        return;
       }
-    };
-    
-    if (rideId && user?.customer_id) {
-      fetchRideDetails();
+      
+      const rideData = response.data.data;
+      
+      // Transform location data with proper null checks
+      const formattedRide = {
+        ...rideData,
+        pickup_location: rideData.pickup_location && rideData.pickup_location.coordinates ? {
+          latitude: typeof rideData.pickup_location.coordinates[1] === 'number' ? rideData.pickup_location.coordinates[1] : 0,
+          longitude: typeof rideData.pickup_location.coordinates[0] === 'number' ? rideData.pickup_location.coordinates[0] : 0
+        } : { latitude: 0, longitude: 0 },
+        dropoff_location: rideData.dropoff_location && rideData.dropoff_location.coordinates ? {
+          latitude: typeof rideData.dropoff_location.coordinates[1] === 'number' ? rideData.dropoff_location.coordinates[1] : 0,
+          longitude: typeof rideData.dropoff_location.coordinates[0] === 'number' ? rideData.dropoff_location.coordinates[0] : 0
+        } : { latitude: 0, longitude: 0 }
+      };
+      
+      setRide(formattedRide);
+      
+      // Fetch billing information if ride exists
+      if (formattedRide.ride_id) {
+        await fetchBillingInfo(formattedRide.ride_id);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load ride details');
+      setLoading(false);
     }
-  }, [rideId, user]);
+  };
+  
+  if (rideId && user?.customer_id) {
+    fetchRideDetails();
+  }
+}, [rideId, user]);
 
   // Real-time status polling for active rides
   useEffect(() => {

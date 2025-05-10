@@ -62,7 +62,7 @@ exports.getRideById = async (req, res) => {
   try {
     const { ride_id } = req.params;
     
-    // Find the ride and populate driver and customer info in one query
+    // Find the ride
     const ride = await Ride.findOne({ ride_id });
     
     if (!ride) {
@@ -78,21 +78,20 @@ exports.getRideById = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to view this ride' });
     }
     
-    // Fetch driver and customer information if they exist
-    let driver_info = null;
-    let customer_info = null;
-    
-    if (ride.driver_id) {
-      driver_info = await Driver.findOne({ driver_id: ride.driver_id })
-        .select('driver_id first_name last_name phone car_details rating')
-        .lean();
-    }
-    
-    if (ride.customer_id) {
-      customer_info = await Customer.findOne({ customer_id: ride.customer_id })
+    // Fetch driver and customer information in parallel for better performance
+    const [driver_info, customer_info] = await Promise.all([
+      // Only fetch driver info if a driver is assigned
+      ride.driver_id 
+        ? Driver.findOne({ driver_id: ride.driver_id })
+            .select('driver_id first_name last_name phone car_details rating')
+            .lean()
+        : Promise.resolve(null),
+      
+      // Fetch customer info
+      Customer.findOne({ customer_id: ride.customer_id })
         .select('customer_id first_name last_name phone rating')
-        .lean();
-    }
+        .lean()
+    ]);
     
     // Create response with ride data and user information
     const rideResponse = {
@@ -620,7 +619,7 @@ exports.getActiveRideForCustomer = async (req, res) => {
     }).sort({ date_time: -1 });
     
     if (!activeRide) {
-      return res.status(404).json({ message: 'No active ride found' });
+      return res.status(200).json({ message: 'No active ride found', data: null });
     }
     
     // Add driver information if a driver has been assigned
@@ -663,7 +662,7 @@ exports.getActiveRideForDriver = async (req, res) => {
     }).sort({ date_time: -1 });
     
     if (!activeRide) {
-      return res.status(404).json({ message: 'No active ride found' });
+      return res.status(200).json({ message: 'No active ride found', data: null });
     }
     
     // Get customer information

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, clearError } from '../../store/slices/authSlice';
+import Navbar from './Navbar';
 import {
   Avatar,
   Button,
@@ -41,7 +42,8 @@ function DriverApplication() {
     zip_code: '',
     
     // Step 3: Vehicle Info
-    driver_id: generateRandomSsn(), // Generate SSN format ID
+    // driver_id: generateRandomSsn(), // Generate SSN format ID
+    driver_id: '',
     car_details: '',
   });
   
@@ -49,12 +51,12 @@ function DriverApplication() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  function generateRandomSsn() {
-    const part1 = Math.floor(Math.random() * 900 + 100).toString();
-    const part2 = Math.floor(Math.random() * 90 + 10).toString();
-    const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
-    return `${part1}-${part2}-${part3}`;
-  }
+  //function generateRandomSsn() {
+   // const part1 = Math.floor(Math.random() * 900 + 100).toString();
+   // const part2 = Math.floor(Math.random() * 90 + 10).toString();
+   // const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
+   // return `${part1}-${part2}-${part3}`;
+ // }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -237,14 +239,18 @@ function DriverApplication() {
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Driver ID (Automatically Generated)
+                  Driver ID (SSN)
                 </Typography>
                 <TextField
-                  disabled
+                  required
                   fullWidth
                   id="driver_id"
                   name="driver_id"
                   value={formData.driver_id}
+                  label="Social Security Number"
+                  onChange={handleChange}
+                  placeholder="XXX-XX-XXXX"
+                  helperText="Format: XXX-XX-XXXX"
                 />
               </Grid>
               
@@ -281,6 +287,8 @@ function DriverApplication() {
   };
 
   return (
+    <>
+    <Navbar/>
     <Container component="main" maxWidth="md">
       <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
         <Box
@@ -354,6 +362,7 @@ function DriverApplication() {
         </Box>
       </Paper>
     </Container>
+    </>
   );
 }
 

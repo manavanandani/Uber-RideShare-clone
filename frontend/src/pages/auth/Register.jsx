@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, clearError } from '../../store/slices/authSlice';
+import Navbar from './Navbar';
 import {
   Avatar,
   Button,
@@ -41,8 +42,9 @@ function Register() {
     zip_code: '',
     
     // Step 3: Role-specific info
-    customer_id: generateRandomSsn(), // Generate SSN format ID
+    // customer_id: generateRandomSsn(), // Generate SSN format ID
     // For customer
+    customer_id: '',
     credit_card: {
       number: '',
       expiry: '',
@@ -55,12 +57,12 @@ function Register() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  function generateRandomSsn() {
-    const part1 = Math.floor(Math.random() * 900 + 100).toString();
-    const part2 = Math.floor(Math.random() * 90 + 10).toString();
-    const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
-    return `${part1}-${part2}-${part3}`;
-  }
+  //function generateRandomSsn() {
+  //  const part1 = Math.floor(Math.random() * 900 + 100).toString();
+  //  const part2 = Math.floor(Math.random() * 90 + 10).toString();
+  //  const part3 = Math.floor(Math.random() * 9000 + 1000).toString();
+  //  return `${part1}-${part2}-${part3}`;
+  //}
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -256,14 +258,18 @@ function Register() {
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Customer ID (Automatically Generated)
+                  Customer ID (SSN)
                 </Typography>
                 <TextField
-                  disabled
+                  required
                   fullWidth
                   id="customer_id"
                   name="customer_id"
+                  label="Social Security Number"
                   value={formData.customer_id}
+                  onChange={handleChange}
+                  placeholder='XXX-XX-XXXX'
+                  helperText="Format: XXX-XX-XXXX"
                 />
               </Grid>
               
@@ -328,9 +334,28 @@ function Register() {
     }
   };
 
+  const getErrorMessage = (errorText) => {
+    if (errorText.includes('SSN')) {
+      return (
+        <>
+          <strong>SSN already registered:</strong> {errorText}
+        </>
+      );
+    } else if (errorText.includes('email')) {
+      return (
+        <>
+          <strong>Email already in use:</strong> {errorText}
+        </>
+      );
+    }
+    return errorText;
+  };
+
   return (
+    <>
+    <Navbar />
     <Container component="main" maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
+      <Paper elevation={3} sx={{ p: 4, mt: 5, mb: 5 }}>
         <Box
           sx={{
             display: 'flex',
@@ -346,8 +371,18 @@ function Register() {
           </Typography>
           
           {error && (
-            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-              {error}
+            <Alert 
+              severity="error" 
+              sx={{ 
+                width: '100%', 
+                mt: 2,
+                mb: 2,
+                '& .MuiAlert-message': {
+                  fontWeight: 'medium'
+                }
+              }}
+            >
+              {getErrorMessage(error)}
             </Alert>
           )}
           
@@ -402,6 +437,7 @@ function Register() {
         </Box>
       </Paper>
     </Container>
+    </>
   );
 }
 
