@@ -71,12 +71,8 @@ function Login() {
   };
 
   return (
-<<<<<<< HEAD
     <>
-    <Navbar />
-    <Container component="main" maxWidth="lg" align="center">
-      <Paper elevation={3} sx={{ p: 8, mt: 8 }}>
-=======
+    < Navbar />
     <Box
       sx={{
         minHeight: '100vh',
@@ -115,7 +111,6 @@ function Login() {
           </Alert>
         )}
 
->>>>>>> 2d711a303f6d2d9ad4ec141ca1d3a411a9ab0cce
         <Box
           component="form"
           onSubmit={handleSubmit}
@@ -192,12 +187,8 @@ function Login() {
           </Grid>
         </Box>
       </Paper>
-<<<<<<< HEAD
-    </Container>
-    </>
-=======
     </Box>
->>>>>>> 2d711a303f6d2d9ad4ec141ca1d3a411a9ab0cce
+    </>
   );
 }
 
