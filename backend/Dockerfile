@@ -1,48 +1,31 @@
-# Build stage
+# Use Node.js 18 Alpine as the base image for build
 FROM node:18-alpine AS build
 
+# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install production
+RUN npm ci --only=production
 
-# Copy application code
-COPY . .
-
-# Prune dev dependencies and remove unnecessary files
-RUN npm prune --production && \
-    rm -rf tests/ .git* .eslint* nodemon.json
-
-# Final stage
+# Second stage: Runtime
 FROM node:18-alpine
 
-# Set production environment
-ENV NODE_ENV=production
-
+# Set working directory
 WORKDIR /app
 
 # Copy only necessary files from build stage
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/config ./config
-COPY --from=build /app/controllers ./controllers
-COPY --from=build /app/middleware ./middleware
-COPY --from=build /app/models ./models
-COPY --from=build /app/routes ./routes
-COPY --from=build /app/services ./services
-COPY --from=build /app/utils ./utils
-COPY --from=build /app/FastAPI ./FastAPI
-COPY --from=build /app/app.js ./app.js
-COPY --from=build /app/server.js ./server.js
-COPY --from=build /app/package.json ./package.json
+COPY ./ ./
 
-# Create directory for uploads if your app needs it
-RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=5000
 
 # Expose port
 EXPOSE 5000
 
-# Start the application
+# Run the app
 CMD ["node", "server.js"]
