@@ -73,42 +73,16 @@ function BillingManagement() {
 
   const fetchBillingStats = async () => {
   try {
-    const response = await api.get('/stats/revenue');
+    const response = await api.get('/stats/billing-summary');
     
     if (response.data && response.data.data) {
-      // Calculate some basic stats
-      let totalRevenue = 0;
-      let completedCount = 0;
-      let pendingCount = 0;
-      
-      // Process billings array to count statuses and sum revenue
-      if (billings && Array.isArray(billings)) {
-        billings.forEach(bill => {
-          if (bill.total_amount) {
-            totalRevenue += parseFloat(bill.total_amount);
-          }
-          
-          if (bill.payment_status === 'completed') {
-            completedCount++;
-          } else if (bill.payment_status === 'pending') {
-            pendingCount++;
-          }
-        });
-      }
-      
-      setStats({
-        totalBillings: billings ? billings.length : 0,
-        totalRevenue: totalRevenue,
-        completedPayments: completedCount,
-        pendingPayments: pendingCount
-      });
+      setStats(response.data.data);
     }
   } catch (err) {
     console.error('Error fetching billing stats:', err);
     // Don't set error state to avoid disrupting the main UI
   }
 };
-
   const fetchBillings = async (filterParams = {}) => {
     try {
       setLoading(true);
