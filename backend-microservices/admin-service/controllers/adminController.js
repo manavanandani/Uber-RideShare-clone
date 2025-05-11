@@ -1,6 +1,7 @@
 const Admin = require('../models/Admin');
 const { invalidateCache } = require('../config/redis');
-const { publishDriverStatusChange, publishCustomerEvent } = require('../services/messageService');
+const { publishDriverStatusChange, publishCustomerEvent,
+  requestSystemStats } = require('../services/messageService');
 
 // Get all admins
 exports.getAllAdmins = async (req, res) => {
@@ -240,40 +241,43 @@ exports.reviewCustomerAccount = async (req, res) => {
   }
 };
 
-// Controller method to retrieve system statistics from multiple microservices
 exports.getSystemStats = async (req, res) => {
   try {
-    const driverStats = await requestSystemStats('driver_stats_request');
-    const customerStats = await requestSystemStats('customer_stats_request');
-    const rideStats = await requestSystemStats('ride_stats_request');
-    const billingStats = await requestSystemStats('billing_stats_request');
+    const [
+      driverResponse,
+      customerResponse,
+      rideResponse,
+      billingResponse
+    ] = await Promise.all([
+      requestSystemStats('driver_stats_request'),
+      requestSystemStats('customer_stats_request'),
+      requestSystemStats('ride_stats_request'),
+      requestSystemStats('billing_stats_request')
+    ]);
 
     res.status(200).json({
-      message: 'System stats retrieved successfully',
+      message: 'System statistics retrieved successfully',
       data: {
-        driverStats,
-        customerStats,
-        rideStats,
-        billingStats
+        counts: {
+          drivers: driverResponse.drivers || 0,
+          customers: customerResponse.customers || 0,
+          rides: rideResponse.rides || 0,
+          billings: billingResponse.billings || 0
+        },
+        revenue: billingResponse.revenue || {
+          total: 0,
+          average: 0,
+          minimum: 0,
+          maximum: 0
+        },
+        rideStatusDistribution: rideResponse.rideStatusDistribution || {}
       }
     });
   } catch (error) {
-    console.error('Error retrieving system stats:', error);
+    console.error('Error retrieving system statistics:', error);
     res.status(500).json({
-      message: 'Failed to retrieve system stats',
+      message: 'Failed to retrieve system statistics',
       error: error.message
     });
   }
 };
-
-// Helper function to simulate a Kafka request-response for system stats
-async function requestSystemStats(requestType) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve({
-        count: 100, // Simulated stats data
-        active: 75  // Simulated active data
-      });
-    }, 1000);
-  });
-}

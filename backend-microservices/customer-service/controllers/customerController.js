@@ -2,7 +2,7 @@ const Customer = require('../models/Customer');
 const { publishCustomerEvent } = require('../services/messageService');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');
-
+const { publishCustomerEvent } = require('../services/messageService');
 
 // Get all customers
 exports.getAllCustomers = async (req, res) => {
