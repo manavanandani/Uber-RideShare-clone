@@ -17,16 +17,27 @@ const { initKafka } = require('./config/kafka');
 
 const app = express();
 
-const corsOptions = {
+//const corsOptions = {
   //origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  origin: 'http://localhost:5173',
+  //origin: '*',
+  //origin: ['http://localhost:5173', 'http://localhost', 'http://localhost:3000', 'http://localhost:80'],
+  //methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  //allowedHeaders: ['Content-Type', 'Authorization'],
+  //credentials: true // This allows cookies/authentication
+//};
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow all origins
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // This allows cookies/authentication
-};
+  credentials: true
+}));
 
 // Middleware
-app.use(cors(corsOptions));
+//app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use(databaseSelectorMiddleware);

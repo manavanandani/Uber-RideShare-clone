@@ -1,6 +1,7 @@
 // src/pages/driver/DriverProfile.jsx
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -44,6 +45,8 @@ import { driverService } from '../../services/driverService';
 function DriverProfile() {
   const { user } = useSelector(state => state.auth);
   const dispatch = useDispatch();
+  const { driverId: routeDriverId } = useParams();
+
   
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -94,18 +97,15 @@ function DriverProfile() {
           setProfile(user);
         }
         
-        // Try to get full profile data from API
-        const response = await driverService.getProfile(user.driver_id);
-        if (response.data && response.data) {
+        // Get the driver ID to use - either from URL params or from logged-in user
+        const idToUse = routeDriverId || user.driver_id;
+        
+        // Get the full profile using the determined driver ID
+        const response = await driverService.getProfile(idToUse);
+        
+        if (response.data) {
           const profileData = response.data;
           setProfile(profileData);
-
-        const { driverId } = useParams(); // Add this if missing
-        const idToUse = driverId || user.driver_id;
-        const response = await driverService.getProfile(idToUse);
-
-
-          
           // Update form data with complete profile
           setFormData({
             first_name: profileData.first_name || '',
@@ -129,7 +129,7 @@ function DriverProfile() {
     };
     
     fetchProfile();
-  }, [user]);
+  }, [user, routeDriverId]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
