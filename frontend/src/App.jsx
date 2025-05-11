@@ -233,7 +233,9 @@ function App() {
             
             {/* Ride management */}
             <Route path="rides" element={<RidesManagement />} />
-            <Route path="rides/:rideId" element={<RideDetail />} />
+
+            <Route path="rides/:rideId" element={<RideDetailView />} />
+
             
             {/* Billing management */}
             <Route path="billing" element={<BillingManagement />} />
