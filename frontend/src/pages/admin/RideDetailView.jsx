@@ -239,31 +239,33 @@ function RideDetailView() {
             </Grid>
             
             <Box sx={{ mt: 3, mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Map View
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                {ride.pickup_location && ride.pickup_location.coordinates && 
-                 ride.dropoff_location && ride.dropoff_location.coordinates ? (
-                  <MapWithMarkers
-                    pickup={{
-                      lat: ride.pickup_location.coordinates[1],
-                      lng: ride.pickup_location.coordinates[0]
-                    }}
-                    dropoff={{
-                      lat: ride.dropoff_location.coordinates[1],
-                      lng: ride.dropoff_location.coordinates[0]
-                    }}
-                    showDirections={true}
-                    height={300}
-                  />
-                ) : (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: 'grey.100' }}>
-                    <Typography color="textSecondary">Map data unavailable</Typography>
-                  </Box>
-                )}
-              </Box>
-            </Box>
+  <Typography variant="subtitle1" gutterBottom>
+    Map View
+  </Typography>
+  <Box sx={{ height: 300 }}>
+    {ride.pickup_location && ride.pickup_location.coordinates && 
+     ride.dropoff_location && ride.dropoff_location.coordinates && 
+     Array.isArray(ride.pickup_location.coordinates) && 
+     Array.isArray(ride.dropoff_location.coordinates) ? (
+      <MapWithMarkers
+        pickup={{
+          lat: ride.pickup_location.coordinates[1],
+          lng: ride.pickup_location.coordinates[0]
+        }}
+        dropoff={{
+          lat: ride.dropoff_location.coordinates[1],
+          lng: ride.dropoff_location.coordinates[0]
+        }}
+        showDirections={true}
+        height={300}
+      />
+    ) : (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: 'grey.100' }}>
+        <Typography color="textSecondary">Map data unavailable</Typography>
+      </Box>
+    )}
+  </Box>
+</Box>
           </Paper>
           
           {billing && (

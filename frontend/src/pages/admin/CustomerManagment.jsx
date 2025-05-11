@@ -216,20 +216,19 @@ function CustomersManagement() {
                       </Box>
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton 
-                        color="primary"
-                        component={Link}
-                        to={`/admin/customers/${customer.customer_id}`}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton 
-                        color="error"
-                        onClick={() => handleDeleteClick(customer)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+  <IconButton 
+    color="primary"
+    onClick={() => navigate(`/admin/customers/${customer.customer_id}`)}
+  >
+    <EditIcon />
+  </IconButton>
+  <IconButton 
+    color="error"
+    onClick={() => handleDeleteClick(customer)}
+  >
+    <DeleteIcon />
+  </IconButton>
+</TableCell>
                   </TableRow>
                 ))
               )}

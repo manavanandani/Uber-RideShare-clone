@@ -110,26 +110,30 @@ function DriversManagement() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!driverToDelete) return;
+  if (!driverToDelete) return;
+  
+  try {
+    setDeleting(true);
+    // Fix the endpoint URL
+    await api.delete(`/drivers/delete/${driverToDelete.driver_id}`);
     
-    try {
-      setDeleting(true);
-      await api.delete(`/drivers/${driverToDelete.driver_id}`);
-      
-      // Remove from the list
-      setDrivers(prevDrivers => 
-        prevDrivers.filter(driver => driver.driver_id !== driverToDelete.driver_id)
-      );
-      
-      setOpenDeleteDialog(false);
-      setDriverToDelete(null);
-      setDeleting(false);
-    } catch (err) {
-      console.error('Error deleting driver:', err);
-      setError(err.response?.data?.message || 'Failed to delete driver');
-      setDeleting(false);
-    }
-  };
+    // Remove from the list
+    setDrivers(prevDrivers => 
+      prevDrivers.filter(driver => driver.driver_id !== driverToDelete.driver_id)
+    );
+    
+    setOpenDeleteDialog(false);
+    setDriverToDelete(null);
+    setDeleting(false);
+    
+    // Refresh the driver list to be sure
+    fetchDrivers();
+  } catch (err) {
+    console.error('Error deleting driver:', err);
+    setError(err.response?.data?.message || 'Failed to delete driver');
+    setDeleting(false);
+  }
+};
 
   return (
     <Box>
@@ -227,20 +231,19 @@ function DriversManagement() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton 
-                        color="primary"
-                        component={Link}
-                        to={`/admin/drivers/${driver.driver_id}`}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton 
-                        color="error"
-                        onClick={() => handleDeleteClick(driver)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+  <IconButton 
+    color="primary"
+  onClick={() => navigate(`/admin/drivers/edit/${driver.driver_id}`)}
+  >
+    <EditIcon />
+  </IconButton>
+  <IconButton 
+    color="error"
+    onClick={() => handleDeleteClick(driver)}
+  >
+    <DeleteIcon />
+  </IconButton>
+</TableCell>
                   </TableRow>
                 ))
               )}

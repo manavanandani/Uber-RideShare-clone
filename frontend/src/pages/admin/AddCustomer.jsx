@@ -79,66 +79,66 @@ function AddCustomer() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  try {
+    setLoading(true);
+    setError(null);
     
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Validate inputs
-      if (!formData.customer_id.match(/^\d{3}-\d{2}-\d{4}$/)) {
-        setError('Customer ID must be in the format XXX-XX-XXXX');
-        setLoading(false);
-        return;
-      }
-      
-      if (!formData.email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
-        setError('Please enter a valid email address');
-        setLoading(false);
-        return;
-      }
-      
-      if (!formData.phone.match(/^\d{10}$/)) {
-        setError('Phone number must be 10 digits');
-        setLoading(false);
-        return;
-      }
-      
-      if (formData.password.length < 4) {
-        setError('Password must be at least 4 characters');
-        setLoading(false);
-        return;
-      }
-      
-      // Validate credit card
-      if (!formData.credit_card.number.match(/^\d{16}$/)) {
-        setError('Credit card number must be 16 digits');
-        setLoading(false);
-        return;
-      }
-      
-      if (!formData.credit_card.expiry.match(/^(0[1-9]|1[0-2])\/\d{2}$/)) {
-        setError('Expiry date must be in the format MM/YY');
-        setLoading(false);
-        return;
-      }
-      
-      if (!formData.credit_card.cvv.match(/^\d{3}$/)) {
-        setError('CVV must be 3 digits');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await api.post('/customers', formData);
-      
-      // Redirect to customers list
-      navigate('/admin/customers');
-    } catch (err) {
-      console.error('Error adding customer:', err);
-      setError(err.response?.data?.message || 'Failed to add customer');
+    // Validate inputs
+    if (!formData.customer_id.match(/^\d{3}-\d{2}-\d{4}$/)) {
+      setError('Customer ID must be in the format XXX-XX-XXXX');
       setLoading(false);
+      return;
     }
-  };
+    
+    if (!formData.email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.phone.match(/^\d{10}$/)) {
+      setError('Phone number must be 10 digits');
+      setLoading(false);
+      return;
+    }
+    
+    if (formData.password.length < 4) {
+      setError('Password must be at least 4 characters');
+      setLoading(false);
+      return;
+    }
+    
+    // Validate credit card
+    if (!formData.credit_card.number.match(/^\d{16}$/)) {
+      setError('Credit card number must be 16 digits');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.credit_card.expiry.match(/^(0[1-9]|1[0-2])\/\d{2}$/)) {
+      setError('Expiry date must be in the format MM/YY');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.credit_card.cvv.match(/^\d{3}$/)) {
+      setError('CVV must be 3 digits');
+      setLoading(false);
+      return;
+    }
+    
+    const response = await api.post('/customers', formData);
+    
+    // Force reload to show new customer
+    window.location.href = '/admin/customers';
+  } catch (err) {
+    console.error('Error adding customer:', err);
+    setError(err.response?.data?.message || 'Failed to add customer');
+    setLoading(false);
+  }
+};
 
   return (
     <Box>

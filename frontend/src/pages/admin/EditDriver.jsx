@@ -1,6 +1,6 @@
-// src/pages/admin/AddDriver.jsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// src/pages/admin/EditDriver.jsx
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -18,12 +18,14 @@ import {
 } from '@mui/material';
 import api from '../../services/api';
 
-function AddDriver() {
+function EditDriver() {
+  const { driverId } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [formData, setFormData] = useState({
-    driver_id: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -32,111 +34,120 @@ function AddDriver() {
     city: '',
     state: '',
     zip_code: '',
-    password: '',
     car_details: '',
     status: 'offline'
   });
 
+  useEffect(() => {
+    const fetchDriverData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log(`Fetching driver data for ID: ${driverId}`);
+        const response = await api.get(`/drivers/${driverId}`);
+        
+        if (response.data && response.data.data) {
+          const driver = response.data.data;
+          console.log('Driver data fetched successfully:', driver);
+          
+          setFormData({
+            first_name: driver.first_name || '',
+            last_name: driver.last_name || '',
+            email: driver.email || '',
+            phone: driver.phone || '',
+            address: driver.address || '',
+            city: driver.city || '',
+            state: driver.state || '',
+            zip_code: driver.zip_code || '',
+            car_details: driver.car_details || '',
+            status: driver.status || 'offline'
+          });
+        } else {
+          console.error('Invalid driver data format received:', response.data);
+          setError('Failed to load driver data. Invalid response format.');
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching driver data:', err);
+        setError(err.response?.data?.message || 'Failed to load driver data');
+        setLoading(false);
+      }
+    };
+    
+    if (driverId) {
+      fetchDriverData();
+    }
+  }, [driverId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name === 'driver_id') {
-      // Format SSN as XXX-XX-XXXX
-      const digitsOnly = value.replace(/\D/g, '');
-      let formattedValue = '';
-      if (digitsOnly.length <= 3) {
-        formattedValue = digitsOnly;
-      } else if (digitsOnly.length <= 5) {
-        formattedValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
-      } else {
-        formattedValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5, 9)}`;
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        [name]: formattedValue
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  try {
-    setLoading(true);
-    setError(null);
+    e.preventDefault();
     
-    // Validate inputs
-    if (!formData.driver_id.match(/^\d{3}-\d{2}-\d{4}$/)) {
-      setError('Driver ID must be in the format XXX-XX-XXXX');
-      setLoading(false);
-      return;
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      
+      console.log(`Updating driver ${driverId} with data:`, formData);
+      const response = await api.put(`/drivers/${driverId}`, formData);
+      
+      console.log('Driver updated successfully:', response.data);
+      setSuccess('Driver updated successfully');
+      setSaving(false);
+      
+      // Navigate back after short delay
+      setTimeout(() => {
+        navigate('/admin/drivers');
+      }, 1500);
+    } catch (err) {
+      console.error('Error updating driver:', err);
+      setError(err.response?.data?.message || 'Failed to update driver');
+      setSaving(false);
     }
-    
-    if (!formData.email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
-      setError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
-    
-    if (!formData.phone.match(/^\d{10}$/)) {
-      setError('Phone number must be 10 digits');
-      setLoading(false);
-      return;
-    }
-    
-    if (formData.password.length < 4) {
-      setError('Password must be at least 4 characters');
-      setLoading(false);
-      return;
-    }
-    
-    //const response = await api.post('/drivers', formData);
-    const response = await api.post('/drivers', formData);
-    
+  };
 
-    
-    // Force reload to show new driver
-    window.location.href = '/admin/drivers';
-  } catch (err) {
-    console.error('Error adding driver:', err);
-    setError(err.response?.data?.message || 'Failed to add driver');
-    setLoading(false);
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
-};
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Add New Driver
+        Edit Driver: {formData.first_name} {formData.last_name}
       </Typography>
       
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
+        </Alert>
+      )}
+      
       <Paper sx={{ p: 3 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="Driver ID (SSN)"
-                name="driver_id"
-                value={formData.driver_id}
-                onChange={handleChange}
-                placeholder="XXX-XX-XXXX"
-                inputProps={{ maxLength: 11 }}
-                helperText="Format: XXX-XX-XXXX"
-              />
+              <Typography variant="subtitle1" gutterBottom>
+                Driver ID: {driverId}
+              </Typography>
             </Grid>
             
             <Grid item xs={12} md={6}>
@@ -183,19 +194,6 @@ function AddDriver() {
                 onChange={handleChange}
                 inputProps={{ maxLength: 10 }}
                 helperText="10 digits without dashes or spaces"
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                required
-                fullWidth
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                helperText="Minimum 4 characters"
               />
             </Grid>
             
@@ -303,16 +301,16 @@ function AddDriver() {
                 <Button 
                   variant="outlined"
                   onClick={() => navigate('/admin/drivers')}
-                  disabled={loading}
+                  disabled={saving}
                 >
                   Cancel
                 </Button>
                 <Button 
                   variant="contained"
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Add Driver'}
+                  {saving ? <CircularProgress size={24} /> : 'Save Changes'}
                 </Button>
               </Box>
             </Grid>
@@ -323,4 +321,4 @@ function AddDriver() {
   );
 }
 
-export default AddDriver;
+export default EditDriver;

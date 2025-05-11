@@ -99,6 +99,12 @@ function DriverProfile() {
         if (response.data && response.data) {
           const profileData = response.data;
           setProfile(profileData);
+
+        const { driverId } = useParams(); // Add this if missing
+        const idToUse = driverId || user.driver_id;
+        const response = await driverService.getProfile(idToUse);
+
+
           
           // Update form data with complete profile
           setFormData({

@@ -53,10 +53,11 @@ import AddCustomer from './pages/admin/AddCustomer';
 import BillingDetail from './pages/admin/BillingDetail';
 import AdminProfile from './pages/admin/AdminProfile';
 import RideDetailView from './pages/admin/RideDetailView';
+import EditDriver from './pages/admin/EditDriver';
 
 // Lazy load Analytics to avoid the import error if it doesn't exist yet
 const Analytics = React.lazy(() => 
-  //import('./pages/admin/Analytics')
+  import('./pages/admin/Analytics')
     .catch(() => ({ 
       default: () => <div>Analytics component is under development</div> 
     }))
@@ -220,6 +221,7 @@ function App() {
             {/* Driver management */}
             <Route path="drivers" element={<DriversManagement />} />
             <Route path="drivers/add" element={<AddDriver />} />
+            <Route path="drivers/edit/:driverId" element={<EditDriver />} />
             <Route path="drivers/:driverId" element={<DriverProfile />} />
             
             {/* Customer management */}
@@ -246,7 +248,7 @@ function App() {
             <Route path="profile" element={<AdminProfile />} />
 
             {/* Ride detail view */}
-            <Route path="ride/:rideId" element={<RideDetailView />} />
+            <Route path="rides/:rideId" element={<RideDetailView />} />
           </Route>
           
           {/* Fallback route */}

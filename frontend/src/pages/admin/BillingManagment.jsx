@@ -72,27 +72,42 @@ function BillingManagement() {
   }, [page, rowsPerPage]);
 
   const fetchBillingStats = async () => {
-    try {
-      const response = await api.get('/stats/revenue');
+  try {
+    const response = await api.get('/stats/revenue');
+    
+    if (response.data && response.data.data) {
+      // Calculate some basic stats
+      let totalRevenue = 0;
+      let completedCount = 0;
+      let pendingCount = 0;
       
-      if (response.data && response.data.data) {
-        const statsData = response.data.data;
-        
-        // Calculate some basic stats from the revenue data
-        const totalRevenue = statsData.reduce((sum, day) => sum + day.revenue, 0);
-        
-        setStats({
-          totalBillings: billings.length,
-          totalRevenue: totalRevenue,
-          completedPayments: billings.filter(b => b.payment_status === 'completed').length,
-          pendingPayments: billings.filter(b => b.payment_status === 'pending').length
+      // Process billings array to count statuses and sum revenue
+      if (billings && Array.isArray(billings)) {
+        billings.forEach(bill => {
+          if (bill.total_amount) {
+            totalRevenue += parseFloat(bill.total_amount);
+          }
+          
+          if (bill.payment_status === 'completed') {
+            completedCount++;
+          } else if (bill.payment_status === 'pending') {
+            pendingCount++;
+          }
         });
       }
-    } catch (err) {
-      console.error('Error fetching billing stats:', err);
-      // Don't set error state to avoid disrupting the main UI
+      
+      setStats({
+        totalBillings: billings ? billings.length : 0,
+        totalRevenue: totalRevenue,
+        completedPayments: completedCount,
+        pendingPayments: pendingCount
+      });
     }
-  };
+  } catch (err) {
+    console.error('Error fetching billing stats:', err);
+    // Don't set error state to avoid disrupting the main UI
+  }
+};
 
   const fetchBillings = async (filterParams = {}) => {
     try {

@@ -8,7 +8,8 @@ const { cacheMiddleware } = require('../config/redis');
 
 router.get('/available', cacheMiddleware(60), driverController.getAvailableDrivers);
 router.get('/search', verifyRole(['admin', 'customer']), driverController.searchDrivers);
-router.get('/', verifyRole(['admin', 'driver']), cacheMiddleware(300), driverController.getAllDrivers);
+//router.get('/', verifyRole(['admin', 'driver']), cacheMiddleware(300), driverController.getAllDrivers);
+router.get('/', verifyRole(['admin', 'driver']), driverController.getAllDrivers);
 router.get('/:driver_id', verifyRole(['admin', 'driver']), cacheMiddleware(60), driverController.getDriverById);
 router.post('/', verifyRole(['admin']), bulkRequestHandler(driverController.createDriver));
 router.put('/:driver_id', verifyRole(['admin', 'driver']), driverController.updateDriver);
