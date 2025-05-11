@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
+const { CustomError } = require('../../../shared/utils/errors');
 
 const validStates = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -9,7 +10,7 @@ const validStates = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
 
-const AdminSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema({
   admin_id: {
     type: String,
     required: true,
@@ -34,25 +35,23 @@ const AdminSchema = new mongoose.Schema({
   phone: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-
 }, {
   timestamps: true
 });
 
-AdminSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-  
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-      next();
-    } catch (err) {
-      next(err);
-    }
-  });
+adminSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(new CustomError('Failed to hash password', 500));
+  }
+});
 
-AdminSchema.methods.matchPassword = async function (enteredPassword) {
+adminSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('Admin', AdminSchema);
+module.exports = { Admin: mongoose.model('Admin', adminSchema) };
