@@ -4,7 +4,8 @@ const {
   getRidesByDriver,
   getRidesByCustomer,
   getRideStatsByLocation,
-  getPerformanceData
+  getPerformanceData,
+  getBillingStats
 } = require('../services/statsService');
 
 /**
@@ -204,5 +205,24 @@ exports.getSystemHealth = async (req, res) => {
     res.status(500).json({ message: 'Error getting system health data' });
   }
 };
+
+/**
+ * Get billing statistics summary
+ * GET /api/stats/billing-summary
+ */
+exports.getBillingStatsSummary = async (req, res) => {
+  try {
+    const stats = await getBillingStats();
+    
+    res.status(200).json({
+      message: 'Billing statistics retrieved successfully',
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting billing stats:', error);
+    res.status(500).json({ message: 'Error getting billing statistics' });
+  }
+};
+
 
 module.exports = exports;
