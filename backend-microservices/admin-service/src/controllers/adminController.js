@@ -1,7 +1,7 @@
 const { AdminService } = require('../services/adminService');
 const { redis } = require('../config/redis');
-const { adminEventProducer } = require('../kafka/producers/adminEventProducer');
-const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
+const { sendMessage } = require('../kafka/producers/adminEventProducer');
+const { KAFKA_TOPICS } = require('../kafka/topics');
 const { CustomError } = require('../../../shared/utils/errors');
 
 exports.getAllAdmins = async (req, res) => {
@@ -106,7 +106,7 @@ exports.reviewDriverAccount = async (req, res) => {
         message: 'Invalid status. Must be "approved", "rejected", or "pending_review"',
       });
     }
-    await adminEventProducer({
+    await sendMessage({
       topic: KAFKA_TOPICS.DRIVER_REVIEW_REQUEST,
       message: {
         driver_id,
@@ -122,7 +122,8 @@ exports.reviewDriverAccount = async (req, res) => {
     });
   } catch (error) {
     console.error('Error reviewing driver account:', error);
-    res.status(500).json({
+    const status = error instanceof CustomError ? error.status : 500;
+    res.status(status).json({
       message: 'Failed to review driver account',
       error: error.message,
     });
@@ -138,7 +139,7 @@ exports.reviewCustomerAccount = async (req, res) => {
         message: 'Invalid status. Must be "approved", "suspended", or "active"',
       });
     }
-    await adminEventProducer({
+    await sendMessage({
       topic: KAFKA_TOPICS.CUSTOMER_REVIEW_REQUEST,
       message: {
         customer_id,
@@ -154,7 +155,8 @@ exports.reviewCustomerAccount = async (req, res) => {
     });
   } catch (error) {
     console.error('Error reviewing customer account:', error);
-    res.status(500).json({
+    const status = error instanceof CustomError ? error.status : 500;
+    res.status(status).json({
       message: 'Failed to review customer account',
       error: error.message,
     });
@@ -162,32 +164,38 @@ exports.reviewCustomerAccount = async (req, res) => {
 };
 
 exports.getSystemStats = async (req, res) => {
+  const correlationId = Date.now().toString();
   try {
-    const requestId = Date.now().toString();
-    await adminEventProducer({
+    await sendMessage({
       topic: KAFKA_TOPICS.SYSTEM_STATS_REQUEST,
-      message: { requestId },
+      message: { correlationId },
     });
+
     const stats = await new Promise((resolve, reject) => {
-      const interval = setInterval(async () => {
-        const cachedStats = await redis.get(`stats:${requestId}`);
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds with 100ms intervals
+      const checkStats = async () => {
+        attempts++;
+        const cachedStats = await redis.get(`stats:${correlationId}`);
         if (cachedStats) {
-          clearInterval(interval);
-          resolve(JSON.parse(cachedStats));
+          return resolve(JSON.parse(cachedStats));
         }
-      }, 100);
-      setTimeout(() => {
-        clearInterval(interval);
-        reject(new Error('Timeout waiting for system stats'));
-      }, 5000);
+        if (attempts >= maxAttempts) {
+          return reject(new CustomError('Timeout waiting for system stats', 504));
+        }
+        setTimeout(checkStats, 100);
+      };
+      checkStats();
     });
+
     res.status(200).json({
       message: 'System statistics retrieved successfully',
       data: stats,
     });
   } catch (error) {
     console.error('Error retrieving system statistics:', error);
-    res.status(500).json({
+    const status = error instanceof CustomError ? error.status : 500;
+    res.status(status).json({
       message: 'Failed to retrieve system statistics',
       error: error.message,
     });

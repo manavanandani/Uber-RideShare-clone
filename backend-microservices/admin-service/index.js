@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./config/database');
-const { kafka } = require('./config/kafka');
-const { statsConsumer } = require('./kafka/consumers/statsConsumer');
+const { connectProducer } = require('./kafka/producers/adminEventProducer');
+const { runConsumer } = require('./kafka/consumers/statsResponseConsumer');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
 
@@ -35,8 +35,9 @@ app.get('/', (req, res) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await statsConsumer(kafka);
-    console.log('Kafka consumer for Admin service started');
+    await connectProducer();
+    await runConsumer();
+    console.log('Kafka producer and consumer for Admin service started');
     const port = process.env.SERVICE_PORT || 5001;
     app.listen(port, () => {
       console.log(`Admin service running on port ${port}`);
