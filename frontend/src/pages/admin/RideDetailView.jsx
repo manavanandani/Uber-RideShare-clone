@@ -371,16 +371,6 @@ function RideDetailView() {
                     </Typography>
                   )}
                 </Box>
-                
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => navigate(`/admin/customers/${ride.customer_info.customer_id}`)}
-                  >
-                    View Full Profile
-                  </Button>
-                </Box>
               </CardContent>
             </Card>
           )}
@@ -426,16 +416,6 @@ function RideDetailView() {
                       <strong>Rating:</strong> {ride.driver_info.rating.toFixed(1)}
                     </Typography>
                   )}
-                </Box>
-                
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => navigate(`/admin/drivers/${ride.driver_info.driver_id}`)}
-                  >
-                    View Full Profile
-                  </Button>
                 </Box>
               </CardContent>
             </Card>
