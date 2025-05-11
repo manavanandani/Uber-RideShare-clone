@@ -1,4 +1,4 @@
-// frontend/src/pages/admin/AdminProfile.jsx
+// src/pages/admin/AdminProfile.jsx
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
@@ -8,22 +8,32 @@ import {
   TextField,
   Button,
   Grid,
+  Divider,
   CircularProgress,
   Alert,
-  Divider,
   Card,
   CardContent,
-  Avatar
+  Avatar,
+  InputAdornment
 } from '@mui/material';
+import {
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  LocationOn as LocationIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon
+} from '@mui/icons-material';
 import api from '../../services/api';
 
 function AdminProfile() {
   const { user } = useSelector(state => state.auth);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(null);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [editMode, setEditMode] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: '',
@@ -56,7 +66,7 @@ function AdminProfile() {
           setProfile(user);
         }
         
-        // Try to get full profile data from API
+        // Get the full profile
         const response = await api.get(`/admin/${user.admin_id}`);
         if (response.data && response.data.data) {
           const profileData = response.data.data;
@@ -94,9 +104,27 @@ function AdminProfile() {
     }));
   };
 
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    
+    // If canceling edit, reset form data
+    if (editMode) {
+      setFormData({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zip_code: profile.zip_code || ''
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    setUpdating(true);
     setError(null);
     setSuccess(null);
     
@@ -109,10 +137,11 @@ function AdminProfile() {
         setProfile(response.data.data);
       }
       
-      setSaving(false);
+      setEditMode(false);
+      setUpdating(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
-      setSaving(false);
+      setUpdating(false);
     }
   };
 
@@ -143,134 +172,19 @@ function AdminProfile() {
       )}
       
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Personal Information
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            
-            <Box component="form" onSubmit={handleSubmit}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={5}>
-                  <TextField
-                    fullWidth
-                    label="City"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={3}>
-                  <TextField
-                    fullWidth
-                    label="State"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    label="ZIP Code"
-                    name="zip_code"
-                    value={formData.zip_code}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      disabled={saving}
-                    >
-                      {saving ? <CircularProgress size={24} /> : 'Save Profile'}
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          </Paper>
-        </Grid>
-        
         <Grid item xs={12} md={4}>
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
                 <Avatar 
-                  sx={{ width: 100, height: 100, mb: 2, fontSize: 40 }}
+                  sx={{ width: 100, height: 100, mb: 2, fontSize: 40, bgcolor: 'error.main' }}
                 >
                   {profile?.first_name?.[0] || 'A'}
                 </Avatar>
                 <Typography variant="h5">
                   {profile?.first_name} {profile?.last_name}
                 </Typography>
-                <Typography variant="body1" color="textSecondary">
+                <Typography variant="body1" color="error">
                   Administrator
                 </Typography>
               </Box>
@@ -287,60 +201,188 @@ function AdminProfile() {
               </Box>
               
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Email
+                <Typography variant="subtitle2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <EmailIcon fontSize="small" sx={{ mr: 1 }} /> Email
                 </Typography>
                 <Typography variant="body1">
                   {profile?.email || 'N/A'}
                 </Typography>
               </Box>
               
-              <Box>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Phone
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <PhoneIcon fontSize="small" sx={{ mr: 1 }} /> Phone
                 </Typography>
                 <Typography variant="body1">
                   {profile?.phone || 'N/A'}
                 </Typography>
               </Box>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                System Information
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Role
-                </Typography>
-                <Typography variant="body1">
-                  System Administrator
-                </Typography>
-              </Box>
-              
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Access Level
-                </Typography>
-                <Typography variant="body1">
-                  Full Access
-                </Typography>
-              </Box>
               
               <Box>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Last Login
+                <Typography variant="subtitle2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <LocationIcon fontSize="small" sx={{ mr: 1 }} /> Address
                 </Typography>
                 <Typography variant="body1">
-                  {new Date().toLocaleString()}
+                  {profile?.address}, {profile?.city}, {profile?.state} {profile?.zip_code}
                 </Typography>
               </Box>
             </CardContent>
           </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6">Edit Profile</Typography>
+              <Button
+                variant={editMode ? "outlined" : "contained"}
+                color={editMode ? "error" : "primary"}
+                startIcon={editMode ? <CancelIcon /> : <EditIcon />}
+                onClick={toggleEditMode}
+                disabled={updating}
+              >
+                {editMode ? 'Cancel' : 'Edit Profile'}
+              </Button>
+            </Box>
+            
+            <Divider sx={{ mb: 3 }} />
+            
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PhoneIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="City"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="State"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="ZIP Code"
+                    name="zip_code"
+                    value={formData.zip_code}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    required
+                  />
+                </Grid>
+              </Grid>
+              
+              {editMode && (
+                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    startIcon={<SaveIcon />}
+                    disabled={updating}
+                  >
+                    {updating ? <CircularProgress size={24} /> : 'Save Changes'}
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          </Paper>
         </Grid>
       </Grid>
     </Box>

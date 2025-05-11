@@ -1,5 +1,3 @@
-// this is our admin Layout
-
 // src/layouts/AdminLayout.jsx
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
@@ -28,12 +26,11 @@ import {
   Dashboard as DashboardIcon,
   DirectionsCar as CarIcon,
   Person as PersonIcon,
-  ExitToApp as LogoutIcon,
   People as PeopleIcon,
-  BarChart as AnalyticsIcon,
-  Receipt as BillingIcon,
-  Notifications as NotificationIcon,
-  AdminPanelSettings as AdminIcon,
+  ExitToApp as LogoutIcon,
+  Receipt as ReceiptIcon,
+  Analytics as AnalyticsIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -68,71 +65,55 @@ function AdminLayout() {
   };
 
   const drawer = (
-    <div>
+    <div style={{ background: '#fff', height: '100%', borderRight: '1px solid #eee' }}>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div">
-          Admin Dashboard
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: '#000', letterSpacing: '-0.02em' }}>
+          Ride Sharing Admin
         </Typography>
       </Toolbar>
       <Divider />
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-        <Avatar sx={{ mr: 2 }}>{user?.first_name?.[0] || 'A'}</Avatar>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Avatar sx={{ mr: 2, width: 44, height: 44, bgcolor: 'error.main', color: '#fff', fontWeight: 700, fontSize: 22 }}>{user?.first_name?.[0] || 'A'}</Avatar>
         <Box>
-          <Typography variant="subtitle1">{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
-          <Typography variant="body2" color="textSecondary">Administrator</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#111' }}>{`${user?.first_name || ''} ${user?.last_name || ''}`}</Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontWeight: 500 }}>Administrator</Typography>
         </Box>
       </Box>
       <Divider />
-      <List>
-        <ListItem button onClick={() => handleNavigation('/admin')}>
-          <ListItemIcon>
-            <DashboardIcon />
-          </ListItemIcon>
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={() => handleNavigation('/admin')} sx={{ borderLeft: window.location.pathname === '/admin' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/admin' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/admin' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><DashboardIcon /></ListItemIcon>
           <ListItemText primary="Dashboard" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/drivers')}>
-          <ListItemIcon>
-            <CarIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/admin/drivers')} sx={{ borderLeft: window.location.pathname.includes('/admin/drivers') ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname.includes('/admin/drivers') ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname.includes('/admin/drivers') ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><CarIcon /></ListItemIcon>
           <ListItemText primary="Drivers" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/customers')}>
-          <ListItemIcon>
-            <PeopleIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/admin/customers')} sx={{ borderLeft: window.location.pathname.includes('/admin/customers') ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname.includes('/admin/customers') ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname.includes('/admin/customers') ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><PeopleIcon /></ListItemIcon>
           <ListItemText primary="Customers" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/rides')}>
-          <ListItemIcon>
-            <CarIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/admin/rides')} sx={{ borderLeft: window.location.pathname.includes('/admin/rides') ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname.includes('/admin/rides') ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname.includes('/admin/rides') ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><CarIcon /></ListItemIcon>
           <ListItemText primary="Rides" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/billing')}>
-          <ListItemIcon>
-            <BillingIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/admin/billing')} sx={{ borderLeft: window.location.pathname.includes('/admin/billing') ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname.includes('/admin/billing') ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname.includes('/admin/billing') ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><ReceiptIcon /></ListItemIcon>
           <ListItemText primary="Billing" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/analytics')}>
-          <ListItemIcon>
-            <AnalyticsIcon />
-          </ListItemIcon>
+        <ListItem button onClick={() => handleNavigation('/admin/analytics')} sx={{ borderLeft: window.location.pathname.includes('/admin/analytics') ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname.includes('/admin/analytics') ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname.includes('/admin/analytics') ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><AnalyticsIcon /></ListItemIcon>
           <ListItemText primary="Analytics" />
         </ListItem>
-        <ListItem button onClick={() => handleNavigation('/admin/profile')}>
-          <ListItemIcon>
-            <AdminIcon />
-          </ListItemIcon>
+      </List>
+      <Divider sx={{ mt: 2 }} />
+      <List sx={{ mt: 1 }}>
+        <ListItem button onClick={() => handleNavigation('/admin/profile')} sx={{ borderLeft: window.location.pathname === '/admin/profile' ? '4px solid #000' : '4px solid transparent', bgcolor: window.location.pathname === '/admin/profile' ? '#f6f6f6' : 'inherit', fontWeight: window.location.pathname === '/admin/profile' ? 700 : 500 }}>
+          <ListItemIcon sx={{ color: '#111' }}><PersonIcon /></ListItemIcon>
           <ListItemText primary="Profile" />
         </ListItem>
-      </List>
-      <Divider />
-      <List>
-        <ListItem button onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
+        <ListItem button onClick={handleLogout} sx={{ color: '#d32f2f', fontWeight: 700 }}>
+          <ListItemIcon sx={{ color: '#d32f2f' }}><LogoutIcon /></ListItemIcon>
           <ListItemText primary="Logout" />
         </ListItem>
       </List>
@@ -146,6 +127,10 @@ function AdminLayout() {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          bgcolor: '#000',
+          color: '#fff',
+          boxShadow: 'none',
+          borderBottom: '1px solid #222',
         }}
       >
         <Toolbar>
@@ -157,14 +142,11 @@ function AdminLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
             Admin Dashboard
           </Typography>
-          <IconButton color="inherit">
-            <NotificationIcon />
-          </IconButton>
-          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 1 }}>
-            <Avatar alt={user?.first_name || 'User'}>
+          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+            <Avatar alt={user?.first_name || 'Admin'} sx={{ bgcolor: 'error.main', color: '#fff', fontWeight: 700 }}>
               {user?.first_name?.[0] || 'A'}
             </Avatar>
           </IconButton>

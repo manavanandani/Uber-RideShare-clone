@@ -1,4 +1,4 @@
-// src/pages/admin/DriversManagement.jsx
+// src/pages/admin/CustomersManagement.jsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -35,9 +35,9 @@ import {
 } from '@mui/icons-material';
 import api from '../../services/api';
 
-function DriversManagement() {
+function CustomersManagement() {
   const navigate = useNavigate();
-  const [drivers, setDrivers] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
@@ -45,36 +45,36 @@ function DriversManagement() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [driverToDelete, setDriverToDelete] = useState(null);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchDrivers();
+    fetchCustomers();
   }, [page, rowsPerPage]);
 
-  const fetchDrivers = async (query = '') => {
+  const fetchCustomers = async (query = '') => {
     try {
       setLoading(true);
       setError(null);
       
       const endpoint = query 
-        ? `/drivers/search?name=${query}`
-        : `/drivers?page=${page + 1}&limit=${rowsPerPage}`;
+        ? `/customers/search?name=${query}`
+        : `/customers?page=${page + 1}&limit=${rowsPerPage}`;
       
       const response = await api.get(endpoint);
       
       if (response.data && Array.isArray(response.data.data)) {
-        setDrivers(response.data.data);
+        setCustomers(response.data.data);
         setTotalCount(response.data.count || response.data.data.length);
       } else {
-        setDrivers([]);
+        setCustomers([]);
         setTotalCount(0);
       }
       
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching drivers:', err);
-      setError(err.response?.data?.message || 'Failed to load drivers');
+      console.error('Error fetching customers:', err);
+      setError(err.response?.data?.message || 'Failed to load customers');
       setLoading(false);
     }
   };
@@ -89,44 +89,44 @@ function DriversManagement() {
   };
 
   const handleSearch = () => {
-    fetchDrivers(searchQuery);
+    fetchCustomers(searchQuery);
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
     if (e.target.value === '') {
-      fetchDrivers();
+      fetchCustomers();
     }
   };
 
-  const handleDeleteClick = (driver) => {
-    setDriverToDelete(driver);
+  const handleDeleteClick = (customer) => {
+    setCustomerToDelete(customer);
     setOpenDeleteDialog(true);
   };
 
   const handleCloseDeleteDialog = () => {
     setOpenDeleteDialog(false);
-    setDriverToDelete(null);
+    setCustomerToDelete(null);
   };
 
   const handleConfirmDelete = async () => {
-    if (!driverToDelete) return;
+    if (!customerToDelete) return;
     
     try {
       setDeleting(true);
-      await api.delete(`/drivers/${driverToDelete.driver_id}`);
+      await api.delete(`/customers/${customerToDelete.customer_id}`);
       
       // Remove from the list
-      setDrivers(prevDrivers => 
-        prevDrivers.filter(driver => driver.driver_id !== driverToDelete.driver_id)
+      setCustomers(prevCustomers => 
+        prevCustomers.filter(customer => customer.customer_id !== customerToDelete.customer_id)
       );
       
       setOpenDeleteDialog(false);
-      setDriverToDelete(null);
+      setCustomerToDelete(null);
       setDeleting(false);
     } catch (err) {
-      console.error('Error deleting driver:', err);
-      setError(err.response?.data?.message || 'Failed to delete driver');
+      console.error('Error deleting customer:', err);
+      setError(err.response?.data?.message || 'Failed to delete customer');
       setDeleting(false);
     }
   };
@@ -134,14 +134,14 @@ function DriversManagement() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Drivers Management</Typography>
+        <Typography variant="h4">Customers Management</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           component={Link}
-          to="/admin/drivers/add"
+          to="/admin/customers/add"
         >
-          Add Driver
+          Add Customer
         </Button>
       </Box>
       
@@ -156,7 +156,7 @@ function DriversManagement() {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Search drivers"
+              label="Search customers"
               variant="outlined"
               value={searchQuery}
               onChange={handleSearchChange}
@@ -179,64 +179,53 @@ function DriversManagement() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Driver ID</TableCell>
+                <TableCell>Customer ID</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Phone</TableCell>
                 <TableCell>Rating</TableCell>
-                <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={6} align="center">
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
-              ) : drivers.length === 0 ? (
+              ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No drivers found
+                  <TableCell colSpan={6} align="center">
+                    No customers found
                   </TableCell>
                 </TableRow>
               ) : (
-                drivers.map((driver) => (
-                  <TableRow key={driver.driver_id}>
-                    <TableCell>{driver.driver_id}</TableCell>
-                    <TableCell>{`${driver.first_name} ${driver.last_name}`}</TableCell>
-                    <TableCell>{driver.email}</TableCell>
-                    <TableCell>{driver.phone}</TableCell>
+                customers.map((customer) => (
+                  <TableRow key={customer.customer_id}>
+                    <TableCell>{customer.customer_id}</TableCell>
+                    <TableCell>{`${customer.first_name} ${customer.last_name}`}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.phone}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Rating value={driver.rating || 0} readOnly precision={0.5} size="small" />
+                        <Rating value={customer.rating || 0} readOnly precision={0.5} size="small" />
                         <Typography variant="body2" sx={{ ml: 1 }}>
-                          ({driver.rating ? driver.rating.toFixed(1) : 'N/A'})
+                          ({customer.rating ? customer.rating.toFixed(1) : 'N/A'})
                         </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={driver.status || 'Unknown'} 
-                        color={
-                          driver.status === 'available' ? 'success' :
-                          driver.status === 'busy' ? 'warning' : 'default'
-                        }
-                        size="small"
-                      />
                     </TableCell>
                     <TableCell align="right">
                       <IconButton 
                         color="primary"
                         component={Link}
-                        to={`/admin/drivers/${driver.driver_id}`}
+                        to={`/admin/customers/${customer.customer_id}`}
                       >
                         <EditIcon />
                       </IconButton>
                       <IconButton 
                         color="error"
-                        onClick={() => handleDeleteClick(driver)}
+                        onClick={() => handleDeleteClick(customer)}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -266,7 +255,7 @@ function DriversManagement() {
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the driver {driverToDelete?.first_name} {driverToDelete?.last_name} ({driverToDelete?.driver_id})?
+            Are you sure you want to delete the customer {customerToDelete?.first_name} {customerToDelete?.last_name} ({customerToDelete?.customer_id})?
             This action cannot be undone.
           </DialogContentText>
         </DialogContent>
@@ -287,4 +276,4 @@ function DriversManagement() {
   );
 }
 
-export default DriversManagement;
+export default CustomersManagement;

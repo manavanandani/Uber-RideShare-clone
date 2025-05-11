@@ -43,10 +43,10 @@ import DriverProfile from './pages/driver/DriverProfile';
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
 import DriversManagement from './pages/admin/DriversManagment';
-import CustomersManagement from './pages/admin/CustomersManagment';
+import CustomersManagement from './pages/admin/CustomerManagment';
 import RidesManagement from './pages/admin/RidesManagment';
 import BillingManagement from './pages/admin/BillingManagment';
-import Analytics from './pages/admin/Analytics';
+//import Analytics from './pages/admin/Analytics';
 import AddDriver from './pages/admin/AddDriver';
 import AddCustomer from './pages/admin/AddCustomer';
 import BillingDetail from './pages/admin/BillingDetail';
