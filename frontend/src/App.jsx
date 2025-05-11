@@ -1,4 +1,5 @@
-// Updated App.jsx with proper authentication state handling
+// Updated App.jsx with fixes for admin rendering
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -46,17 +47,22 @@ import DriversManagement from './pages/admin/DriversManagment';
 import CustomersManagement from './pages/admin/CustomerManagment';
 import RidesManagement from './pages/admin/RidesManagment';
 import BillingManagement from './pages/admin/BillingManagment';
-//import Analytics from './pages/admin/Analytics';
+// Instead of importing Analytics directly, let's use lazy loading
 import AddDriver from './pages/admin/AddDriver';
 import AddCustomer from './pages/admin/AddCustomer';
 import BillingDetail from './pages/admin/BillingDetail';
 import AdminProfile from './pages/admin/AdminProfile';
 import RideDetailView from './pages/admin/RideDetailView';
 
-
+// Lazy load Analytics to avoid the import error if it doesn't exist yet
+const Analytics = React.lazy(() => 
+  //import('./pages/admin/Analytics')
+    .catch(() => ({ 
+      default: () => <div>Analytics component is under development</div> 
+    }))
+);
 
 function App() {
-
   useEffect(() => {
     window.addEventListener('popstate', () => {
       window.location.reload();
@@ -230,7 +236,11 @@ function App() {
             <Route path="billing/:billId" element={<BillingDetail />} />
             
             {/* Analytics */}
-            <Route path="analytics" element={<Analytics />} />
+            <Route path="analytics" element={
+              <React.Suspense fallback={<CircularProgress />}>
+                <Analytics />
+              </React.Suspense>
+            } />
 
             {/* Admin profile */}
             <Route path="profile" element={<AdminProfile />} />
