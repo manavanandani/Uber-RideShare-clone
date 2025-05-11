@@ -255,6 +255,67 @@ const getPerformanceData = async () => {
     throw error;
   }
 };
+/**
+ * Get billing statistics summary
+ */
+const getBillingStats = async () => {
+  try {
+    // Try to get from cache first
+    const cacheKey = 'stats:billing-summary';
+    const cachedStats = await redisClient.get(cacheKey);
+    
+    if (cachedStats) {
+      return JSON.parse(cachedStats);
+    }
+    
+    // If not in cache, query database
+    const stats = await Billing.aggregate([
+      {
+        $facet: {
+          totalRevenue: [
+            { $group: { _id: null, total: { $sum: "$total_amount" } } }
+          ],
+          paymentStatus: [
+            { $group: { 
+                _id: "$payment_status", 
+                count: { $sum: 1 } 
+              } 
+            }
+          ],
+          totalBillings: [
+            { $count: "count" }
+          ]
+        }
+      }
+    ]);
+    
+    // Process the results
+    const result = {
+      totalBillings: stats[0].totalBillings[0]?.count || 0,
+      totalRevenue: stats[0].totalRevenue[0]?.total || 0,
+      completedPayments: 0,
+      pendingPayments: 0
+    };
+    
+    // Extract payment status counts
+    stats[0].paymentStatus.forEach(status => {
+      if (status._id === 'completed') {
+        result.completedPayments = status.count;
+      } else if (status._id === 'pending') {
+        result.pendingPayments = status.count;
+      }
+    });
+    
+    // Cache for 5 minutes
+    await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 300);
+    
+    return result;
+  } catch (error) {
+    console.error('Error getting billing stats:', error);
+    throw error;
+  }
+};
+
 
 module.exports = {
   getRevenueByDay,
@@ -262,5 +323,6 @@ module.exports = {
   getRidesByDriver,
   getRidesByCustomer,
   getRideStatsByLocation,
-  getPerformanceData
+  getPerformanceData,
+  getBillingStats
 };
