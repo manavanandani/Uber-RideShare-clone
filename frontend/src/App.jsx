@@ -54,6 +54,7 @@ import BillingDetail from './pages/admin/BillingDetail';
 import AdminProfile from './pages/admin/AdminProfile';
 import RideDetailView from './pages/admin/RideDetailView';
 import EditDriver from './pages/admin/EditDriver';
+import EditCustomer from './pages/admin/EditCustomer';
 
 // Lazy load Analytics to avoid the import error if it doesn't exist yet
 const Analytics = React.lazy(() => 
@@ -227,6 +228,7 @@ function App() {
             {/* Customer management */}
             <Route path="customers" element={<CustomersManagement />} />
             <Route path="customers/add" element={<AddCustomer />} />
+            <Route path="customers/edit/:customerId" element={<EditCustomer />} />
             <Route path="customers/:customerId" element={<CustomerProfile />} />
             
             {/* Ride management */}

@@ -6,7 +6,7 @@ const verifyRole = require('../middleware/verifyRole');
 const upload = require('../config/gridFsStorage');
 const { cacheMiddleware } = require('../config/redis');
 
-router.get('/', verifyRole(['admin']), cacheMiddleware(300), customerController.getAllCustomers);
+router.get('/', verifyRole(['admin']), customerController.getAllCustomers);
 router.post('/', verifyRole(['admin']), bulkRequestHandler(customerController.createCustomer));
 router.get('/search', verifyRole(['admin']), customerController.searchCustomers);
 router.get('/:customer_id', verifyRole(['admin', 'customer']), cacheMiddleware(60), customerController.getCustomerById);

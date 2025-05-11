@@ -52,32 +52,35 @@ function CustomersManagement() {
     fetchCustomers();
   }, [page, rowsPerPage]);
 
-  const fetchCustomers = async (query = '') => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const endpoint = query 
-        ? `/customers/search?name=${query}`
-        : `/customers?page=${page + 1}&limit=${rowsPerPage}`;
-      
-      const response = await api.get(endpoint);
-      
-      if (response.data && Array.isArray(response.data.data)) {
-        setCustomers(response.data.data);
-        setTotalCount(response.data.count || response.data.data.length);
-      } else {
-        setCustomers([]);
-        setTotalCount(0);
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching customers:', err);
-      setError(err.response?.data?.message || 'Failed to load customers');
-      setLoading(false);
+const fetchCustomers = async (query = '') => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    
+    const endpoint = query 
+      ? `/customers/search?name=${query}&_t=${timestamp}`
+      : `/customers?page=${page + 1}&limit=${rowsPerPage}&_t=${timestamp}`;
+    
+    const response = await api.get(endpoint);
+    
+    if (response.data && Array.isArray(response.data.data)) {
+      setCustomers(response.data.data);
+      setTotalCount(response.data.count || response.data.data.length);
+    } else {
+      setCustomers([]);
+      setTotalCount(0);
     }
-  };
+    
+    setLoading(false);
+  } catch (err) {
+    console.error('Error fetching customers:', err);
+    setError(err.response?.data?.message || 'Failed to load customers');
+    setLoading(false);
+  }
+};
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -109,27 +112,34 @@ function CustomersManagement() {
     setCustomerToDelete(null);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!customerToDelete) return;
+  // In CustomersManagement.jsx
+const handleConfirmDelete = async () => {
+  if (!customerToDelete) return;
+  
+  try {
+    setDeleting(true);
     
-    try {
-      setDeleting(true);
-      await api.delete(`/customers/${customerToDelete.customer_id}`);
-      
-      // Remove from the list
-      setCustomers(prevCustomers => 
-        prevCustomers.filter(customer => customer.customer_id !== customerToDelete.customer_id)
-      );
-      
-      setOpenDeleteDialog(false);
-      setCustomerToDelete(null);
-      setDeleting(false);
-    } catch (err) {
-      console.error('Error deleting customer:', err);
-      setError(err.response?.data?.message || 'Failed to delete customer');
-      setDeleting(false);
-    }
-  };
+    // Check the customer routes in your backend to find the correct delete endpoint
+    // Use the following line if your backend is using '/customers/delete/:customer_id'
+    await api.delete(`/customers/delete/${customerToDelete.customer_id}`);
+    
+    // Remove from the list
+    setCustomers(prevCustomers => 
+      prevCustomers.filter(customer => customer.customer_id !== customerToDelete.customer_id)
+    );
+    
+    setOpenDeleteDialog(false);
+    setCustomerToDelete(null);
+    setDeleting(false);
+    
+    // Refresh the list to be sure
+    fetchCustomers();
+  } catch (err) {
+    console.error('Error deleting customer:', err);
+    setError(err.response?.data?.message || 'Failed to delete customer');
+    setDeleting(false);
+  }
+};
 
   return (
     <Box>
@@ -218,7 +228,8 @@ function CustomersManagement() {
                     <TableCell align="right">
   <IconButton 
     color="primary"
-    onClick={() => navigate(`/admin/customers/${customer.customer_id}`)}
+    //onClick={() => navigate(`/admin/customers/${customer.customer_id}`)}
+    onClick={() => navigate(`/admin/customers/edit/${customer.customer_id}`)}
   >
     <EditIcon />
   </IconButton>
