@@ -250,8 +250,9 @@ function DriverLayout() {
       <Box sx={{
         width: '100%',
         bgcolor: '#000',
-        py: 2,
+        py: 0,
         px: 4,
+        height: 64,
         position: 'fixed',
         zIndex: 1201,
         left: { sm: `${drawerWidth}px` },
@@ -261,12 +262,13 @@ function DriverLayout() {
         alignItems: 'center',
         justifyContent: 'space-between',
         boxShadow: '0 2px 12px 0 rgba(0,0,0,0.10)',
+        borderRadius: '0 0 24px 24px',
       }}>
         {/* Left: Title */}
-        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'Inter, Uber Move, Arial, sans-serif', display: 'flex', alignItems: 'center', height: 48 }}>
+        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'Inter, Uber Move, Arial, sans-serif', display: 'flex', alignItems: 'center', pl: 2 }}>
           Driver Dashboard
         </Typography>
-        {/* Right: Online/Offline Toggle, Status Dot, Avatar */}
+        {/* Right: Online/Offline Toggle, Status Dot, Avatar, Notification */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <FormControlLabel
             control={
@@ -290,7 +292,10 @@ function DriverLayout() {
               border: '2px solid #fff',
             }}
           />
-          <IconButton onClick={() => navigate('/driver/profile')} sx={{ p: 0, ml: 2, transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'scale(1.08)', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.18)' } }}>
+          <IconButton color="inherit" sx={{ ml: 1 }}>
+            <NotificationIcon sx={{ color: '#fff' }} />
+          </IconButton>
+          <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 2, transition: 'transform 0.15s, box-shadow 0.15s', '&:hover': { transform: 'scale(1.08)', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.18)' } }}>
             <Avatar
               alt={user?.first_name || 'User'}
               src={user?.intro_media?.image_urls?.length > 0 ? `http://localhost:5000${user.intro_media.image_urls[0]}` : ''}
@@ -299,6 +304,31 @@ function DriverLayout() {
               {user?.first_name?.[0] || 'U'}
             </Avatar>
           </IconButton>
+          <Menu
+            sx={{ mt: '45px', '& .MuiPaper-root': { borderRadius: 3, boxShadow: '0 4px 24px 0 rgba(0,0,0,0.18)', zIndex: 2000 } }}
+            id="menu-appbar"
+            anchorEl={anchorElUser}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            keepMounted
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            open={Boolean(anchorElUser)}
+            onClose={handleCloseUserMenu}
+            disablePortal={false}
+          >
+            <MenuItem onClick={() => { handleCloseUserMenu(); navigate('/driver/profile'); }}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography textAlign="center">Profile</Typography>
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={() => { handleCloseUserMenu(); handleLogout(); }}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography textAlign="center">Logout</Typography>
+            </MenuItem>
+          </Menu>
         </Box>
       </Box>
       <Box

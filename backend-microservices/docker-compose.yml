@@ -5,6 +5,12 @@ services:
       - "22181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc -w 2 localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   kafka:
     image: confluentinc/cp-kafka:7.3.0
@@ -26,6 +32,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   mongo:
     image: mongo:7
@@ -34,40 +41,75 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+    restart: unless-stopped
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   admin-service:
     build:
       context: ./admin-service
+      dockerfile: Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
       mongo:
         condition: service_started
+      redis:
+        condition: service_healthy
     ports:
       - "5001:5001"
     environment:
-      KAFKA_BROKER: kafka:9092
-      MONGO_URI: mongodb+srv://jiyoonlee:OFMwgS2AStEVOvE9@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-  
+      KAFKA_BROKERS: kafka:9092
+      MONGO_URI: mongodb+srv://${MONGO_USER}:${MONGO_PASSWORD}@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
+      REDIS_URL: redis://redis:6379
+      SERVICE_PORT: 5001
+      SERVICE_NAME: admin-service
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    env_file:
+      - ./admin-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   customer-service:
     build:
       context: ./customer-service
-    depend_on:
+      dockerfile: Dockerfile
+    depends_on:
       kafka:
         condition: service_healthy
       mongo:
         condition: service_started
-      ports:
-        - "5002:5002"
+      redis:
+        condition: service_healthy
+    ports:
+      - "5002:5002"
     environment:
-      KAFKA_BROKER: kafka:9092
-      MONGO_URI: mongodb+srv://jiyoonlee:OFMwgS2AStEVOvE9@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:9092
+      MONGO_URI: mongodb+srv://${MONGO_USER}:${MONGO_PASSWORD}@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
+      REDIS_URL: redis://redis:6379
+      SERVICE_PORT: 5002
+      SERVICE_NAME: customer-service
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    env_file:
+      - ./customer-service/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped

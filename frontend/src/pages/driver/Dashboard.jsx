@@ -126,6 +126,21 @@ function DriverDashboard() {
 
   return (
     <Box sx={{ bgcolor: '#f7f7f7', minHeight: '100vh' }}>
+      {/* Hero Banner/Illustration */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
+        <svg width="340" height="80" viewBox="0 0 340 80" fill="none">
+          <rect x="0" y="20" width="340" height="40" rx="20" fill="#E3F2FD"/>
+          <rect x="120" y="40" width="100" height="20" rx="10" fill="#1976D2"/>
+          <circle cx="170" cy="50" r="10" fill="#FFD600"/>
+          <rect x="160" y="30" width="20" height="10" rx="5" fill="#fff"/>
+        </svg>
+      </Box>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 900, color: '#111', letterSpacing: '-0.03em', fontFamily: 'Uber Move, Inter, Arial, sans-serif', textAlign: 'center' }}>
+        Welcome back, {dashboard.profile.first_name}!
+      </Typography>
+      <Typography variant="subtitle1" sx={{ color: '#555', mb: 4, fontWeight: 500, textAlign: 'center' }}>
+        Here's your driving summary and quick actions
+      </Typography>
       <Grid container spacing={3}>
         {/* Stats Cards */}
         <Grid item xs={12} md={3}>
@@ -256,7 +271,14 @@ function DriverDashboard() {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             {recentRides.length === 0 ? (
-              <Typography>No rides yet. Go online to start accepting rides!</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+                <svg width="120" height="60" viewBox="0 0 120 60" fill="none">
+                  <rect x="10" y="30" width="100" height="20" rx="10" fill="#E3F2FD"/>
+                  <rect x="40" y="40" width="40" height="10" rx="5" fill="#1976D2"/>
+                  <circle cx="60" cy="45" r="6" fill="#FFD600"/>
+                </svg>
+                <Typography sx={{ mt: 2 }}>No rides yet. Go online to start accepting rides!</Typography>
+              </Box>
             ) : (
               <List>
                 {recentRides.map((ride) => (

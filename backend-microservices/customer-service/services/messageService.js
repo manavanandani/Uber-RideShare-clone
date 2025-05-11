@@ -1,23 +1,38 @@
-const { sendMessage } = require('./kafka');
+const { consumer, producer } = require('../config/kafka');
+const Customer = require('../models/Customer');
 
-// Publish customer event to Kafka
-async function publishCustomerEvent(customerId, eventType, data) {
-  const message = {
-    customerId,
-    eventType,
-    timestamp: new Date().toISOString(),
-    data,
-  };
+const handleCustomerMessages = async () => {
+  await consumer.connect();
+  await producer.connect();
+  await consumer.subscribe({ topic: 'system_stats_request', fromBeginning: false });
 
-  try {
-    // Send the event message to the appropriate Kafka topic
-    await sendMessage('customer-events', message);
-    console.log(`Customer event ${eventType} published for customer ${customerId}`);
-  } catch (error) {
-    console.error(`Failed to publish customer event for customer ${customerId}:`, error);
-  }
-}
+  consumer.run({
+    eachMessage: async ({ message }) => {
+      const parsed = JSON.parse(message.value.toString());
+      const { type, correlationId, replyTo } = parsed;
 
-module.exports = {
-  publishCustomerEvent,
+      if (type === 'GET_CUSTOMER_STATS') {
+        try {
+          const customerCount = await Customer.countDocuments();
+          await producer.send({
+            topic: replyTo,
+            messages: [
+              {
+                key: correlationId,
+                value: JSON.stringify({
+                  correlationId,
+                  source: 'customer-service',
+                  data: { customerCount },
+                }),
+              },
+            ],
+          });
+        } catch (err) {
+          console.error('Error in customer stats:', err);
+        }
+      }
+    },
+  });
 };
+
+module.exports = { handleCustomerMessages };

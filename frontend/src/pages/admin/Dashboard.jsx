@@ -33,8 +33,10 @@ import {
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
+import { useSelector } from 'react-redux';
 
 function AdminDashboard() {
+  const { user } = useSelector(state => state.auth);
   const [stats, setStats] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
   const [recentRides, setRecentRides] = useState([]);
@@ -110,10 +112,21 @@ function AdminDashboard() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Dashboard
+      {/* Hero Banner/Illustration */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
+        <svg width="340" height="80" viewBox="0 0 340 80" fill="none">
+          <rect x="0" y="20" width="340" height="40" rx="20" fill="#E3F2FD"/>
+          <rect x="120" y="40" width="100" height="20" rx="10" fill="#1976D2"/>
+          <circle cx="170" cy="50" r="10" fill="#FFD600"/>
+          <rect x="160" y="30" width="20" height="10" rx="5" fill="#fff"/>
+        </svg>
+      </Box>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 900, color: '#111', letterSpacing: '-0.03em', fontFamily: 'Uber Move, Inter, Arial, sans-serif', textAlign: 'center' }}>
+        Welcome back, {user?.first_name || 'Administrator'}!
       </Typography>
-      
+      <Typography variant="subtitle1" sx={{ color: '#555', mb: 4, fontWeight: 500, textAlign: 'center' }}>
+        Here's your system overview and quick actions
+      </Typography>
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
