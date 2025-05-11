@@ -10,5 +10,7 @@ router.get('/rides-by-area', verifyRole('admin'), cacheMiddleware(300), statsCon
 router.get('/graph-data', verifyRole('admin'), cacheMiddleware(300), statsController.getGraphData);
 router.get('/performance-comparison', verifyRole('admin'), cacheMiddleware(3600), statsController.getPerformanceComparison);
 router.get('/health', verifyRole('admin'), statsController.getSystemHealth);
+router.get('/billing-summary', verifyRole('admin'), cacheMiddleware(300), statsController.getBillingStatsSummary);
+
 
 module.exports = router;
