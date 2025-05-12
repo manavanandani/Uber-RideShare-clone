@@ -1,5 +1,5 @@
-const { kafka } = require('../../config/kafka');
-const { KAFKA_TOPICS } = require('../topics');
+const { kafka } = require('../config/kafka');
+const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { CompressionTypes } = require('kafkajs');
 const { CustomError } = require('../../../shared/utils/errors');
 

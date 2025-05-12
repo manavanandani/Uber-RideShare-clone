@@ -1,5 +1,5 @@
 const { Customer } = require('../models/customer');
-const { sendMessage } = require('../kafka/producers/customerEventProducer');
+const { sendMessage } = require('../kafka/customerEventProducer');
 const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation } = require('../utils/locationUtils');

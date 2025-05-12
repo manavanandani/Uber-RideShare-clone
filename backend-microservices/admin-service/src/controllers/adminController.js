@@ -1,7 +1,7 @@
 const { AdminService } = require('../services/adminService');
 const { redis } = require('../config/redis');
-const { sendMessage } = require('../kafka/producers/adminEventProducer');
-const { KAFKA_TOPICS } = require('../kafka/topics');
+const { sendMessage } = require('../kafka/adminEventProducer');
+const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { CustomError } = require('../../../shared/utils/errors');
 
 exports.getAllAdmins = async (req, res) => {

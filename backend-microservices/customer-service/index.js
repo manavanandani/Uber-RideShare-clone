@@ -1,11 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const { connectDB } = require('./config/database');
-const { connectProducer } = require('./kafka/producers/customerEventProducer');
-const { runConsumer } = require('./kafka/consumers/customerReviewConsumer');
-const { createTopics } = require('./kafka/createTopics');
-const customerRoutes = require('./routes/customerRoutes');
-const { CustomError } = require('../../../shared/utils/errors');
+const { connectDB } = require('./src/config/database');
+const { connectProducer } = require('./src/kafka/customerEventProducer');
+const { runConsumer } = require('./src/kafka/customerReviewConsumer');
+const authRoutes = require('./src/routes/authRoutes');
+const customerRoutes = require('./src/routes/customerRoutes');
+const { CustomError } = require('../shared/utils/errors');
 
 const app = express();
 
@@ -21,6 +21,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/customer', customerRoutes);
 
 // Health Check
@@ -41,7 +42,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await createTopics(); // Create Kafka topics
+    await createAllTopics(); // Create Kafka topics
     await connectProducer();
     await runConsumer();
     console.log('Kafka producer, consumer, and topics for Customer service initialized');

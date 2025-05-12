@@ -1,6 +1,6 @@
-const { kafka } = require('../../config/kafka');
+const { kafka } = require('../config/kafka');
 const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
-const { Customer } = require('../../models/customer');
+const { Customer } = require('../models/customer');
 const { CustomError } = require('../../../shared/utils/errors');
 
 const consumer = kafka.consumer({ groupId: 'customer-review-consumer' });

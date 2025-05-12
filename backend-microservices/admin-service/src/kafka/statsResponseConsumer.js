@@ -1,6 +1,6 @@
-const { kafka } = require('../../config/kafka');
-const { KAFKA_TOPICS } = require('../topics');
-const { redis } = require('../../config/redis');
+const { kafka } = require('../config/kafka');
+const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
+const { redis } = require('../config/redis');
 
 const consumer = kafka.consumer({ groupId: 'admin-stats-consumer' });
 

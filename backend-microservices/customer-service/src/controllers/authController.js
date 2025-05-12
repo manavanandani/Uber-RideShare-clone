@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Customer } = require('../models/customer');
-const { sendMessage } = require('../kafka/producers/customerEventProducer');
+const { sendMessage } = require('../kafka/customerEventProducer');
 const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { CustomError } = require('../../../shared/utils/errors');
 const customerService = require('../services/customerService');
