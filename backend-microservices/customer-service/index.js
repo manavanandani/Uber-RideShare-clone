@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { connectDB } = require('./src/config/database');
+const connectDB  = require('./src/config/database');
 const { connectProducer } = require('./src/kafka/customerEventProducer');
 const { runConsumer } = require('./src/kafka/customerReviewConsumer');
 const authRoutes = require('./src/routes/authRoutes');
