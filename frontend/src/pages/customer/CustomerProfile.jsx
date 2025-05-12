@@ -84,7 +84,7 @@ function CustomerProfile() {
         setLoading(true);
         setError(null);
         
-        // If we already have user data from Redux, use it as a starting point
+        // Use redux as starting point if available
         if (user && user.customer_id) {
           setFormData({
             first_name: user.first_name || '',
@@ -105,7 +105,7 @@ function CustomerProfile() {
           setProfile(user);
         }
         
-        // Try to get full profile data from API
+        // Get full profile data from API
         const response = await customerService.getProfile(user.customer_id);
         if (response.data) {
           const profileData = response.data;
@@ -226,23 +226,16 @@ function CustomerProfile() {
       
       // Handle credit card information
       if (submitData.credit_card) {
-        // If the credit card number is masked (contains asterisks), we need to handle it
+        // Handle if credit card number is masked
         if (submitData.credit_card.number && submitData.credit_card.number.includes('*')) {
-          // Two options:
-          // 1. Remove it completely to keep the existing number in the database
           delete submitData.credit_card.number;
-          
-          // 2. OR, if you want to indicate to the backend that the user didn't change it:
-          // submitData.credit_card.number = 'UNCHANGED';
         }
         
         // Similarly for CVV
         if (submitData.credit_card.cvv === '***') {
           delete submitData.credit_card.cvv;
-          // Or: submitData.credit_card.cvv = 'UNCHANGED';
         }
         
-        // If the user has entered new values (no asterisks), they will be sent as-is
       }
       
       console.log('Submitting data:', JSON.stringify(submitData, null, 2));
