@@ -53,7 +53,6 @@ function BookRide() {
   const [error, setError] = useState(null);
   const [booking, setBooking] = useState(false);
   
-  // New state for address inputs
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [geocoding, setGeocoding] = useState(false);
@@ -87,14 +86,12 @@ function BookRide() {
         }
       } catch (err) {
         console.error('Error checking active ride:', err);
-        // Just continue with booking form if error occurs
       }
     };
     
     checkActiveRide();
   }, [user, navigate]);
   
-  // Get user's current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -115,7 +112,6 @@ function BookRide() {
             }
           }));
           
-          // Reverse geocode the current location for better UX
           reverseGeocode(currentLocation.lat, currentLocation.lng)
             .then(address => {
               if (address) {
@@ -131,7 +127,7 @@ function BookRide() {
     }
   }, []);
   
-  // Helper function for fare calculation - moved from useEffect to standalone function
+  // Helper function for fare calculation
   const calculateFare = async () => {
     if (!rideData.pickup_location.latitude || !rideData.dropoff_location.latitude) {
       setError('Both pickup and dropoff locations are required');
@@ -174,7 +170,7 @@ function BookRide() {
     } catch (err) {
       console.error('Fare calculation error:', err);
       
-      // Fallback fare calculation on frontend
+      // Fallback fare calculation
       const directDistance = calculateDirectDistance(
         rideData.pickup_location.latitude,
         rideData.pickup_location.longitude,
@@ -182,10 +178,10 @@ function BookRide() {
         rideData.dropoff_location.longitude
       );
       
-      // Simple fare calculation - should match backend's emergency fallback
+      // Simple fare calculation
       const baseFare = 3.0;
       const distanceFare = directDistance * 1.5;
-      const duration = directDistance * 2; // Rough estimate: 2 minutes per km
+      const duration = directDistance * 2;
       const timeFare = duration * 0.2;
       const fare = baseFare + distanceFare + timeFare;
       
@@ -201,13 +197,13 @@ function BookRide() {
       
       setError('Could not fetch exact fare estimate. Using approximate calculation.');
       setLoading(false);
-      return true; // We still return true because we have a fallback estimate
+      return true;
     }
   };
 
   function calculateDirectDistance(lat1, lon1, lat2, lon2) {
     // Haversine formula to calculate direct distance
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -215,7 +211,7 @@ function BookRide() {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in km
+    return R * c;
   }
 
   // Function to geocode an address using Nominatim
@@ -275,7 +271,7 @@ function BookRide() {
   };
 
   const handleMapClick = (event) => {
-    // Extract lat and lng from the event
+    // Extract lat and lng
     let lat, lng;
     
     // Handle different map click event structures
@@ -284,7 +280,7 @@ function BookRide() {
       lat = event.latLng.lat();
       lng = event.latLng.lng();
     } else if (event.latLng) {
-      // Our custom leaflet wrapper
+      // Custom leaflet wrapper
       lat = event.latLng.lat;
       lng = event.latLng.lng;
     } else if (event.latlng) {
@@ -429,10 +425,10 @@ function BookRide() {
     // Clear any previous errors
     setError(null);
     
-    // Calculate fare estimate before proceeding to next step
+    // Calculate fare estimate 
     const fareCalculated = await calculateFare();
     
-    // Only proceed to next step if fare calculation was successful
+    // Only proceed if fare calculation was successful
     if (fareCalculated) {
       setActiveStep(1);
     }
@@ -457,7 +453,7 @@ function BookRide() {
       // Book ride without specifying a driver (system will assign one)
       const bookingData = {
         ...rideData,
-        customer_id: user.customer_id // Ensure customer_id is included
+        customer_id: user.customer_id 
       };
       
       const response = await customerService.bookRide(bookingData);
@@ -474,7 +470,6 @@ function BookRide() {
       if (err.response?.data?.active_ride_id) {
         const activeRideId = err.response.data.active_ride_id;
         
-        // Ask user if they want to navigate to their active ride
         if (window.confirm('You already have an active ride. Do you want to view your active ride?')) {
           navigate(`/customer/ride/${activeRideId}`);
         }
