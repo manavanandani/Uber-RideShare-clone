@@ -1,43 +1,38 @@
 const Redis = require('ioredis');
+const { CustomError } = require('../../../shared/utils/errors');
 
-const createMockRedisClient = () => {
-  const cache = new Map();
-  return {
-    get: async (key) => cache.get(key),
-    set: async (key, value, expiryType, duration) => {
-      cache.set(key, value);
-      if (expiryType === 'EX') {
-        setTimeout(() => cache.delete(key), duration * 1000);
-      }
-      return 'OK';
-    },
-    del: async (...keys) => {
-      let count = 0;
-      for (const key of keys) {
-        if (cache.delete(key)) count++;
-      }
-      return count;
-    },
-  };
+const redis = new Redis(process.env.REDIS_URL || 'redis://redis:6379');
+
+const cacheMiddleware = (seconds) => async (req, res, next) => {
+  const key = `cache:${req.originalUrl}`;
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+    res.sendResponse = res.json;
+    res.json = (body) => {
+      redis.setex(key, seconds, JSON.stringify(body));
+      res.sendResponse(body);
+    };
+    next();
+  } catch (error) {
+    console.error('Redis cache error:', error);
+    next();
+  }
 };
 
-let redisClient;
-try {
-  redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  redisClient.on('connect', () => {
-    console.log('Redis client connected');
-  });
-  redisClient.on('error', (err) => {
-    console.error('Redis connection error:', err);
-    redisClient = createMockRedisClient();
-  });
-  redisClient.ping().catch((err) => {
-    console.error('Redis ping failed:', err);
-    redisClient = createMockRedisClient();
-  });
-} catch (error) {
-  console.error('Error creating Redis client:', error);
-  redisClient = createMockRedisClient();
-}
+const invalidateCache = async (pattern) => {
+  try {
+    const keys = await redis.keys(`${pattern}*`);
+    if (keys.length > 0) {
+      await redis.del(keys);
+      console.log(`Invalidated cache keys: ${keys}`);
+    }
+  } catch (error) {
+    console.error('Error invalidating cache:', error);
+    throw new CustomError('Cache invalidation failed', 500);
+  }
+};
 
-module.exports = { redis: redisClient };
+module.exports = { redis, cacheMiddleware, invalidateCache };
