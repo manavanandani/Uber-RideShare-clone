@@ -35,7 +35,7 @@ function CustomerDashboard() {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        // Since we don't have a specific dashboard endpoint, let's get ride history
+        
         const ridesResponse = await customerService.getRideHistory(user.customer_id);
         const profileResponse = await customerService.getProfile(user.customer_id);
         
