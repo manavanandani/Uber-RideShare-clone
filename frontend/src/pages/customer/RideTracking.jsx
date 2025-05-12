@@ -65,13 +65,10 @@ function RideTracking() {
       }
     } catch (err) {
       console.error('Error fetching billing information:', err);
-      // Don't set error state to avoid disrupting the UI
       setBilling(null);
     }
   };
 
-  // Initial load of ride details
-  // In src/pages/customer/RideTracking.jsx
 
 // Update the fetchRideDetails function in useEffect
 useEffect(() => {
@@ -79,7 +76,7 @@ useEffect(() => {
     try {
       setLoading(true);
       
-      // Make a direct call to get the specific ride with complete details
+      // Fetch ride details from the API
       const response = await api.get(`/rides/${rideId}`);
       
       if (!response.data || !response.data.data) {
@@ -124,9 +121,9 @@ useEffect(() => {
 
   // Real-time status polling for active rides
   useEffect(() => {
-    // Only set up polling if we have a ride and it's not completed
+    // Only set up polling if the ride is active
     if (ride && ride.status !== 'completed' && ride.status !== 'cancelled') {
-      // Clear any existing interval first
+
       if (pollingInterval) {
         clearInterval(pollingInterval);
       }
@@ -154,15 +151,15 @@ useEffect(() => {
               } : { latitude: 0, longitude: 0 }
             };
             
-            // Only update if there's an actual change
+            // Only update if the ride status has changed
             if (JSON.stringify(updatedRide) !== JSON.stringify(ride)) {
               console.log('Ride status updated:', updatedRide.status);
               setRide(updatedRide);
               
-              // Also refresh billing info when ride status changes
+              // Refresh billing info
               await fetchBillingInfo(updatedRide.ride_id);
               
-              // If the ride is completed, stop polling and show rating dialog
+              // Stop polling if the ride is completed or cancelled
               if (updatedRide.status === 'completed' || updatedRide.status === 'cancelled') {
                 clearInterval(interval);
                 setPollingInterval(null);
@@ -176,8 +173,6 @@ useEffect(() => {
           }
         } catch (err) {
           console.error('Error polling for ride updates:', err);
-          // Don't set the error state to avoid disrupting the UI
-          // Just log it and continue polling
         }
       }, 5000); // Poll every 5 seconds
       

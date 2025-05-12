@@ -27,7 +27,6 @@ function RideHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -76,7 +75,6 @@ function RideHistory() {
     setPage(0);
   };
 
-  // Function to get status color
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
