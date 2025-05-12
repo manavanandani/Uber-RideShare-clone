@@ -42,7 +42,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await createAllTopics(); // Create Kafka topics
+    
     await connectProducer();
     await runConsumer();
     console.log('Kafka producer, consumer, and topics for Customer service initialized');
