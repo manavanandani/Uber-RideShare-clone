@@ -14,7 +14,9 @@ const KAFKA_TOPICS = {
   DRIVER_DLQ: 'driver.events.dlq',
   // Billing topics
   BILLING_EVENTS: 'billing.events',
-  BILLING_DLQ: 'billing.events.dlq'
+  BILLING_DLQ: 'billing.events.dlq',
+  // Ride topics
+  RIDE_EVENTS: 'ride.events'
 };
 
 module.exports = { KAFKA_TOPICS };

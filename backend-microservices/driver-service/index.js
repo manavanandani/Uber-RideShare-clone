@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./src/config/database');
-const { connectProducer } = require('./src/kafka/driverEventProducer');
-const { runConsumer } = require('./src/kafka/driverReviewConsumer');
+const { connectProducer } = require('./src/kafka/producers/driverEventProducer');
+const { runConsumer: runReviewConsumer } = require('./src/kafka/driverReviewConsumer');
+const { runConsumer: runRideEventConsumer } = require('./src/kafka/rideEventConsumer');
 const driverRoutes = require('./src/routes/driverRoutes');
 const authRoutes = require('./src/routes/authRoutes');
 const { CustomError } = require('../shared/utils/errors');
@@ -43,8 +44,9 @@ const startServer = async () => {
   try {
     await connectDB();
     await connectProducer();
-    await runConsumer();
-    console.log('Kafka producer, consumer, and topics for Driver service initialized');
+    await runReviewConsumer();
+    await runRideEventConsumer();
+    console.log('Kafka producer, consumers, and topics for Driver service initialized');
     const port = process.env.SERVICE_PORT || 5003;
     app.listen(port, () => {
       console.log(`Driver service running on port ${port}`);
