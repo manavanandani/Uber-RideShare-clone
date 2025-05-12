@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const verifyRole = require('../middleware/verifyRole');
+const { authMiddleware } = require('../middleware/authMiddleware');
+const bulkRequestHandler = require('../middleware/bulkRequestMiddleware');
 
-router.post('/driver/login', authController.driverLogin);
-router.post('/driver/register', authController.registerDriver);
-router.get('/me', verifyRole('driver'), authController.getCurrentUser);
+router.post('/login', authController.driverLogin);
+router.post('/register', bulkRequestHandler(authController.registerDriver));
+router.get('/me', authMiddleware(['driver']), authController.getCurrentUser);
 
 module.exports = router;

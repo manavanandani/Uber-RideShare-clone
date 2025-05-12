@@ -11,42 +11,36 @@ const validStates = [
 ];
 
 const DriverSchema = new mongoose.Schema({
-  driver_id: {type: String, required: true, unique: true, match: [/^\d{3}-\d{2}-\d{4}$/, 'Invalid SSN format']},
-  first_name: {type: String, required: true},
-  last_name: {type: String, required: true},
-  address: {type: String, required: true},
-  city: {type: String, required: true},
-  state: {type: String, uppercase: true, enum: validStates, required: true},
-  zip_code: {type: String, match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'], required: true},
-  phone: {type: String, required: true},
+  driver_id: { type: String, required: true, unique: true, match: [/^\d{3}-\d{2}-\d{4}$/, 'Invalid SSN format'] },
+  first_name: { type: String, required: true },
+  last_name: { type: String, required: true },
+  address: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, uppercase: true, enum: validStates, required: true },
+  zip_code: { type: String, match: [/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'], required: true },
+  phone: { type: String, required: true },
   email: { type: String, unique: true, required: true },
-  password: {type: String, required: true, minlength: 4},
-  car_details: {type: String, required: true},
+  password: { type: String, required: true, minlength: 4 },
+  car_details: { type: String, required: true },
   rating: { type: Number, default: 0, required: true },
   reviews: [{
-    ride_id: {type: String, required: true},
-    customer_id: {type: String, required: true}, 
-    rating: {type: Number, min:1, max:5},
-    comment: {type: String},
-    date: {type: Date, required: true, default: Date.now}}],
+    ride_id: { type: String, required: true },
+    customer_id: { type: String, required: true },
+    rating: { type: Number, min: 1, max: 5 },
+    comment: { type: String },
+    date: { type: Date, required: true, default: Date.now }
+  }],
   intro_media: {
-      image_urls: {type: [String], default: []},
-      video_url: {type: String, default: ''},
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-  coordinates: {
-    type: [Number], // [longitude, latitude]
-    default: [0, 0]
-  }
-  }
-},
-  ride_history: {type: [String], default: []},
-  status: {type: String, enum: ['available', 'busy', 'offline'], default: 'offline'},
-  created_at: {type: Date, default: Date.now},
+    image_urls: { type: [String], default: [] },
+    video_url: { type: String, default: '' },
+    location: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]
+    }
+  },
+  ride_history: { type: [String], default: [] },
+  status: { type: String, enum: ['available', 'busy', 'offline'], default: 'offline' },
+  created_at: { type: Date, default: Date.now }
 });
 
 DriverSchema.pre('save', async function (next) {
