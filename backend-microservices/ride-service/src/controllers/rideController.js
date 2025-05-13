@@ -18,7 +18,7 @@ const { createRide,
   cancelRideByDriver,
   rateRide
 } = require('../services/rideService');
-const { sendMessage } = require('../kafka/producers/rideEventProducer');
+const { sendMessage } = require('../kafka/rideEventProducer');
 
 exports.getAllRides = async (req, res) => {
   try {

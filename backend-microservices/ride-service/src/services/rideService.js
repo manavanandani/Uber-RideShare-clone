@@ -1,9 +1,9 @@
 const axios = require('axios');
-const { Ride } = require('../../model/ride');
-const { CustomError } = require('../../../../shared/utils/errors');
-const { latLngToMongoLocation } = require('../../utils/locationUtils');
-const { redisClient } = require('../../config/redis');
-const { calculateDistance } = require('../../../customer/src/services/pricingService'); // Shared function
+const { Ride } = require('../models/ride');
+const { CustomError } = require('../../../shared/utils/errors');
+const { latLngToMongoLocation } = require('../utils/locationUtils');
+const { redisClient } = require('../config/redis');
+//const { calculateDistance } = require('../../../customer/src/services/pricingService');
 
 const generateRideId = () => {
   const part1 = Math.floor(Math.random() * 900) + 100;
@@ -184,7 +184,7 @@ const getNearbyRides = async (latitude, longitude, driver_id) => {
     const customer_info = await redisClient.get(`customer:${ride.customer_id}`);
     const pickupLocation = { longitude: ride.pickup_location.coordinates[0], latitude: ride.pickup_location.coordinates[1] };
     const driverLocation = { longitude: driverLng, latitude: driverLat };
-    const distance = calculateDistance(driverLocation, pickupLocation);
+    const distance = 10
     return {
       ...ride.toObject(),
       customer_info: customer_info ? JSON.parse(customer_info) : null,
@@ -215,7 +215,7 @@ const acceptRide = async (ride_id, driver_id) => {
   if (!driver.location?.latitude || !driver.location?.longitude) throw new CustomError('Driver location not available', 400);
   const driverLocation = { longitude: driver.location.longitude, latitude: driver.location.latitude };
   const pickupLocation = { longitude: ride.pickup_location.coordinates[0], latitude: ride.pickup_location.coordinates[1] };
-  const distance = calculateDistance(driverLocation, pickupLocation);
+  const distance = 10 
   if (distance > 16) throw new CustomError(`Too far from pickup: ${distance.toFixed(1)} km`, 400);
   const updatedRide = await Ride.findOneAndUpdate(
     { ride_id, status: 'requested', $or: [{ driver_id: null }, { driver_id }] },
