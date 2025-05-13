@@ -1,43 +1,48 @@
 const Redis = require('ioredis');
 
-const createMockRedisClient = () => {
-  const cache = new Map();
-  return {
-    get: async (key) => cache.get(key),
-    set: async (key, value, expiryType, duration) => {
-      cache.set(key, value);
-      if (expiryType === 'EX') {
-        setTimeout(() => cache.delete(key), duration * 1000);
-      }
-      return 'OK';
-    },
-    del: async (...keys) => {
-      let count = 0;
-      for (const key of keys) {
-        if (cache.delete(key)) count++;
-      }
-      return count;
-    },
-  };
+const redisClient = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined
+});
+
+redisClient.on('connect', () => {
+  console.log('Redis client connected for Admin service');
+});
+
+redisClient.on('error', (err) => {
+  console.error('Redis client error:', err);
+});
+
+const cacheMiddleware = (ttl) => async (req, res, next) => {
+  const cacheKey = `admin:${req.method}:${req.originalUrl}`;
+  try {
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+    res.originalJson = res.json;
+    res.json = async (body) => {
+      await redisClient.set(cacheKey, JSON.stringify(body), 'EX', ttl);
+      res.originalJson(body);
+    };
+    next();
+  } catch (err) {
+    console.error('Redis cache error:', err);
+    next();
+  }
 };
 
-let redisClient;
-try {
-  redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  redisClient.on('connect', () => {
-    console.log('Redis client connected');
-  });
-  redisClient.on('error', (err) => {
-    console.error('Redis connection error:', err);
-    redisClient = createMockRedisClient();
-  });
-  redisClient.ping().catch((err) => {
-    console.error('Redis ping failed:', err);
-    redisClient = createMockRedisClient();
-  });
-} catch (error) {
-  console.error('Error creating Redis client:', error);
-  redisClient = createMockRedisClient();
-}
+const invalidateCache = async (pattern) => {
+  try {
+    const keys = await redisClient.keys(`admin:${pattern}`);
+    if (keys.length > 0) {
+      await redisClient.del(...keys);
+      console.log(`Invalidated cache keys: ${keys}`);
+    }
+  } catch (err) {
+    console.error('Error invalidating cache:', err);
+  }
+};
 
-module.exports = { redis: redisClient };
+module.exports = { redisClient, cacheMiddleware, invalidateCache };

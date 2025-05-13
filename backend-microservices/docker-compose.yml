@@ -29,8 +29,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 20s
       retries: 10
     restart: unless-stopped
 
@@ -57,7 +57,7 @@ services:
   admin-service:
     build:
       context: .
-      dockerfile: ./admin-service/Dockerfile
+      dockerfile: admin-service/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
   customer-service:
     build:
       context: .
-      dockerfile: ./customer-service/Dockerfile
+      dockerfile: customer-service/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -113,11 +113,40 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
-  
+
+  driver-service:
+      build:
+        context: .
+        dockerfile: driver-service/Dockerfile
+      depends_on:
+        kafka:
+          condition: service_healthy
+        mongo:
+          condition: service_started
+        redis:
+          condition: service_healthy
+      ports:
+        - "5003:5003"
+      environment:
+        KAFKA_BROKERS: kafka:9092
+        MONGO_URI: mongodb+srv://${MONGO_USER}:${MONGO_PASSWORD}@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
+        REDIS_URL: redis://redis:6379
+        SERVICE_PORT: 5003
+        SERVICE_NAME: driver-service
+        JWT_SECRET: ${JWT_SECRET}
+        CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      env_file:
+        - ./driver-service/.env
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5003/api/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+      restart: unless-stopped
   billing-service:
     build:
       context: .
-      dockerfile: ./billing-service/Dockerfile
+      dockerfile: billing-service/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -132,22 +161,22 @@ services:
       MONGO_URI: mongodb+srv://${MONGO_USER}:${MONGO_PASSWORD}@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
       REDIS_URL: redis://redis:6379
       SERVICE_PORT: 5004
-      SERVICE_NAME: driver-service
+      SERVICE_NAME: billing-service
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     env_file:
       - ./billing-service/.env
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5004/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     restart: unless-stopped
 
-driver-service:
+  ride-service:
     build:
       context: .
-      dockerfile: ./driver-service/Dockerfile
+      dockerfile: ride-service/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -156,19 +185,19 @@ driver-service:
       redis:
         condition: service_healthy
     ports:
-      - "5003:5003"
+      - "5005:5005"
     environment:
       KAFKA_BROKERS: kafka:9092
       MONGO_URI: mongodb+srv://${MONGO_USER}:${MONGO_PASSWORD}@uber.dvdc9fh.mongodb.net/?retryWrites=true&w=majority&appName=Uber
       REDIS_URL: redis://redis:6379
-      SERVICE_PORT: 5003
-      SERVICE_NAME: driver-service
+      SERVICE_PORT: 5005
+      SERVICE_NAME: ride-service
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     env_file:
-      - ./driver-service/.env
+      - ./ride-service/.env
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5005/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

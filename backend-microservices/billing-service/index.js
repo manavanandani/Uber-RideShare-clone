@@ -5,7 +5,7 @@ const { connectProducer } = require('./src/kafka/billingEventProducer');
 const { runConsumer: runRideEventConsumer } = require('./src/kafka/rideEventConsumer');
 const { runConsumer: runSystemStatsConsumer } = require('./src/kafka/systemStatsConsumer');
 const billingRoutes = require('./src/routes/billingRoutes');
-const { CustomError } = require('../../shared/utils/errors');
+const { CustomError } = require('../shared/utils/errors');
 
 const app = express();
 
