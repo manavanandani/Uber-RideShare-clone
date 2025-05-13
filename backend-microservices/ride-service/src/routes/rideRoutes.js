@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const rideController = require('../controllers/rideController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authMiddleware } = require('../middleware/authMiddleware');
 const { cacheMiddleware } = require('../config/redis');
 
+router.post('/', authMiddleware(['customer']), rideController.createRide);
 router.get('/customer/:customer_id', authMiddleware(['customer']), cacheMiddleware(60), rideController.getRidesByCustomer);
 router.get('/customer/:customer_id/active', authMiddleware(['customer']), rideController.getActiveRideForCustomer);
 router.get('/driver/:driver_id', authMiddleware(['driver']), cacheMiddleware(60), rideController.getRidesByDriver);
