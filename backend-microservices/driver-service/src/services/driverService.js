@@ -1,4 +1,4 @@
-const { Driver } = require('../model/driver');
+const { Driver } = require('../models/driver');
 const { CustomError } = require('../../../shared/utils/errors');
 
 const validStates = [

@@ -1,6 +1,6 @@
-const { Driver } = require('../model/driver');
+const { Driver } = require('../models/driver');
 const { sendMessage } = require('../kafka/driverEventProducer');
-const { KAFKA_TOPICS } = require('../../../shared/kafka/config');
+const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { invalidateCache } = require('../config/redis');
 const { mongoLocationToLatLng, latLngToMongoLocation, geocodeAddress } = require('../utils/locationUtils');
 const { CustomError } = require('../../../shared/utils/errors');

@@ -1,7 +1,7 @@
 const { kafka } = require('../config/kafka');
 const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { CustomError } = require('../../../shared/utils/errors');
-const { Driver } = require('../model/driver');
+const { Driver } = require('../models/driver');
 
 const consumer = kafka.consumer({ groupId: 'driver-ride-group' });
 

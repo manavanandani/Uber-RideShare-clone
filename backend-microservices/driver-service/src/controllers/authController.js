@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
-const { Driver } = require('../model/driver');
-const { sendMessage } = require('../kafka/producers/driverEventProducer');
-const { KAFKA_TOPICS } = require('../../../shared/kafka/config');
+const { Driver } = require('../models/driver');
+const { sendMessage } = require('../kafka/driverEventProducer');
+const { KAFKA_TOPICS } = require('../../../shared/kafka/topics');
 const { CustomError } = require('../../../shared/utils/errors');
 const driverService = require('../services/driverService');
 
