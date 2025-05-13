@@ -5,6 +5,7 @@ const { connectProducer } = require('./src/kafka/customerEventProducer');
 const { runConsumer } = require('./src/kafka/customerReviewConsumer');
 const authRoutes = require('./src/routes/authRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
+const pricingRoutes = require('./src/routes/pricingRoutes');
 const { CustomError } = require('../shared/utils/errors');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customer', customerRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
