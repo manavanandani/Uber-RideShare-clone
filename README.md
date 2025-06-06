@@ -1,5 +1,4 @@
-# Uber Simulation - Node.js Backend
-
+# Uber Ride Share
 ## Overview
 
 This project is a comprehensive ride-sharing application backend built with Node.js. It provides a full simulation of an Uber-like service, with features for customers to request rides, drivers to accept and complete rides, and administrators to oversee the system.
